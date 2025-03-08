@@ -49,25 +49,32 @@ export default function Welcome() {
                 {/* Main Content */}
                 <main className="container mx-auto flex flex-1 flex-col items-center justify-center px-4 py-12 md:px-6 lg:flex-row lg:py-24">
                     {/* Text Content */}
-                    <div className="mb-12 w-full max-w-lg space-y-6 text-center lg:mb-0 lg:w-1/2 lg:text-left">
-                        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">Welcome to SimpleSocial</h1>
-                        <p className="text-lg leading-relaxed text-[#706f6c] sm:text-xl dark:text-[#A1A09A]">
+                    <div className="mb-12 w-full max-w-lg space-y-6 text-center lg:mb-0 lg:w-1/2 lg:text-left justify-center">
+                        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl text-center">Welcome to SimpleSocial</h1>
+                        <p className="text-center text-lg leading-relaxed text-[#706f6c] sm:text-xl dark:text-[#A1A09A]">
                             A safe space to connect with people known and unknown. Have fun but be civil!
                         </p>
-                        <div className="flex flex-col items-center gap-4 sm:flex-row lg:justify-start">
-                            {!auth.user && (
+                        <div className="flex flex-col items-center gap-4 sm:flex-row lg:justify-center">
+                            {auth.user ? (
+                                <Link
+                                    href={route('dashboard')}
+                                    className="rounded-md bg-[#525252] px-8 py-4 text-xl font-medium text-white transition-colors hover:bg-gray-600 dark:bg-[#52525B]"
+                                >
+                                    Dashboard
+                                </Link>
+                            ) : (
                                 <>
                                     <Link
-                                        href={route('register')}
-                                        className="inline-block rounded-md bg-[#525252] px-6 py-3 text-base font-medium text-white transition-colors hover:bg-gray-600"
+                                        href={route('login')}
+                                        className="rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 dark:hover:bg-[#27272A]"
                                     >
-                                        Get Started
+                                        Log in
                                     </Link>
                                     <Link
-                                        href={route('login')}
-                                        className="inline-block rounded-md px-6 py-3 text-base font-medium transition-colors hover:bg-gray-100 dark:hover:bg-[#27272A]"
+                                        href={route('register')}
+                                        className="rounded-md bg-[#525252] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600"
                                     >
-                                        Log In
+                                        Register
                                     </Link>
                                 </>
                             )}
