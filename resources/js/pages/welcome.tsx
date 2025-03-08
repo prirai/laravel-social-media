@@ -1,6 +1,5 @@
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
-// NO import of next/image
 
 export default function Welcome() {
     const { auth } = usePage<SharedData>().props;
@@ -36,7 +35,7 @@ export default function Welcome() {
                                     </Link>
                                     <Link
                                         href={route('register')}
-                                        className="rounded-md bg-[#525252] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+                                        className="rounded-md bg-[#525252] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600 dark:bg-[#3E3E3E]"
                                     >
                                         Register
                                     </Link>
@@ -47,53 +46,51 @@ export default function Welcome() {
                 </header>
 
                 {/* Main Content */}
-                <main className="container mx-auto flex flex-1 flex-col items-center justify-center px-4 py-12 md:px-6 lg:flex-row lg:py-24">
+                <main className="container mx-auto flex flex-1 flex-col items-center justify-center gap-12 px-4 py-12 md:px-6 lg:flex-row lg:py-24">
+                    {/* Image (Moved before text on larger screens) */}
+                    <div className="w-full max-w-lg lg:w-1/2">
+                        <img
+                            src="/img/ss-v1.png"
+                            alt="SimpleSocial Welcome Image"
+                            className="w-full rounded-lg object-cover" // Added shadow
+                        />
+                    </div>
+
                     {/* Text Content */}
-                    <div className="mb-12 w-full max-w-lg space-y-6 text-center lg:mb-0 lg:w-1/2 lg:text-left justify-center">
-                        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl text-center">Welcome to SimpleSocial</h1>
-                        <p className="text-center text-lg leading-relaxed text-[#706f6c] sm:text-xl dark:text-[#A1A09A]">
-                            A safe space to connect with people known and unknown. Have fun but be civil!
+                    <div className="w-full max-w-lg space-y-6 text-center lg:w-1/2 lg:text-left">
+                        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">Connect and Share</h1>
+                        <p className="text-lg leading-relaxed text-[#706f6c] sm:text-xl dark:text-[#A1A09A]">
+                            SimpleSocial is a place to connect with friends, family, and people you know. Share your thoughts, photos, and more.
                         </p>
-                        <div className="flex flex-col items-center gap-4 sm:flex-row lg:justify-center">
+                        <div className="flex flex-col items-center gap-4 sm:flex-row lg:justify-start">
                             {auth.user ? (
                                 <Link
                                     href={route('dashboard')}
-                                    className="rounded-md bg-[#525252] px-8 py-4 text-xl font-medium text-white transition-colors hover:bg-gray-600 dark:bg-[#52525B]"
+                                    className="w-full rounded-md bg-[#525252] px-6 py-3 text-lg font-medium text-white transition-colors hover:bg-gray-600 sm:w-auto dark:bg-[#52525B]"
                                 >
-                                    Dashboard
+                                    Go to Dashboard
                                 </Link>
                             ) : (
                                 <>
                                     <Link
                                         href={route('login')}
-                                        className="rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 dark:hover:bg-[#27272A]"
+                                        className="w-full rounded-md border border-[#525252] px-6 py-3 text-lg font-medium text-[#525252] transition-colors hover:bg-gray-100 sm:w-auto dark:border-[#A1A09A] dark:text-[#A1A09A] dark:hover:bg-[#27272A]" // Added border for a "ghost button" effect
                                     >
-                                        Log in
+                                        Log In
                                     </Link>
                                     <Link
                                         href={route('register')}
-                                        className="rounded-md bg-[#525252] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600"
+                                        className="w-full rounded-md bg-[#525252] px-6 py-3 text-lg font-medium text-white transition-colors hover:bg-gray-600 sm:w-auto dark:bg-[#3E3E3E]"
                                     >
-                                        Register
+                                        Get Started
                                     </Link>
                                 </>
                             )}
                         </div>
                     </div>
-
-                    {/* Image */}
-                    <div className="relative w-full max-w-lg lg:w-1/2">
-                        <img
-                            src="/img/ss-v1.png"
-                            alt="SimpleSocial Welcome Image"
-                            className="rounded-lg object-cover"
-                            // No width/height needed, let the CSS control it
-                            // No priority needed, it's a regular img tag
-                        />
-                    </div>
                 </main>
 
-                {/* Footer (Optional) */}
+                {/* Footer */}
                 <footer className="bg-[#FDFDFC] py-6 text-center text-sm text-[#706f6c] dark:bg-[#121212] dark:text-[#A1A09A]">
                     &copy; {new Date().getFullYear()} SimpleSocial. All rights reserved.
                 </footer>
