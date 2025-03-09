@@ -1,5 +1,3 @@
-class AppLogoIconProps {}
-
 interface AppLogoIconProps {
     className?: string;
 }
