@@ -93,6 +93,8 @@ Commands essential for setting up and running the project.
     ```
     This typically runs both the Laravel development server (using `php artisan serve`) and the Vite development server, allowing you to see your changes in real-time.  It combines hot-reloading for both PHP (using `artisan serve`) and React (using Vite).
 
+7. php artisan storage link 
+
 ### Admin Panel (Backpack for Laravel - Optional Setup)
 
 These steps are only required *once* to set up the admin panel.  For ongoing contributions, you usually only need the commands from the previous section.

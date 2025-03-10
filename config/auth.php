@@ -40,9 +40,9 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-        'backpack' => [
+        'admin' => [
             'driver'   => 'session',
-            'provider' => 'users', // Ensure this matches your users table
+            'provider' => 'admins', // Ensure this matches your users table
         ],
     ],
 
@@ -69,10 +69,11 @@ return [
             'model' => env('AUTH_MODEL', App\Models\User::class),
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'admins' => [
+            'driver' => 'eloquent',
+            // 'model' => 'env(App\Models\Admin::class)',
+            'model' => env('AUTH_MODEL', App\Models\Admin::class),
+        ],
     ],
 
     /*
