@@ -23,3 +23,7 @@ yarn-error.log
 /.vscode
 /.zed
 /treestruct.txt
+
+**/caddy
+frankenphp
+frankenphp-worker.php
