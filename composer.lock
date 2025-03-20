@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c49f8889c1084866f5d21fb5c3a93d7d",
+    "content-hash": "9bf01b73a9948ffe3056044a6883e7ee",
     "packages": [
         {
             "name": "backpack/basset",
@@ -173,76 +173,6 @@
                 "source": "https://github.com/Laravel-Backpack/CRUD/tree/6.8.0"
             },
             "time": "2025-02-24T16:21:55+00:00"
-        },
-        {
-            "name": "backpack/theme-coreuiv4",
-            "version": "1.1.5",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/Laravel-Backpack/theme-coreuiv4.git",
-                "reference": "31655325d6022444c732e31e16339cd2c2f476a7"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/Laravel-Backpack/theme-coreuiv4/zipball/31655325d6022444c732e31e16339cd2c2f476a7",
-                "reference": "31655325d6022444c732e31e16339cd2c2f476a7",
-                "shasum": ""
-            },
-            "require": {
-                "backpack/crud": "^6.2.1"
-            },
-            "require-dev": {
-                "orchestra/testbench": "~5|~6",
-                "phpunit/phpunit": "~9.0"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Backpack\\ThemeCoreuiv4\\AddonServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Backpack\\ThemeCoreuiv4\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Cristian Tabacitu",
-                    "email": "hello@backpackforlaravel.com",
-                    "homepage": "https://backpackforlaravel.com"
-                },
-                {
-                    "name": "Antonio Almeida",
-                    "email": "promatik@gmail.com",
-                    "homepage": "https://backpackforlaravel.com"
-                },
-                {
-                    "name": "Mauro Martinez",
-                    "email": "maurohmartinez@gmail.com",
-                    "homepage": "https://backpackforlaravel.com"
-                }
-            ],
-            "description": "UI for Backpack v6 that uses CoreUI v4 and Bootstrap v5.",
-            "homepage": "https://github.com/backpack/theme-coreuiv4",
-            "keywords": [
-                "Backpack Addon",
-                "Backpack for Laravel",
-                "ThemeCoreuiv4",
-                "backpack",
-                "laravel"
-            ],
-            "support": {
-                "issues": "https://github.com/Laravel-Backpack/theme-coreuiv4/issues",
-                "source": "https://github.com/Laravel-Backpack/theme-coreuiv4/tree/1.1.5"
-            },
-            "time": "2024-12-20T16:55:26+00:00"
         },
         {
             "name": "backpack/theme-tabler",
@@ -2104,6 +2034,70 @@
                 "source": "https://github.com/laravel/prompts/tree/v0.3.5"
             },
             "time": "2025-02-11T13:34:40+00:00"
+        },
+        {
+            "name": "laravel/sanctum",
+            "version": "v4.0.8",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laravel/sanctum.git",
+                "reference": "ec1dd9ddb2ab370f79dfe724a101856e0963f43c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laravel/sanctum/zipball/ec1dd9ddb2ab370f79dfe724a101856e0963f43c",
+                "reference": "ec1dd9ddb2ab370f79dfe724a101856e0963f43c",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "illuminate/console": "^11.0|^12.0",
+                "illuminate/contracts": "^11.0|^12.0",
+                "illuminate/database": "^11.0|^12.0",
+                "illuminate/support": "^11.0|^12.0",
+                "php": "^8.2",
+                "symfony/console": "^7.0"
+            },
+            "require-dev": {
+                "mockery/mockery": "^1.6",
+                "orchestra/testbench": "^9.0|^10.0",
+                "phpstan/phpstan": "^1.10",
+                "phpunit/phpunit": "^11.3"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Laravel\\Sanctum\\SanctumServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Laravel\\Sanctum\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Taylor Otwell",
+                    "email": "taylor@laravel.com"
+                }
+            ],
+            "description": "Laravel Sanctum provides a featherweight authentication system for SPAs and simple APIs.",
+            "keywords": [
+                "auth",
+                "laravel",
+                "sanctum"
+            ],
+            "support": {
+                "issues": "https://github.com/laravel/sanctum/issues",
+                "source": "https://github.com/laravel/sanctum"
+            },
+            "time": "2025-01-26T19:34:36+00:00"
         },
         {
             "name": "laravel/serializable-closure",

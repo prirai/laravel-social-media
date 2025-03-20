@@ -31,7 +31,8 @@ interface Post {
     }>;
     user: {
         name: string;
-        avatar?: string;
+        username: string;
+        avatar: string;
     };
     likes: Array<{
         id: number;
@@ -45,6 +46,8 @@ interface Post {
         content: string;
         user: {
             name: string;
+            username?: string;
+            avatar?: string;
         };
     }>;
 }
@@ -272,12 +275,20 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                                 {/* User Info (remains the same) */}
 
                                 <div className="mb-3 flex items-center gap-3">
-                                    {/* Don't try to access avatar since it doesn't exist */}
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200">
-                                        {post.user.name.charAt(0)}
-                                    </div>
+                                    {post.user.avatar ? (
+                                        <img
+                                            src={post.user.avatar.startsWith('avatars/') ? `/storage/${post.user.avatar}` : post.user.avatar} // Use /storage path directly, assuming paths are relative to public/storage now.
+                                            alt={`Avatar of ${post.user.name}`}
+                                            className="h-10 w-10 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200">
+                                            {post.user.name.charAt(0)}
+                                        </div>
+                                    )}
                                     <div>
                                         <p className="font-medium">{post.user.name}</p>
+                                        <p className="text-sm text-gray-500">@{post.user.username}</p>
                                         <p className="text-sm text-gray-500">{new Date(post.created_at).toLocaleString()}</p>
                                     </div>
                                 </div>
@@ -330,11 +341,13 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                                     {post.comments.map((comment) => (
                                         <div key={comment.id} className="border-t pt-2">
                                             <div className="flex items-start gap-2">
+                                                {/*  Add avatar to comment user */}
                                                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200">
                                                     {comment.user.name.charAt(0)}
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-medium">{comment.user.name}</p>
+                                                    <p className="text-sm text-gray-600">@{comment.user.username}</p>
                                                     <p className="text-sm text-gray-600">{comment.content}</p>
                                                 </div>
                                             </div>
@@ -355,7 +368,6 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                     )}
                 </div>
 
-                {/* Comment Modal */}
                 <Dialog open={commentOpen} onOpenChange={setCommentOpen}>
                     <DialogContent>
                         <DialogHeader>

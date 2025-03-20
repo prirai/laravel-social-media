@@ -1,7 +1,7 @@
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useState } from 'react'; // Import useState
 
 import DeleteUser from '@/components/delete-user';
 import HeadingSmall from '@/components/heading-small';
@@ -21,23 +21,56 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 interface ProfileForm {
     name: string;
+    username: string;
     email: string;
+    avatar: string | null;
+    new_avatar?: File | null;
 }
 
 export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: boolean; status?: string }) {
     const { auth } = usePage<SharedData>().props;
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(auth.user.avatar || null); // Add avatar preview state
 
-    const { data, setData, patch, errors, processing, recentlySuccessful } = useForm<Required<ProfileForm>>({
+    const { data, setData, patch, errors, processing, recentlySuccessful } = useForm<ProfileForm>({
+        //Changed to ProfileForm
         name: auth.user.name,
+        username: auth.user.username,
         email: auth.user.email,
+        avatar: auth.user.avatar,
+        new_avatar: null,
     });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
 
+        const formData = new FormData();
+        formData.append('name', data.name);
+        formData.append('username', data.username);
+        formData.append('email', data.email);
+        if (data.new_avatar) {
+            formData.append('new_avatar', data.new_avatar);
+        }
+
         patch(route('profile.update'), {
+            data: formData, //Changed data for form
+            forceFormData: true, // Explicitly set the encoding
             preserveScroll: true,
+            onSuccess: () => {
+                // No need to update avatarPreview here, it's already updated in handleAvatarChange.
+                //  The server will send back the updated user data.
+            },
         });
+    };
+
+    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setData('new_avatar', file);
+            setAvatarPreview(URL.createObjectURL(file));
+        } else {
+            setData('new_avatar', null);
+            setAvatarPreview(auth.user.avatar || null); // Reset to original avatar or null
+        }
     };
 
     return (
@@ -46,9 +79,30 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
 
             <SettingsLayout>
                 <div className="space-y-6">
-                    <HeadingSmall title="Profile information" description="Update your name and email address" />
+                    <HeadingSmall title="Profile information" description="Update your name, username, email address, and profile picture." />
 
                     <form onSubmit={submit} className="space-y-6">
+                        <div className="grid gap-2">
+                            <Label htmlFor="avatar">Profile Picture</Label>
+                            <div className="flex items-center gap-4">
+                                {avatarPreview ? (
+                                    <img src={avatarPreview} alt="Avatar Preview" className="h-16 w-16 rounded-full object-cover" />
+                                ) : (
+                                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-gray-500">
+                                        {data.name.charAt(0)}
+                                    </div>
+                                )}
+                                <Input id="avatar" type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => document.getElementById('avatar')?.click()} // Trigger file input
+                                >
+                                    Change Picture
+                                </Button>
+                            </div>
+                            <InputError className="mt-2" message={errors.new_avatar} />
+                        </div>
                         <div className="grid gap-2">
                             <Label htmlFor="name">Name</Label>
 
@@ -66,6 +120,20 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                         </div>
 
                         <div className="grid gap-2">
+                            <Label htmlFor="username">Username</Label>
+                            <Input
+                                id="username"
+                                className="mt-1 block w-full"
+                                value={data.username}
+                                onChange={(e) => setData('username', e.target.value)}
+                                required
+                                autoComplete="username"
+                                placeholder="Username"
+                            />
+                            <InputError className="mt-2" message={errors.username} />
+                        </div>
+
+                        <div className="grid gap-2">
                             <Label htmlFor="email">Email address</Label>
 
                             <Input
@@ -75,7 +143,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                 value={data.email}
                                 onChange={(e) => setData('email', e.target.value)}
                                 required
-                                autoComplete="username"
+                                autoComplete="email"
                                 placeholder="Email address"
                             />
 
