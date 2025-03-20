@@ -1,13 +1,14 @@
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { DocumentIcon, PhotoIcon, PlusIcon } from '@heroicons/react/24/outline';
-import { Head, useForm } from '@inertiajs/react';
+import { ChatBubbleLeftIcon, DocumentIcon, HeartIcon, PhotoIcon, PlusIcon } from '@heroicons/react/24/outline'; // Import like/comment icons
+import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid'; // Import solid heart icon
+import { Head, useForm, usePage } from '@inertiajs/react'; // Add usePage
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -17,7 +18,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-// Define Post type for TypeScript
 interface Post {
     id: number;
     content: string;
@@ -33,17 +33,77 @@ interface Post {
         name: string;
         avatar?: string;
     };
+    likes: Array<{
+        id: number;
+        user_id: number;
+        post_id: number;
+    }>;
+    comments: Array<{
+        id: number;
+        user_id: number;
+        post_id: number;
+        content: string;
+        user: {
+            name: string;
+        };
+    }>;
 }
 
 export default function Dashboard({ posts = [] }: { posts: Post[] }) {
     const [isOpen, setIsOpen] = useState(false);
-    const [localErrors, setLocalErrors] = useState<{ [key: string]: string }>({});
+    const [commentOpen, setCommentOpen] = useState(false);
+    const [selectedPost, setSelectedPost] = useState<Post | null>(null); // State to hold the post for the comment modal
+    const [commentErrors, setCommentErrors] = useState<{ [key: string]: string }>({}); // State for individual comment error.
 
-    const { data, setData, post, processing, errors, reset, progress } = useForm({
+    const {
+        data,
+        setData,
+        post,
+        processing,
+        errors: formErrors,
+        reset,
+        progress,
+    } = useForm({
         content: '',
         attachments: [] as File[],
     });
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+    const { props } = usePage();
+    const authUserId = (props.auth as any)?.user?.id; // Get authenticated user ID (handle type casting)
+
+    const handleLike = (postId: number) => {
+        post(route('posts.like', { post: postId }));
+    };
+
+    const {
+        data: commentData,
+        setData: setCommentData,
+        post: postComment,
+        processing: commentProcessing,
+        errors: commentFormErrors,
+        reset: resetComment,
+    } = useForm({
+        content: '',
+    });
+
+    const handleCommentSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (selectedPost) {
+            postComment(route('posts.comment', { post: selectedPost.id }), {
+                onSuccess: () => {
+                    resetComment();
+                    setCommentOpen(false);
+                    setSelectedPost(null); // Clear the selected post
+                },
+                onError: (errors) => {
+                    setCommentErrors(errors);
+                },
+            });
+        }
+    };
+
+    // ... (handleSubmit, handleAttachmentChange, removeAttachment methods remain the same)
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -76,17 +136,13 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
             if (oversizedFiles.length > 0) {
                 // Set error message for too large files
                 const errorMessage = `The following files exceed the 5MB limit: ${oversizedFiles.join(', ')}`;
-                setLocalErrors((prev) => ({
+                setErrors((prev) => ({
                     ...prev,
                     attachments: errorMessage,
                 }));
-            } else {
-                // Clear the error if all files are valid
-                setLocalErrors((prev) => {
-                    const newErrors = { ...prev };
-                    delete newErrors.attachments;
-                    return newErrors;
-                });
+
+                // Optional: Create a toast/notification for better visibility
+                alert(`File size error: ${errorMessage}`);
             }
 
             // Add only valid files to the form data
@@ -104,7 +160,6 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                {/* Create Post Button */}
                 <div className="mb-4 flex justify-end">
                     <Dialog open={isOpen} onOpenChange={setIsOpen}>
                         <DialogTrigger asChild>
@@ -128,7 +183,7 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                                         placeholder="What's on your mind?"
                                         className="min-h-[150px]"
                                     />
-                                    {errors.content && <p className="text-sm text-red-500">{errors.content}</p>}
+                                    {formErrors.content && <p className="text-sm text-red-500">{formErrors.content}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -153,9 +208,6 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                                             className="hidden"
                                         />
                                     </div>
-
-                                    {/* Display local error message for attachment size */}
-                                    {localErrors.attachments && <p className="mt-1 text-sm text-red-500">{localErrors.attachments}</p>}
 
                                     {/* Preview attachments */}
                                     {data.attachments.length > 0 && (
@@ -183,7 +235,7 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                                         </div>
                                     )}
 
-                                    {errors.attachments && <p className="text-sm text-red-500">{errors.attachments}</p>}
+                                    {formErrors.attachments && <p className="text-sm text-red-500">{formErrors.attachments}</p>}
                                 </div>
 
                                 {progress && (
@@ -213,11 +265,14 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                 </div>
 
                 {/* Post List */}
-                <div className="flex-1 space-y-4">
+                <div className="space-y-4">
                     {posts.length > 0 ? (
                         posts.map((post) => (
                             <div key={post.id} className="rounded-xl border p-4 shadow-sm">
+                                {/* User Info (remains the same) */}
+
                                 <div className="mb-3 flex items-center gap-3">
+                                    {/* Don't try to access avatar since it doesn't exist */}
                                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200">
                                         {post.user.name.charAt(0)}
                                     </div>
@@ -226,9 +281,7 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                                         <p className="text-sm text-gray-500">{new Date(post.created_at).toLocaleString()}</p>
                                     </div>
                                 </div>
-
                                 <div className="mb-3 whitespace-pre-wrap">{post.content}</div>
-
                                 {post.attachments.length > 0 && (
                                     <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3">
                                         {post.attachments.map((attachment) => (
@@ -249,6 +302,45 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                                         ))}
                                     </div>
                                 )}
+                                {/* Like and Comment Buttons */}
+                                <div className="mt-2 flex items-center gap-4">
+                                    <button onClick={() => handleLike(post.id)} className="flex items-center gap-1 text-gray-500 hover:text-blue-500">
+                                        {post.likes.some((like) => like.user_id === authUserId) ? (
+                                            <HeartIconSolid className="h-5 w-5 text-red-500" />
+                                        ) : (
+                                            <HeartIcon className="h-5 w-5" />
+                                        )}
+                                        <span>{post.likes.length}</span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => {
+                                            setSelectedPost(post);
+                                            setCommentOpen(true);
+                                        }}
+                                        className="flex items-center gap-1 text-gray-500 hover:text-blue-500"
+                                    >
+                                        <ChatBubbleLeftIcon className="h-5 w-5" />
+                                        <span>{post.comments.length}</span>
+                                    </button>
+                                </div>
+
+                                {/* Comment Section */}
+                                <div className="mt-4 space-y-2">
+                                    {post.comments.map((comment) => (
+                                        <div key={comment.id} className="border-t pt-2">
+                                            <div className="flex items-start gap-2">
+                                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200">
+                                                    {comment.user.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium">{comment.user.name}</p>
+                                                    <p className="text-sm text-gray-600">{comment.content}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         ))
                     ) : (
@@ -263,18 +355,30 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                     )}
                 </div>
 
-                {/* Stats cards */}
-                <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                    <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                    <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                    <div className="border-sidebar-border/70 dark:border-sidebar-border relative aspect-video overflow-hidden rounded-xl border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                </div>
+                {/* Comment Modal */}
+                <Dialog open={commentOpen} onOpenChange={setCommentOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Add a Comment</DialogTitle>
+                            {selectedPost && <DialogDescription>Replying to {selectedPost.user.name}'s post</DialogDescription>}
+                        </DialogHeader>
+                        <form onSubmit={handleCommentSubmit} className="space-y-4">
+                            <Textarea
+                                value={commentData.content}
+                                onChange={(e) => setCommentData('content', e.target.value)}
+                                placeholder="Write your comment..."
+                                className="min-h-[100px]"
+                            />
+                            {commentErrors.content && <p className="text-sm text-red-500">{commentErrors.content}</p>}
+
+                            <div className="flex justify-end">
+                                <Button type="submit" disabled={commentProcessing}>
+                                    {commentProcessing ? 'Posting...' : 'Comment'}
+                                </Button>
+                            </div>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );

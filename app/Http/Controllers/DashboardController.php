@@ -9,13 +9,13 @@ use Inertia\Inertia;
 class DashboardController extends Controller
 {
     public function index()
-    {
-        $posts = Post::with(['user:id,name', 'attachments'])
-            ->latest()
-            ->get();
+        {
+            $posts = Post::with(['user:id,name', 'attachments', 'likes', 'comments' => function($query) {
+                $query->with('user:id,name');  // Load comment user data
+            }])->latest()->get();
 
-        return Inertia::render('dashboard', [
-            'posts' => $posts
-        ]);
-    }
+            return Inertia::render('dashboard', [
+                'posts' => $posts
+            ]);
+        }
 }
