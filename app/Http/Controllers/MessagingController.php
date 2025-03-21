@@ -7,6 +7,8 @@ use App\Models\Message;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use App\Models\Group;
+use App\Models\GroupMessage;
 
 class MessagingController extends Controller
 {
@@ -15,7 +17,7 @@ class MessagingController extends Controller
      */
     public function index()
     {
-        // Get users with existing conversations
+        // Get individual conversations
         $users = User::where('id', '!=', auth()->id())
             ->select('id', 'name', 'username', 'avatar')
             ->withCount(['receivedMessages as unread_count' => function ($query) {
@@ -42,21 +44,30 @@ class MessagingController extends Controller
                 ];
             });
 
-        // Get all users for the new message dialog
-        $allUsers = User::select('id', 'name', 'username', 'avatar')
-            ->get()
-            ->map(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'username' => $user->username,
-                    'avatar' => $user->avatar,
-                ];
-            });
+        // Get group conversations
+        $groups = Group::whereHas('users', function ($query) {
+            $query->where('user_id', auth()->id());
+        })
+        ->with(['latestMessage.user:id,name', 'users:id,name,avatar'])
+        ->get()
+        ->map(function ($group) {
+            $lastMessage = $group->latestMessage;
+            return [
+                'id' => 'group_' . $group->id, // Add prefix to distinguish from user IDs
+                'name' => $group->name,
+                'avatar' => $group->avatar,
+                'isGroup' => true,
+                'members' => $group->users,
+                'lastMessage' => $lastMessage ? $lastMessage->content : null,
+                'lastMessageTime' => $lastMessage ? $lastMessage->created_at->diffForHumans() : null,
+                'unreadCount' => 0, // Implement unread count for groups if needed
+            ];
+        });
 
         return Inertia::render('messaging', [
             'users' => $users,
-            'allUsers' => $allUsers
+            'groups' => $groups,
+            'allUsers' => User::select('id', 'name', 'username', 'avatar')->get(),
         ]);
     }
 
@@ -127,6 +138,82 @@ class MessagingController extends Controller
         // This is a placeholder - implement once you have the messages table
         return response()->json([
             'success' => true
+        ]);
+    }
+
+    public function createGroup(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'users' => 'required|array|min:2',
+            'users.*' => 'exists:users,id',
+            'avatar' => 'nullable|image|max:5120',
+        ]);
+
+        $group = Group::create([
+            'name' => $validated['name'],
+            'created_by' => auth()->id(),
+        ]);
+
+        if ($request->hasFile('avatar')) {
+            $path = $request->file('avatar')->store('groups', 'public');
+            $group->update(['avatar' => '/storage/' . $path]);
+        }
+
+        // Add creator and selected users to the group
+        $group->users()->attach(array_unique([auth()->id(), ...$validated['users']]));
+
+        return response()->json([
+            'group' => $group->load('users'),
+        ]);
+    }
+
+    public function sendGroupMessage(Request $request, Group $group)
+    {
+        $validated = $request->validate([
+            'content' => 'required|string|max:1000',
+        ]);
+
+        // Verify user is in group
+        if (!$group->users->contains(auth()->id())) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $message = GroupMessage::create([
+            'group_id' => $group->id,
+            'user_id' => auth()->id(),
+            'content' => $validated['content'],
+        ]);
+
+        // Load the message with user information
+        $message->load('user:id,name,username,avatar');
+
+        return response()->json([
+            'message' => array_merge($message->toArray(), [
+                'created_at' => $message->created_at->toISOString(),
+            ])
+        ]);
+    }
+
+    public function getGroupMessages(Group $group)
+    {
+        // Verify user is in group
+        if (!$group->users->contains(auth()->id())) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $messages = $group->messages()
+            ->with('user:id,name,username,avatar')
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function ($message) {
+                return array_merge($message->toArray(), [
+                    'created_at' => $message->created_at->toISOString(),
+                ]);
+            });
+
+        return response()->json([
+            'messages' => $messages
         ]);
     }
 } 

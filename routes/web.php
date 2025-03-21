@@ -25,6 +25,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace.index');
     Route::post('/marketplace', [MarketplaceController::class, 'store'])->name('marketplace.store');
+    Route::post('/groups', [MessagingController::class, 'createGroup'])->name('groups.create');
+    Route::post('/groups/{group}/messages', [MessagingController::class, 'sendGroupMessage'])->name('groups.message');
+    Route::get('/groups/{group}/messages', [MessagingController::class, 'getGroupMessages'])->name('groups.messages');
 });
 
 require __DIR__.'/settings.php';

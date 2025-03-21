@@ -76,4 +76,14 @@ class User extends Authenticatable
             ->latest()
             ->orWhere('sender_id', $this->id);
     }
+
+    public function groups()
+    {
+        return $this->belongsToMany(Group::class)->withTimestamps();
+    }
+
+    public function groupMessages()
+    {
+        return $this->hasMany(GroupMessage::class);
+    }
 }
