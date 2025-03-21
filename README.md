@@ -1,7 +1,6 @@
 ## Project Tree
 
 ```
-.
 ├── app                   <-- Laravel application logic
 │   ├── Console           <-- Custom Artisan commands
 │   ├── Http              <-- Controllers, Middleware, Requests

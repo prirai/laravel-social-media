@@ -35,8 +35,8 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'username' => 'required|string|alpha_dash|max:255|unique:users,username,' . auth()->id(),
-            'email' => 'required|string|lowercase|email|max:255|unique:users,email,' . auth()->id(),
+            'username' => 'required|string|alpha_dash|max:255|unique:users,username',
+            'email' => 'required|string|lowercase|email|max:255|unique:users,email',
             // 'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
