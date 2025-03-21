@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
+import UserAvatar from '@/components/user-avatar';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -52,18 +53,7 @@ export default function Messaging() {
                                     key={user.id}
                                     className="flex cursor-pointer items-center gap-3 rounded-lg p-3 hover:bg-gray-100 dark:hover:bg-gray-800"
                                 >
-                                    {/* User Avatar */}
-                                    {user.avatar ? (
-                                        <img
-                                            src={user.avatar}
-                                            alt={`Avatar of ${user.name}`}
-                                            className="h-12 w-12 rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 text-lg font-semibold">
-                                            {user.name.charAt(0)}
-                                        </div>
-                                    )}
+                                    <UserAvatar user={user} className="size-12" />
                                     
                                     {/* User Info */}
                                     <div className="flex-1 overflow-hidden">

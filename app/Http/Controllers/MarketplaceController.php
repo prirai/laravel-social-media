@@ -30,7 +30,10 @@ class MarketplaceController extends Controller
             });
 
         return Inertia::render('marketplace', [
-            'listings' => $listings
+            'listings' => $listings,
+            'flash' => [
+                'success' => session('success')
+            ],
         ]);
     }
 
@@ -41,6 +44,7 @@ class MarketplaceController extends Controller
             'price' => 'required|numeric|min:0',
             'category' => 'required|string',
             'description' => 'required|string',
+            'images' => 'array|max:5', // Maximum 5 images
             'images.*' => 'image|max:5120', // 5MB max per image
         ]);
 
@@ -61,6 +65,7 @@ class MarketplaceController extends Controller
             'images' => $images,
         ]);
 
-        return redirect()->route('marketplace.index');
+        return redirect()->route('marketplace.index')
+            ->with('success', 'Listing created successfully!');
     }
 } 

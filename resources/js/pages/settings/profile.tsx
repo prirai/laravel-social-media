@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
+import UserAvatar from '@/components/user-avatar';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -29,10 +30,9 @@ interface ProfileForm {
 
 export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: boolean; status?: string }) {
     const { auth } = usePage<SharedData>().props;
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(auth.user.avatar || null); // Add avatar preview state
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null); // Only for preview of new uploads
 
     const { data, setData, post, errors, processing, recentlySuccessful } = useForm<ProfileForm>({
-        //Changed to ProfileForm
         name: auth.user.name,
         username: auth.user.username,
         email: auth.user.email,
@@ -84,15 +84,19 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                 {avatarPreview ? (
                                     <img src={avatarPreview} alt="Avatar Preview" className="h-16 w-16 rounded-full object-cover" />
                                 ) : (
-                                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-gray-500">
-                                        {data.name.charAt(0)}
-                                    </div>
+                                    <UserAvatar 
+                                        user={{
+                                            name: data.name,
+                                            avatar: auth.user.avatar
+                                        }} 
+                                        className="size-16" 
+                                    />
                                 )}
                                 <Input id="avatar" type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() => document.getElementById('avatar')?.click()} // Trigger file input
+                                    onClick={() => document.getElementById('avatar')?.click()}
                                 >
                                     Change Picture
                                 </Button>

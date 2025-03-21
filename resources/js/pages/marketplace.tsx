@@ -8,42 +8,13 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { CurrencyDollarIcon, PhotoIcon, PlusIcon, TagIcon } from '@heroicons/react/24/outline';
 import { Head, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import UserAvatar from '@/components/user-avatar';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Marketplace',
         href: '/marketplace',
-    },
-];
-
-// Mock data for demonstration
-const listings = [
-    {
-        id: 1,
-        title: 'Vintage Camera',
-        price: 299.99,
-        description: 'Perfect condition vintage camera from the 1960s',
-        images: ['/storage/marketplace/camera.jpg'],
-        category: 'Electronics',
-        seller: {
-            name: 'John Doe',
-            avatar: null,
-        },
-        created_at: '2024-03-15T10:00:00',
-    },
-    {
-        id: 2,
-        title: 'Mountain Bike',
-        price: 450,
-        description: 'Barely used mountain bike, great for trails',
-        images: ['/storage/marketplace/bike.jpg'],
-        category: 'Sports',
-        seller: {
-            name: 'Jane Smith',
-            avatar: '/storage/avatars/jane.jpg',
-        },
-        created_at: '2024-03-14T15:30:00',
     },
 ];
 
@@ -58,9 +29,17 @@ const categories = [
     'Other',
 ];
 
-export default function Marketplace() {
+export default function Marketplace({ listings = [], flash = {} }: { listings: any[], flash: any }) {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('All Categories');
+    
+    // Add this function to filter listings
+    const filteredListings = useMemo(() => {
+        if (selectedCategory === 'All Categories') {
+            return listings;
+        }
+        return listings.filter(listing => listing.category === selectedCategory);
+    }, [listings, selectedCategory]);
 
     const { data, setData, post, processing, errors, reset, progress } = useForm({
         title: '',
@@ -72,7 +51,22 @@ export default function Marketplace() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Create FormData object to properly handle file uploads
+        const formData = new FormData();
+        formData.append('title', data.title);
+        formData.append('price', data.price);
+        formData.append('category', data.category);
+        formData.append('description', data.description);
+        
+        // Append each image file
+        data.images.forEach((image: File) => {
+            formData.append('images[]', image);
+        });
+
         post(route('marketplace.store'), {
+            forceFormData: true,
+            data: formData,
             onSuccess: () => {
                 reset();
                 setIsOpen(false);
@@ -84,9 +78,16 @@ export default function Marketplace() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Marketplace" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+                {/* Add this flash message section */}
+                {flash.success && (
+                    <div className="rounded-md bg-green-50 p-4 text-green-700 dark:bg-green-900/50 dark:text-green-300">
+                        {flash.success}
+                    </div>
+                )}
+                
                 {/* Header with Create Listing button and Category filter */}
-                <div className="flex items-center justify-between">
-                    <div className="flex gap-2">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap gap-2">
                         {categories.map((category) => (
                             <Button
                                 key={category}
@@ -213,9 +214,9 @@ export default function Marketplace() {
                 </div>
 
                 {/* Listings Grid */}
-                {listings.length > 0 ? (
+                {filteredListings.length > 0 ? (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {listings.map((listing) => (
+                        {filteredListings.map((listing) => (
                             <div key={listing.id} className="overflow-hidden rounded-xl border shadow-sm">
                                 <div className="aspect-video overflow-hidden">
                                     {listing.images[0] ? (
@@ -242,17 +243,7 @@ export default function Marketplace() {
                                             <span className="text-sm text-gray-500">{listing.category}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {listing.seller.avatar ? (
-                                                <img
-                                                    src={listing.seller.avatar}
-                                                    alt={`${listing.seller.name}'s avatar`}
-                                                    className="h-6 w-6 rounded-full"
-                                                />
-                                            ) : (
-                                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-sm">
-                                                    {listing.seller.name.charAt(0)}
-                                                </div>
-                                            )}
+                                            <UserAvatar user={listing.seller} className="size-6" />
                                             <span className="text-sm text-gray-500">{listing.seller.name}</span>
                                         </div>
                                     </div>
@@ -262,7 +253,11 @@ export default function Marketplace() {
                     </div>
                 ) : (
                     <div className="flex min-h-[50vh] flex-col items-center justify-center rounded-xl border">
-                        <p className="mb-4 text-lg font-medium">No listings yet</p>
+                        <p className="mb-4 text-lg font-medium">
+                            {selectedCategory === 'All Categories' 
+                                ? 'No listings yet' 
+                                : `No listings in ${selectedCategory}`}
+                        </p>
                         <Button onClick={() => setIsOpen(true)} className="flex items-center gap-2">
                             <PlusIcon className="h-5 w-5" />
                             Create First Listing
