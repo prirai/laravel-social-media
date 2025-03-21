@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Message;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
 class MessagingController extends Controller
 {
@@ -13,9 +15,35 @@ class MessagingController extends Controller
      */
     public function index()
     {
-        // Get all users except the authenticated user
+        // Get users with existing conversations
         $users = User::where('id', '!=', auth()->id())
             ->select('id', 'name', 'username', 'avatar')
+            ->withCount(['receivedMessages as unread_count' => function ($query) {
+                $query->whereNull('read_at')
+                    ->where('sender_id', '!=', auth()->id());
+            }])
+            ->with(['latestMessage' => function ($query) {
+                $query->where(function ($q) {
+                    $q->where('sender_id', auth()->id())
+                        ->orWhere('receiver_id', auth()->id());
+                });
+            }])
+            ->get()
+            ->map(function ($user) {
+                $lastMessage = $user->latestMessage;
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'username' => $user->username,
+                    'avatar' => $user->avatar,
+                    'lastMessage' => $lastMessage ? $lastMessage->content : null,
+                    'lastMessageTime' => $lastMessage ? $lastMessage->created_at->diffForHumans() : null,
+                    'unreadCount' => $user->unread_count,
+                ];
+            });
+
+        // Get all users for the new message dialog
+        $allUsers = User::select('id', 'name', 'username', 'avatar')
             ->get()
             ->map(function ($user) {
                 return [
@@ -23,15 +51,12 @@ class MessagingController extends Controller
                     'name' => $user->name,
                     'username' => $user->username,
                     'avatar' => $user->avatar,
-                    // You can add these fields once you have the messages table
-                    'lastMessage' => null,
-                    'lastMessageTime' => null,
-                    'unreadCount' => 0,
                 ];
             });
 
         return Inertia::render('messaging', [
-            'users' => $users
+            'users' => $users,
+            'allUsers' => $allUsers
         ]);
     }
 
@@ -40,9 +65,31 @@ class MessagingController extends Controller
      */
     public function getMessages(User $user)
     {
-        // This is a placeholder - implement once you have the messages table
+        // Mark messages as read
+        Message::where('sender_id', $user->id)
+            ->where('receiver_id', auth()->id())
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        // Get messages between users
+        $messages = Message::where(function ($query) use ($user) {
+            $query->where('sender_id', auth()->id())
+                ->where('receiver_id', $user->id);
+        })->orWhere(function ($query) use ($user) {
+            $query->where('sender_id', $user->id)
+                ->where('receiver_id', auth()->id());
+        })
+        ->with('sender:id,name,username,avatar')
+        ->orderBy('created_at', 'asc')
+        ->get()
+        ->map(function ($message) {
+            return array_merge($message->toArray(), [
+                'created_at' => $message->created_at->toISOString(),
+            ]);
+        });
+
         return response()->json([
-            'messages' => []
+            'messages' => $messages
         ]);
     }
 
@@ -52,20 +99,23 @@ class MessagingController extends Controller
     public function sendMessage(Request $request, User $user)
     {
         $validated = $request->validate([
-            'message' => 'required|string|max:1000',
+            'content' => 'required|string|max:1000',
         ]);
 
-        // This is a placeholder - implement once you have the messages table
-        // Create the message
-        // $message = Message::create([
-        //     'sender_id' => auth()->id(),
-        //     'receiver_id' => $user->id,
-        //     'content' => $validated['message'],
-        // ]);
+        $message = Message::create([
+            'sender_id' => auth()->id(),
+            'receiver_id' => $user->id,
+            'content' => $validated['content'],
+        ]);
 
+        // Load the message with sender information
+        $message->load('sender:id,name,username,avatar');
+
+        // Format the response to include all necessary information
         return response()->json([
-            'success' => true,
-            // 'message' => $message
+            'message' => array_merge($message->toArray(), [
+                'created_at' => $message->created_at->toISOString(),
+            ])
         ]);
     }
 

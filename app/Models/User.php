@@ -64,4 +64,16 @@ class User extends Authenticatable
     {
         return $this->hasMany(Comment::class);
     }
+
+    public function receivedMessages()
+    {
+        return $this->hasMany(Message::class, 'receiver_id');
+    }
+
+    public function latestMessage()
+    {
+        return $this->hasOne(Message::class, 'receiver_id')
+            ->latest()
+            ->orWhere('sender_id', $this->id);
+    }
 }
