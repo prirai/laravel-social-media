@@ -31,7 +31,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
     const { auth } = usePage<SharedData>().props;
     const [avatarPreview, setAvatarPreview] = useState<string | null>(auth.user.avatar || null); // Add avatar preview state
 
-    const { data, setData, patch, errors, processing, recentlySuccessful } = useForm<ProfileForm>({
+    const { data, setData, post, errors, processing, recentlySuccessful } = useForm<ProfileForm>({
         //Changed to ProfileForm
         name: auth.user.name,
         username: auth.user.username,
@@ -44,21 +44,17 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
         e.preventDefault();
 
         const formData = new FormData();
-        formData.append('name', data.name);
-        formData.append('username', data.username);
-        formData.append('email', data.email);
+        formData.append('name', data.name); // Make sure to append name
+        formData.append('username', data.username); // Make sure to append username
+        formData.append('email', data.email); // Make sure to append email
         if (data.new_avatar) {
             formData.append('new_avatar', data.new_avatar);
         }
 
-        patch(route('profile.update'), {
-            data: formData, //Changed data for form
-            forceFormData: true, // Explicitly set the encoding
+        post(route('profile.update'), {
+            data: formData,
             preserveScroll: true,
-            onSuccess: () => {
-                // No need to update avatarPreview here, it's already updated in handleAvatarChange.
-                //  The server will send back the updated user data.
-            },
+            // onSuccess: () => {},
         });
     };
 
