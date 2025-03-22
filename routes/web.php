@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\MessagingController;
 use App\Http\Controllers\MarketplaceController;
+use App\Http\Controllers\ProfileController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -28,6 +29,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/groups', [MessagingController::class, 'createGroup'])->name('groups.create');
     Route::post('/groups/{group}/messages', [MessagingController::class, 'sendGroupMessage'])->name('groups.message');
     Route::get('/groups/{group}/messages', [MessagingController::class, 'getGroupMessages'])->name('groups.messages');
+    Route::get('/profile/{username}', [ProfileController::class, 'show'])->name('profile.show');
+    Route::post('/users/{username}/report', [ProfileController::class, 'report'])->name('users.report');
 });
 
 require __DIR__.'/settings.php';

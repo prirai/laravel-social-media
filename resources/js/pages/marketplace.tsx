@@ -218,15 +218,23 @@ export default function Marketplace({ listings = [], flash = {} }: { listings: a
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {filteredListings.map((listing) => (
                             <div key={listing.id} className="overflow-hidden rounded-xl border shadow-sm">
-                                <div className="aspect-video overflow-hidden">
+                                <div className="relative h-[200px] w-full flex justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
                                     {listing.images[0] ? (
-                                        <img
-                                            src={listing.images[0]}
-                                            alt={listing.title}
-                                            className="h-full w-full object-cover"
-                                        />
+                                        <>
+                                            <div 
+                                                className="absolute inset-0 bg-cover bg-center blur-xl opacity-50 scale-110" 
+                                                style={{ 
+                                                    backgroundImage: `url(${listing.images[0]})`,
+                                                }}
+                                            />
+                                            <img
+                                                src={listing.images[0]}
+                                                alt={listing.title}
+                                                className="h-full w-auto object-contain relative z-10"
+                                            />
+                                        </>
                                     ) : (
-                                        <div className="flex h-full w-full items-center justify-center bg-gray-100">
+                                        <div className="flex h-full w-full items-center justify-center">
                                             <PhotoIcon className="h-12 w-12 text-gray-400" />
                                         </div>
                                     )}
