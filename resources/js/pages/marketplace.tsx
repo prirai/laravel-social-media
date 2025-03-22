@@ -56,6 +56,7 @@ const categories = [
 export default function Marketplace({ listings = [], flash = {} }: { listings: any[], flash: any }) {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('All Categories');
+    const [loadedImages, setLoadedImages] = useState<{ [key: string]: boolean }>({});
     
     // Add this function to filter listings
     const filteredListings = useMemo(() => {
@@ -296,8 +297,21 @@ export default function Marketplace({ listings = [], flash = {} }: { listings: a
                                             <img
                                                 src={listing.images[0]}
                                                 alt={listing.title}
-                                                className="h-full w-auto object-contain relative z-10"
+                                                className={`h-full w-auto object-contain relative z-10 transition-opacity duration-300 ${
+                                                    loadedImages[listing.images[0]] ? 'opacity-100' : 'opacity-0'
+                                                }`}
+                                                onLoad={() => {
+                                                    setLoadedImages(prev => ({
+                                                        ...prev,
+                                                        [listing.images[0]]: true
+                                                    }));
+                                                }}
                                             />
+                                            {!loadedImages[listing.images[0]] && (
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-primary"></div>
+                                                </div>
+                                            )}
                                         </>
                                     ) : (
                                         <div className="flex h-full w-full items-center justify-center">

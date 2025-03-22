@@ -296,8 +296,8 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                     <button
                                         key={chat.id}
                                         onClick={() => setSelectedChat(chat)}
-                                        className={`flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-800 
-                                            ${selectedChat?.id === chat.id ? 'bg-gray-100 dark:bg-gray-800' : ''}`}
+                                        className={`flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-200/70 dark:hover:bg-gray-800 
+                                            ${selectedChat?.id === chat.id ? 'bg-gray-200/70 dark:bg-gray-800' : ''}`}
                                     >
                                         {chat.isGroup ? (
                                             <div className="relative">

@@ -41,7 +41,7 @@ const rightNavItems: NavItem[] = [
     },
 ];
 
-const activeItemStyles = 'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
+const activeItemStyles = 'bg-blue-50/70 text-blue-500 dark:bg-blue-900/20 dark:text-blue-300';
 
 interface AppHeaderProps {
     breadcrumbs?: BreadcrumbItem[];
@@ -162,14 +162,14 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                             className={cn(
                                                 navigationMenuTriggerStyle(),
                                                 page.url === item.url && activeItemStyles,
-                                                'h-9 cursor-pointer px-3',
+                                                'h-9 cursor-pointer px-3 hover:bg-blue-50/70 hover:text-blue-500 dark:hover:bg-blue-900/20 dark:hover:text-blue-300',
                                             )}
                                         >
                                             {item.icon && <Icon iconNode={item.icon} className="mr-2 h-4 w-4" />}
                                             {item.title}
                                         </Link>
                                         {page.url === item.url && (
-                                            <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"></div>
+                                            <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-blue-500 dark:bg-blue-300"></div>
                                         )}
                                     </NavigationMenuItem>
                                 ))}
