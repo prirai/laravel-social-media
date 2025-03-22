@@ -5,7 +5,7 @@ import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import AppLayout from '@/layouts/app-layout';
 import UserAvatar from '@/components/user-avatar';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { MagnifyingGlassIcon, PaperAirplaneIcon, PlusIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, PaperAirplaneIcon, PlusIcon, UsersIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
@@ -80,6 +80,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
     const [isNewGroupOpen, setIsNewGroupOpen] = useState(false);
     const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
     const [groupName, setGroupName] = useState('');
+    const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
 
     const { data, setData, reset } = useForm({
         content: '',
@@ -104,6 +105,15 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                 .finally(() => setLoading(false));
         }
     }, [selectedChat]);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobileView(window.innerWidth < 768);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const sendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -264,8 +274,12 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Messages" />
-            <div className="flex h-[calc(100vh-12rem)] flex-1 gap-4 overflow-hidden rounded-xl border">
-                <div className="flex w-80 flex-col border-r">
+            <div className="flex h-[calc(100vh-12rem)] flex-1 overflow-hidden rounded-xl border">
+                <div 
+                    className={`${
+                        isMobileView && selectedChat ? 'hidden' : 'flex'
+                    } w-full flex-col border-r md:w-80 md:flex`}
+                >
                     <div className="border-b p-4">
                         <h2 className="text-lg font-semibold">Messages</h2>
                     </div>
@@ -386,7 +400,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                 {allUsers.map((user) => (
                                                     <label
                                                         key={user.id}
-                                                        className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-100"
+                                                        className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-950"
                                                     >
                                                         <Checkbox
                                                             checked={selectedUsers.includes(user.id)}
@@ -399,7 +413,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                             }}
                                                         />
                                                         <UserAvatar user={user} className="size-8" />
-                                                        <span>{user.name}</span>
+                                                        <span className="text-foreground">{user.name}</span>
                                                     </label>
                                                 ))}
                                             </div>
@@ -420,10 +434,55 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                     </div>
                 </div>
 
-                <div className="flex flex-1 flex-col">
+                <div 
+                    className={`${
+                        isMobileView && !selectedChat ? 'hidden' : 'flex'
+                    } flex-1 flex-col md:flex`}
+                >
                     {selectedChat ? (
                         <>
-                            <ChatHeader />
+                            <div className="border-b p-4">
+                                <div className="flex items-center gap-3">
+                                    {isMobileView && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setSelectedChat(null)}
+                                            className="mr-2"
+                                        >
+                                            <ArrowLeftIcon className="h-5 w-5" />
+                                        </Button>
+                                    )}
+                                    {selectedChat.isGroup ? (
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative">
+                                                <UserAvatar
+                                                    user={{ name: selectedChat.name, avatar: selectedChat.avatar }}
+                                                    className="size-10"
+                                                />
+                                                <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
+                                                    {selectedChat.members.length}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <p className="font-medium">{selectedChat.name}</p>
+                                                <p className="text-sm text-gray-500 line-clamp-1">
+                                                    {selectedChat.members.map(m => m.name).join(', ')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <UserAvatar user={selectedChat} className="size-10" />
+                                            <div>
+                                                <p className="font-medium">{selectedChat.name}</p>
+                                                <p className="text-sm text-gray-500">@{selectedChat.username}</p>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
                             <div className="flex-1 overflow-y-auto p-4">
                                 {loading ? (
                                     <div className="flex h-full items-center justify-center">
@@ -492,7 +551,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                             </form>
                         </>
                     ) : (
-                        <div className="flex flex-1 items-center justify-center">
+                        <div className="hidden flex-1 items-center justify-center md:flex">
                             <div className="text-center text-gray-500">
                                 <p className="text-lg">Select a conversation to start messaging</p>
                             </div>
