@@ -10,6 +10,7 @@ import { ChatBubbleLeftIcon, DocumentIcon, HeartIcon, PhotoIcon, PlusIcon } from
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid'; // Import solid heart icon
 import { Head, useForm, usePage } from '@inertiajs/react'; // Add usePage
 import { useState } from 'react';
+import UserAvatar from '@/components/user-avatar';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -162,12 +163,12 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                <div className="mb-4 flex justify-end">
+            <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-4 md:px-0">
+                <div className="flex justify-end">
                     <Dialog open={isOpen} onOpenChange={setIsOpen}>
                         <DialogTrigger asChild>
-                            <Button className="flex items-center gap-2">
-                                <PlusIcon className="h-5 w-5" />
+                            <Button className="w-full md:w-auto">
+                                <PlusIcon className="mr-2 h-5 w-5" />
                                 Create Post
                             </Button>
                         </DialogTrigger>
@@ -267,97 +268,109 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                     </Dialog>
                 </div>
 
-                {/* Post List */}
                 <div className="space-y-4">
                     {posts.length > 0 ? (
                         posts.map((post) => (
-                            <div key={post.id} className="rounded-xl border p-4 shadow-sm">
-                                {/* User Info (remains the same) */}
+                            <div key={post.id} className="rounded-xl border shadow-sm">
+                                <div className="border-b p-4">
+                                    <div className="flex items-center gap-3">
+                                        <UserAvatar user={post.user} className="size-10" />
+                                        <div className="flex-1">
+                                            <p className="font-medium">{post.user.name}</p>
+                                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                <span>@{post.user.username}</span>
+                                                <span>•</span>
+                                                <span>{new Date(post.created_at).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
-                                <div className="mb-3 flex items-center gap-3">
-                                    {post.user.avatar ? (
-                                        <img
-                                            src={post.user.avatar.startsWith('avatars/') ? `/storage/${post.user.avatar}` : post.user.avatar} // Use /storage path directly, assuming paths are relative to public/storage now.
-                                            alt={`Avatar of ${post.user.name}`}
-                                            className="h-10 w-10 rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200">
-                                            {post.user.name.charAt(0)}
+                                <div className="space-y-4 p-4">
+                                    <div className="whitespace-pre-wrap text-base">{post.content}</div>
+
+                                    {post.attachments.length > 0 && (
+                                        <div className="grid grid-cols-1 gap-4">
+                                            {post.attachments.map((attachment) => (
+                                                <div key={attachment.id} className="overflow-hidden rounded-lg">
+                                                    {attachment.file_type.includes('image') ? (
+                                                        <div className="flex justify-center">
+                                                            <img 
+                                                                src={attachment.file_path} 
+                                                                alt="Attachment" 
+                                                                className="w-full rounded-lg md:max-w-[600px] md:object-contain"
+                                                                style={{ 
+                                                                    maxHeight: '80vh',
+                                                                    width: '100%',
+                                                                    height: 'auto'
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <a
+                                                            href={attachment.file_path}
+                                                            target="_blank"
+                                                            className="mx-auto flex w-full max-w-[600px] items-center justify-center rounded-lg bg-gray-100 p-6 dark:bg-gray-800"
+                                                        >
+                                                            <DocumentIcon className="h-10 w-10" />
+                                                            <span className="ml-2">View PDF</span>
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
-                                    <div>
-                                        <p className="font-medium">{post.user.name}</p>
-                                        <p className="text-sm text-gray-500">@{post.user.username}</p>
-                                        <p className="text-sm text-gray-500">{new Date(post.created_at).toLocaleString()}</p>
+                                </div>
+
+                                <div className="border-t px-4 py-3">
+                                    <div className="flex items-center gap-6">
+                                        <button 
+                                            onClick={() => handleLike(post.id)} 
+                                            className="flex items-center gap-2 text-gray-500 hover:text-blue-500"
+                                        >
+                                            {post.likes.some((like) => like.user_id === authUserId) ? (
+                                                <HeartIconSolid className="h-6 w-6 text-red-500" />
+                                            ) : (
+                                                <HeartIcon className="h-6 w-6" />
+                                            )}
+                                            <span className="text-sm font-medium">{post.likes.length}</span>
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                setSelectedPost(post);
+                                                setCommentOpen(true);
+                                            }}
+                                            className="flex items-center gap-2 text-gray-500 hover:text-blue-500"
+                                        >
+                                            <ChatBubbleLeftIcon className="h-6 w-6" />
+                                            <span className="text-sm font-medium">{post.comments.length}</span>
+                                        </button>
                                     </div>
                                 </div>
-                                <div className="mb-3 whitespace-pre-wrap">{post.content}</div>
-                                {post.attachments.length > 0 && (
-                                    <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3">
-                                        {post.attachments.map((attachment) => (
-                                            <div key={attachment.id} className="relative overflow-hidden rounded-lg">
-                                                {attachment.file_type.includes('image') ? (
-                                                    <img src={attachment.file_path} alt="Attachment" className="h-auto w-full object-cover" />
-                                                ) : (
-                                                    <a
-                                                        href={attachment.file_path}
-                                                        target="_blank"
-                                                        className="flex items-center justify-center rounded-lg bg-gray-100 p-4 dark:bg-gray-800"
-                                                    >
-                                                        <DocumentIcon className="h-10 w-10" />
-                                                        <span className="ml-2">View PDF</span>
-                                                    </a>
-                                                )}
-                                            </div>
-                                        ))}
+
+                                {post.comments.length > 0 && (
+                                    <div className="border-t bg-gray-50 px-4 py-3 dark:bg-gray-900/50">
+                                        <div className="space-y-3">
+                                            {post.comments.map((comment) => (
+                                                <div key={comment.id} className="flex items-start gap-3">
+                                                    <UserAvatar user={comment.user} className="size-8" />
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium">{comment.user.name}</span>
+                                                            <span className="text-sm text-gray-500">@{comment.user.username}</span>
+                                                        </div>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
-                                {/* Like and Comment Buttons */}
-                                <div className="mt-2 flex items-center gap-4">
-                                    <button onClick={() => handleLike(post.id)} className="flex items-center gap-1 text-gray-500 hover:text-blue-500">
-                                        {post.likes.some((like) => like.user_id === authUserId) ? (
-                                            <HeartIconSolid className="h-5 w-5 text-red-500" />
-                                        ) : (
-                                            <HeartIcon className="h-5 w-5" />
-                                        )}
-                                        <span>{post.likes.length}</span>
-                                    </button>
-
-                                    <button
-                                        onClick={() => {
-                                            setSelectedPost(post);
-                                            setCommentOpen(true);
-                                        }}
-                                        className="flex items-center gap-1 text-gray-500 hover:text-blue-500"
-                                    >
-                                        <ChatBubbleLeftIcon className="h-5 w-5" />
-                                        <span>{post.comments.length}</span>
-                                    </button>
-                                </div>
-
-                                {/* Comment Section */}
-                                <div className="mt-4 space-y-2">
-                                    {post.comments.map((comment) => (
-                                        <div key={comment.id} className="border-t pt-2">
-                                            <div className="flex items-start gap-2">
-                                                {/*  Add avatar to comment user */}
-                                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200">
-                                                    {comment.user.name.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-medium">{comment.user.name}</p>
-                                                    <p className="text-sm text-gray-600">@{comment.user.username}</p>
-                                                    <p className="text-sm text-gray-600">{comment.content}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
                             </div>
                         ))
                     ) : (
-                        <div className="border-sidebar-border/70 dark:border-sidebar-border relative flex min-h-[50vh] flex-col items-center justify-center overflow-hidden rounded-xl border">
+                        <div className="flex min-h-[50vh] flex-col items-center justify-center rounded-xl border">
                             <p className="mb-4 text-lg font-medium">No posts yet</p>
                             <Button onClick={() => setIsOpen(true)} className="flex items-center gap-2">
                                 <PlusIcon className="h-5 w-5" />
@@ -369,7 +382,7 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                 </div>
 
                 <Dialog open={commentOpen} onOpenChange={setCommentOpen}>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[425px]">
                         <DialogHeader>
                             <DialogTitle>Add a Comment</DialogTitle>
                             {selectedPost && <DialogDescription>Replying to {selectedPost.user.name}'s post</DialogDescription>}
