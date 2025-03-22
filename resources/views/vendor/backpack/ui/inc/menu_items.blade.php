@@ -3,28 +3,28 @@
 
 <x-backpack::menu-item title="Users" icon="la la-users" :link="backpack_url('user')" />
 
-<x-backpack::menu-item 
-    title="User Reports" 
-    icon="la la-flag" 
+<x-backpack::menu-item
+    title="User Reports"
+    icon="la la-flag"
     :link="backpack_url('user-report')"
     badge="{{ \App\Models\UserReport::where('status', 'pending')->count() ?: '' }}"
     badge-class="bg-danger"
 />
 
-<x-backpack::menu-item 
-    title="Listings" 
-    icon="la la-tag" 
+<x-backpack::menu-item
+    title="Listings"
+    icon="la la-tag"
     :link="backpack_url('listing')"
     badge="{{ \App\Models\Listing::where('status', 'unverified')->count() ?: '' }}"
     badge-class="bg-warning"
 />
 
-<x-backpack::menu-item 
-    title="Verifications" 
-    icon="la la-id-card" 
-    :link="backpack_url('verification-document')"
-    badge="{{ \App\Models\VerificationDocument::whereHas('user', function($query) { 
-        $query->where('verification_status', 'pending');
-    })->count() ?: '' }}"
-    badge-class="bg-warning"
-/>
+{{--<x-backpack::menu-item --}}
+{{--    title="Verifications" --}}
+{{--    icon="la la-id-card" --}}
+{{--    :link="backpack_url('verification-document')"--}}
+{{--    badge="{{ \App\Models\VerificationDocument::whereHas('user', function($query) { --}}
+{{--        $query->where('verification_status', 'pending');--}}
+{{--    })->count() ?: '' }}"--}}
+{{--    badge-class="bg-warning"--}}
+{{--/>--}}
