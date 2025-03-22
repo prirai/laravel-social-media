@@ -10,3 +10,11 @@
     badge="{{ \App\Models\UserReport::where('status', 'pending')->count() ?: '' }}"
     badge-class="bg-danger"
 />
+
+<x-backpack::menu-item 
+    title="Listings" 
+    icon="la la-tag" 
+    :link="backpack_url('listing')"
+    badge="{{ \App\Models\Listing::where('status', 'unverified')->count() ?: '' }}"
+    badge-class="bg-warning"
+/>

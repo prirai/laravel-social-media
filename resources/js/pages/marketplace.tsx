@@ -6,7 +6,7 @@ import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { CurrencyDollarIcon, PhotoIcon, PlusIcon, TagIcon } from '@heroicons/react/24/outline';
+import { CurrencyRupeeIcon, PhotoIcon, PlusIcon, TagIcon, ExclamationCircleIcon, CheckCircleIcon, ComputerDesktopIcon, TruckIcon, HomeIcon, TrophyIcon, ShoppingBagIcon, BookOpenIcon, Squares2X2Icon, EllipsisHorizontalCircleIcon } from '@heroicons/react/24/outline';
 import { Head, useForm } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import UserAvatar from '@/components/user-avatar';
@@ -19,15 +19,39 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const categories = [
-    'All Categories',
-    'Electronics',
-    'Vehicles',
-    'Property',
-    'Sports',
-    'Fashion',
-    'Books',
-    'Other',
-];
+    {
+        name: 'All Categories',
+        icon: Squares2X2Icon,
+    },
+    {
+        name: 'Electronics',
+        icon: ComputerDesktopIcon,
+    },
+    {
+        name: 'Vehicles',
+        icon: TruckIcon,
+    },
+    {
+        name: 'Property',
+        icon: HomeIcon,
+    },
+    {
+        name: 'Sports',
+        icon: TrophyIcon,
+    },
+    {
+        name: 'Fashion',
+        icon: ShoppingBagIcon,
+    },
+    {
+        name: 'Books',
+        icon: BookOpenIcon,
+    },
+    {
+        name: 'Other',
+        icon: EllipsisHorizontalCircleIcon,
+    },
+] as const;
 
 export default function Marketplace({ listings = [], flash = {} }: { listings: any[], flash: any }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -78,26 +102,68 @@ export default function Marketplace({ listings = [], flash = {} }: { listings: a
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Marketplace" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                {/* Add this flash message section */}
+                {/* Flash message section */}
                 {flash.success && (
                     <div className="rounded-md bg-green-50 p-4 text-green-700 dark:bg-green-900/50 dark:text-green-300">
                         {flash.success}
                     </div>
                 )}
                 
+                {/* Information Card - Moved to top */}
+                <div className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">
+                    <div className="space-y-4">
+                        <div className="flex items-start gap-2">
+                            <div className="mt-1 flex-shrink-0">
+                                <ExclamationCircleIcon className="h-5 w-5 text-amber-500" />
+                            </div>
+                            <p>
+                                Listings marked with an exclamation mark (
+                                <span className="text-amber-500">!</span>
+                                ) are pending verification by our administrators.
+                            </p>
+                        </div>
+                        
+                        <div className="flex items-start gap-2">
+                            <div className="mt-1 flex-shrink-0">
+                                <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                            </div>
+                            <p>
+                                Listings marked with a checkmark (
+                                <span className="text-green-500">✓</span>
+                                ) have been reviewed by our administrators for basic compliance with our listing guidelines.
+                            </p>
+                        </div>
+
+                        <div className="mt-4 rounded-lg bg-amber-50 p-4 dark:bg-amber-950/50">
+                            <p className="text-amber-800 dark:text-amber-200">
+                                <strong>Disclaimer:</strong> While we strive to maintain a safe marketplace, buyers are solely responsible 
+                                for verifying the authenticity and condition of items before making a purchase. Our verification process 
+                                is limited to basic listing compliance. We do not guarantee the quality, safety, or legitimacy of any 
+                                listed items. The site and its administrators shall not be held liable for any losses, damages, or harm 
+                                arising from transactions between users.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
                 {/* Header with Create Listing button and Category filter */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-wrap gap-2">
-                        {categories.map((category) => (
-                            <Button
-                                key={category}
-                                variant={selectedCategory === category ? "default" : "outline"}
-                                onClick={() => setSelectedCategory(category)}
-                                size="sm"
-                            >
-                                {category}
-                            </Button>
-                        ))}
+                        {categories.map((category) => {
+                            const CategoryIcon = category.icon;
+                            return (
+                                <Button
+                                    key={category.name}
+                                    variant={selectedCategory === category.name ? "default" : "outline"}
+                                    onClick={() => setSelectedCategory(category.name)}
+                                    size="sm"
+                                    className="flex items-center gap-2"
+                                >
+                                    <CategoryIcon className="h-4 w-4" />
+                                    {category.name}
+                                </Button>
+                            );
+                        })}
                     </div>
                     
                     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -128,7 +194,7 @@ export default function Marketplace({ listings = [], flash = {} }: { listings: a
                                     <div className="space-y-2">
                                         <Label htmlFor="price">Price</Label>
                                         <div className="relative">
-                                            <CurrencyDollarIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                                            <CurrencyRupeeIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
                                             <Input
                                                 id="price"
                                                 type="number"
@@ -151,8 +217,8 @@ export default function Marketplace({ listings = [], flash = {} }: { listings: a
                                         >
                                             <option value="">Select Category</option>
                                             {categories.slice(1).map((category) => (
-                                                <option key={category} value={category}>
-                                                    {category}
+                                                <option key={category.name} value={category.name}>
+                                                    {category.name}
                                                 </option>
                                             ))}
                                         </select>
@@ -241,18 +307,41 @@ export default function Marketplace({ listings = [], flash = {} }: { listings: a
                                 </div>
                                 <div className="p-4">
                                     <div className="mb-2 flex items-center justify-between">
-                                        <h3 className="font-semibold">{listing.title}</h3>
-                                        <span className="text-lg font-bold">${listing.price}</span>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-semibold">{listing.title}</h3>
+                                            {listing.status === 'unverified' ? (
+                                                <span className="text-amber-500">
+                                                    <ExclamationCircleIcon className="h-5 w-5" />
+                                                </span>
+                                            ) : (
+                                                <span className="text-green-500">
+                                                    <CheckCircleIcon className="h-5 w-5" />
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-lg font-bold">₹{listing.price}</span>
                                     </div>
                                     <p className="mb-2 text-sm text-gray-600">{listing.description}</p>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <TagIcon className="h-4 w-4 text-gray-500" />
+                                            {(() => {
+                                                const CategoryIcon = categories.find(c => c.name === listing.category)?.icon || TagIcon;
+                                                return <CategoryIcon className="h-4 w-4 text-gray-500" />;
+                                            })()}
                                             <span className="text-sm text-gray-500">{listing.category}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <UserAvatar user={listing.seller} className="size-6" />
-                                            <span className="text-sm text-gray-500">{listing.seller.name}</span>
+                                            <UserAvatar 
+                                                user={listing.seller || { 
+                                                    name: 'Unknown User',
+                                                    avatar: null,
+                                                    username: 'unknown'
+                                                }} 
+                                                className="size-6" 
+                                            />
+                                            <span className="text-sm text-gray-500">
+                                                {listing.seller?.name || 'Unknown User'}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>

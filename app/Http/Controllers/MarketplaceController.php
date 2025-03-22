@@ -12,25 +12,44 @@ class MarketplaceController extends Controller
     {
         $listings = Listing::with('seller')
             ->latest()
-            ->get()
-            ->map(function ($listing) {
-                return [
-                    'id' => $listing->id,
-                    'title' => $listing->title,
-                    'price' => $listing->price,
-                    'description' => $listing->description,
-                    'images' => $listing->images,
-                    'category' => $listing->category,
-                    'seller' => [
-                        'name' => $listing->seller->name,
-                        'avatar' => $listing->seller->avatar,
-                    ],
-                    'created_at' => $listing->created_at,
-                ];
-            });
+            ->get();
+
+        // Debug the listings data
+        \Log::info('Listings with sellers:', $listings->toArray());
+
+        $formattedListings = $listings->map(function ($listing) {
+            // Debug each listing's seller
+            \Log::info('Processing listing ' . $listing->id . ' with seller:', [
+                'seller_id' => $listing->seller_id,
+                'seller' => $listing->seller
+            ]);
+
+            if (!$listing->seller) {
+                \Log::warning('Missing seller for listing:', [
+                    'listing_id' => $listing->id,
+                    'seller_id' => $listing->seller_id
+                ]);
+            }
+
+            return [
+                'id' => $listing->id,
+                'title' => $listing->title,
+                'price' => $listing->price,
+                'description' => $listing->description,
+                'images' => $listing->images ?? [],
+                'category' => $listing->category,
+                'status' => $listing->status ?? 'unverified',
+                'seller' => $listing->seller ? [
+                    'name' => $listing->seller->name,
+                    'username' => $listing->seller->username,
+                    'avatar' => $listing->seller->avatar,
+                ] : null,
+                'created_at' => $listing->created_at,
+            ];
+        });
 
         return Inertia::render('marketplace', [
-            'listings' => $listings,
+            'listings' => $formattedListings,
             'flash' => [
                 'success' => session('success')
             ],
@@ -45,7 +64,7 @@ class MarketplaceController extends Controller
             'category' => 'required|string',
             'description' => 'required|string',
             'images' => 'array|max:5', // Maximum 5 images
-            'images.*' => 'image|max:5120', // 5MB max per image
+            'images.*' => 'image|max:5120', // 5MB max
         ]);
 
         $images = [];
@@ -57,15 +76,16 @@ class MarketplaceController extends Controller
         }
 
         $listing = Listing::create([
-            'user_id' => auth()->id(),
             'title' => $validated['title'],
             'price' => $validated['price'],
             'category' => $validated['category'],
             'description' => $validated['description'],
+            'user_id' => auth()->id(),
+            'status' => 'unverified',
             'images' => $images,
         ]);
 
         return redirect()->route('marketplace.index')
             ->with('success', 'Listing created successfully!');
     }
-} 
+}

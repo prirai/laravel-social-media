@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\UserReportCrudController;
+use App\Http\Controllers\Admin\ListingCrudController;
 
 // --------------------------
 // Custom Backpack Routes
@@ -21,6 +22,9 @@ Route::group([
     Route::crud('user-report', 'UserReportCrudController');
     Route::get('delete-reported-user/{user}', [UserReportCrudController::class, 'deleteReportedUser'])
         ->name('admin.delete-reported-user');
+    Route::crud('listing', 'ListingCrudController');
+    Route::get('verify-listing/{id}', [ListingCrudController::class, 'verifyListing'])
+        ->name('admin.verify-listing');
 }); // this should be the absolute last line of this file
 
 /**
