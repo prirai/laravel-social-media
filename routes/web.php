@@ -11,7 +11,7 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
         Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
         Route::post('/posts', [App\Http\Controllers\PostController::class, 'store'])->name('posts.store');
         Route::post('/posts/{post}/like', [App\Http\Controllers\PostController::class, 'like'])->name('posts.like');
@@ -36,17 +36,17 @@ Route::middleware(['auth'])->group(function () {
 
 Route::post('user/submit-verification', [VerificationController::class, 'submit'])->name('user.submit-verification');
 
-Route::get('/debug-verification', function() {
-    dd(\App\Models\VerificationDocument::with('user')->get()->toArray());
-});
+// Route::get('/debug-verification', function() {
+//     dd(\App\Models\VerificationDocument::with('user')->get()->toArray());
+// });
 
-Route::get('/test-verification', function() {
-    dd([
-        'count' => \App\Models\VerificationDocument::count(),
-        'first' => \App\Models\VerificationDocument::first(),
-        'all' => \App\Models\VerificationDocument::all()
-    ]);
-});
+// Route::get('/test-verification', function() {
+//     dd([
+//         'count' => \App\Models\VerificationDocument::count(),
+//         'first' => \App\Models\VerificationDocument::first(),
+//         'all' => \App\Models\VerificationDocument::all()
+//     ]);
+// });
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

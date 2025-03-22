@@ -1,4 +1,4 @@
-import { AppHeader } from '@/components/app-header'; // Import AppHeader
+import { AppHeader } from '@/components/app-header';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -6,10 +6,10 @@ import { Label } from '@/components/ui/label';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Textarea } from '@/components/ui/textarea';
 import UserAvatar from '@/components/user-avatar';
-import { type BreadcrumbItem, type SharedData } from '@/types'; // Import SharedData
-import { ChatBubbleLeftIcon, DocumentIcon, ExclamationCircleIcon, HeartIcon, PhotoIcon, PlusIcon } from '@heroicons/react/24/outline'; // Import like/comment icons
-import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid'; // Import solid heart icon
-import { Head, useForm, usePage } from '@inertiajs/react'; // Add usePage
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { ChatBubbleLeftIcon, DocumentIcon, ExclamationCircleIcon, HeartIcon, PhotoIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -49,8 +49,8 @@ interface Post {
         user: {
             name: string;
             username?: string;
-            avatar: string;
-            verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
+            avatar?: string;
+            // verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
         };
     }>;
 }
@@ -62,8 +62,8 @@ interface DashboardProps {
 export default function Dashboard({ posts = [] }: DashboardProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [commentOpen, setCommentOpen] = useState(false);
-    const [selectedPost, setSelectedPost] = useState<Post | null>(null); // State to hold the post for the comment modal
-    const [commentErrors, setCommentErrors] = useState<{ [key: string]: string }>({}); // State for individual comment error.
+    const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+    const [commentErrors, setCommentErrors] = useState<{ [key: string]: string }>({});
     const { auth } = usePage<SharedData>().props;
     const [isVerificationOpen, setIsVerificationOpen] = useState(false);
 
@@ -81,9 +81,8 @@ export default function Dashboard({ posts = [] }: DashboardProps) {
         document: null as File | null,
         notes: '',
     });
-    const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-    const authUserId = auth.user?.id; // Get authenticated user ID (handle type casting)
+    const authUserId = auth.user?.id;
 
     const handleLike = (postId: number) => {
         post(route('posts.like', { post: postId }));
@@ -106,7 +105,7 @@ export default function Dashboard({ posts = [] }: DashboardProps) {
                 onSuccess: () => {
                     resetComment();
                     setCommentOpen(false);
-                    setSelectedPost(null); // Clear the selected post
+                    setSelectedPost(null);
                 },
                 onError: (errors) => {
                     setCommentErrors(errors);
@@ -152,20 +151,18 @@ export default function Dashboard({ posts = [] }: DashboardProps) {
                 }
             });
 
-            // Show error for oversized files
             if (oversizedFiles.length > 0) {
-                // Set error message for too large files
                 const errorMessage = `The following files exceed the 5MB limit: ${oversizedFiles.join(', ')}`;
+
+                setData('attachments', [...data.attachments, ...validFiles]); //Add files even if some are too big
+                //Show the errors after the files have been added.
                 setErrors((prev) => ({
                     ...prev,
                     attachments: errorMessage,
                 }));
-
-                alert(`File size error: ${errorMessage}`);
+            } else {
+                setData('attachments', [...data.attachments, ...validFiles]);
             }
-
-            // Add only valid files to the form data
-            setData('attachments', [...data.attachments, ...validFiles]);
         }
     };
 
@@ -177,11 +174,10 @@ export default function Dashboard({ posts = [] }: DashboardProps) {
 
     return (
         <>
-            <AppHeader breadcrumbs={breadcrumbs} /> {/* Use AppHeader directly */}
+            <AppHeader breadcrumbs={breadcrumbs} />
             <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-4 md:px-0">
                 <Head title="Dashboard" />
 
-                {/* Verification Notice - Moved to top */}
                 {auth.user.verification_status === 'unverified' && (
                     <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-900/20">
                         <div className="flex items-center gap-3">
@@ -288,7 +284,6 @@ export default function Dashboard({ posts = [] }: DashboardProps) {
                                         />
                                     </div>
 
-                                    {/* Preview attachments */}
                                     {data.attachments.length > 0 && (
                                         <div className="mt-2 space-y-2">
                                             <p className="text-sm font-medium">Selected files:</p>
@@ -385,6 +380,7 @@ export default function Dashboard({ posts = [] }: DashboardProps) {
                                                         <a
                                                             href={attachment.file_path}
                                                             target="_blank"
+                                                            rel="noopener noreferrer"
                                                             className="mx-auto flex w-full max-w-[600px] items-center justify-center rounded-lg bg-gray-100 p-6 dark:bg-gray-800"
                                                         >
                                                             <DocumentIcon className="h-10 w-10" />
@@ -434,7 +430,7 @@ export default function Dashboard({ posts = [] }: DashboardProps) {
                                                         <div className="flex items-center gap-2">
                                                             <span className="font-medium">{comment.user.name}</span>
                                                             <span className="text-sm text-gray-500">@{comment.user.username}</span>
-                                                            <span className="text-sm text-gray-500">({comment.user.verification_status})</span>{' '}
+                                                            <span className="text-sm text-gray-500">({comment.user.verification_status})</span>
                                                         </div>
                                                         <p className="text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
                                                     </div>

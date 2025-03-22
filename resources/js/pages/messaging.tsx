@@ -1,16 +1,16 @@
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
-import AppLayout from '@/layouts/app-layout';
 import UserAvatar from '@/components/user-avatar';
+import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { MagnifyingGlassIcon, PaperAirplaneIcon, PlusIcon, UsersIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, MagnifyingGlassIcon, PaperAirplaneIcon, PlusIcon, UsersIcon } from '@heroicons/react/24/outline';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -101,8 +101,9 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                 ? route('groups.messages', selectedChat.id.replace('group_', ''))
                 : route('messages.get', selectedChat.id);
 
-            axios.get(endpoint)
-                .then(response => {
+            axios
+                .get(endpoint)
+                .then((response) => {
                     setMessages(response.data.messages);
                     scrollToBottom();
                 })
@@ -126,63 +127,30 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         try {
             let response;
             if (selectedChat.isGroup) {
-                response = await axios.post(
-                    route('groups.message', selectedChat.id.replace('group_', '')),
-                    data
-                );
+                response = await axios.post(route('groups.message', selectedChat.id.replace('group_', '')), data);
             } else {
                 response = await axios.post(route('messages.send', selectedChat.id), data);
             }
 
-            const newMessage = response.data.message;
-            setMessages([...messages, newMessage]);
+            setMessages((prevMessages) => [...prevMessages, response.data.message]);
 
-            if ('isGroup' in selectedChat) {
-                if (selectedChat.isGroup) {
-                    setGroups(currentGroups => {
-                        return currentGroups.map(group => {
-                            if (group.id === selectedChat.id) {
-                                return {
-                                    ...group,
-                                    lastMessage: data.content,
-                                    lastMessageTime: 'Just now'
-                                };
-                            }
-                            return group;
-                        });
-                    });
-                } else {
-                    setUsers(currentUsers => {
-                        const existingUserIndex = currentUsers.findIndex(u => u.id === selectedChat.id);
-                        const updatedUser = {
-                            ...selectedChat,
-                            lastMessage: data.content,
-                            lastMessageTime: 'Just now'
-                        };
+            const updateLastMessage = (chat: User | Group) => ({
+                ...chat,
+                lastMessage: data.content,
+                lastMessageTime: 'Just now',
+            });
 
-                        if (existingUserIndex !== -1) {
-                            const newUsers = [...currentUsers];
-                            newUsers[existingUserIndex] = updatedUser;
-                            return newUsers;
-                        }
-                        return [updatedUser, ...currentUsers];
-                    });
-                }
+            if ('isGroup' in selectedChat && selectedChat.isGroup) {
+                setGroups((currentGroups) => currentGroups.map((group) => (group.id === selectedChat.id ? updateLastMessage(group) : group)));
             } else {
-                setUsers(currentUsers => {
-                    const existingUserIndex = currentUsers.findIndex(u => u.id === selectedChat.id);
-                    const updatedUser = {
-                        ...selectedChat,
-                        lastMessage: data.content,
-                        lastMessageTime: 'Just now'
-                    };
-
+                setUsers((currentUsers) => {
+                    const existingUserIndex = currentUsers.findIndex((u) => u.id === selectedChat.id);
                     if (existingUserIndex !== -1) {
                         const newUsers = [...currentUsers];
-                        newUsers[existingUserIndex] = updatedUser;
+                        newUsers[existingUserIndex] = updateLastMessage(selectedChat);
                         return newUsers;
                     }
-                    return [updatedUser, ...currentUsers];
+                    return [updateLastMessage(selectedChat), ...currentUsers];
                 });
             }
 
@@ -193,14 +161,12 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         }
     };
 
-    const filteredUsers = allUsers.filter(user =>
-        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.username.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredUsers = allUsers.filter(
+        (user) => user.name.toLowerCase().includes(searchQuery.toLowerCase()) || user.username.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
     const startNewConversation = (user: AllUser) => {
-        const existingUser = users.find(u => u.id === user.id);
-        const newUser: User = existingUser || {
+        const newUser: User = {
             ...user,
             lastMessage: null,
             lastMessageTime: null,
@@ -217,14 +183,14 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         try {
             const formData = new FormData();
             formData.append('name', groupName);
-            selectedUsers.forEach(userId => {
+            selectedUsers.forEach((userId) => {
                 formData.append('users[]', userId.toString());
             });
 
             const response = await axios.post(route('groups.create'), formData);
             const newGroup = response.data.group;
 
-            setGroups(currentGroups => [
+            setGroups((currentGroups) => [
                 {
                     id: `group_${newGroup.id}`,
                     name: newGroup.name,
@@ -235,7 +201,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                     lastMessageTime: null,
                     unreadCount: 0,
                 },
-                ...currentGroups
+                ...currentGroups,
             ]);
 
             setIsNewGroupOpen(false);
@@ -244,44 +210,6 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         } catch (error) {
             console.error('Error creating group:', error);
         }
-    };
-
-    const ChatHeader = () => {
-        if (!selectedChat) return null;
-
-        return (
-            <div className="border-b p-4">
-                <div className="flex items-center gap-3">
-                    {'isGroup' in selectedChat && selectedChat.isGroup ? (
-                        <div className="flex items-center gap-3">
-                            <div className="relative">
-                                <UserAvatar
-                                    user={{ name: selectedChat.name, avatar: selectedChat.avatar }}
-                                    className="size-10"
-                                />
-                                <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
-                                    {selectedChat.members.length}
-                                </span>
-                            </div>
-                            <div>
-                                <p className="font-medium">{selectedChat.name}</p>
-                                <p className="text-sm text-gray-500">
-                                    {selectedChat.members.map(m => m.name).join(', ')}
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            <UserAvatar user={selectedChat} className="size-10" />
-                            <div>
-                                <p className="font-medium">{selectedChat.name}</p>
-                                <p className="text-sm text-gray-500">@{selectedChat.username}</p>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-        );
     };
 
     const isCurrentUserMessage = (message: Message | GroupMessage) => {
@@ -297,11 +225,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Messages" />
             <div className="flex h-[calc(100vh-12rem)] flex-1 overflow-hidden rounded-xl border">
-                <div
-                    className={`${
-                        isMobileView && selectedChat ? 'hidden' : 'flex'
-                    } w-full flex-col border-r md:w-80 md:flex`}
-                >
+                <div className={`${isMobileView && selectedChat ? 'hidden' : 'flex'} w-full flex-col border-r md:flex md:w-80`}>
                     <div className="border-b p-4">
                         <h2 className="text-lg font-semibold">Messages</h2>
                     </div>
@@ -318,16 +242,12 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                     <button
                                         key={chat.id}
                                         onClick={() => setSelectedChat(chat)}
-                                        className={`flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-200/70 dark:hover:bg-gray-800
-                                            ${selectedChat?.id === chat.id ? 'bg-gray-200/70 dark:bg-gray-800' : ''}`}
+                                        className={`flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-200/70 dark:hover:bg-gray-800 ${selectedChat?.id === chat.id ? 'bg-gray-200/70 dark:bg-gray-800' : ''}`}
                                     >
                                         {chat.isGroup ? (
                                             <div className="relative">
-                                                <UserAvatar
-                                                    user={{ name: chat.name, avatar: chat.avatar }}
-                                                    className="size-12"
-                                                />
-                                                <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
+                                                <UserAvatar user={{ name: chat.name, avatar: chat.avatar }} className="size-12" />
+                                                <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
                                                     {chat.members.length}
                                                 </span>
                                             </div>
@@ -336,14 +256,8 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                         )}
                                         <div className="flex-1 overflow-hidden">
                                             <p className="font-medium">{chat.name}</p>
-                                            {chat.isGroup && (
-                                                <p className="text-xs text-gray-500">
-                                                    {chat.members.map(m => m.name).join(', ')}
-                                                </p>
-                                            )}
-                                            <p className="truncate text-sm text-gray-500">
-                                                {chat.lastMessage || `Start chatting in ${chat.name}`}
-                                            </p>
+                                            {chat.isGroup && <p className="text-xs text-gray-500">{chat.members.map((m) => m.name).join(', ')}</p>}
+                                            <p className="truncate text-sm text-gray-500">{chat.lastMessage || `Start chatting in ${chat.name}`}</p>
                                         </div>
                                     </button>
                                 ))}
@@ -365,7 +279,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                     </DialogHeader>
                                     <div className="mt-4 space-y-4">
                                         <div className="relative">
-                                            <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                                            <MagnifyingGlassIcon className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
                                             <Input
                                                 type="text"
                                                 placeholder="Search users..."
@@ -427,10 +341,8 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                         <Checkbox
                                                             checked={selectedUsers.includes(user.id)}
                                                             onCheckedChange={(checked) => {
-                                                                setSelectedUsers(current =>
-                                                                    checked
-                                                                        ? [...current, user.id]
-                                                                        : current.filter(id => id !== user.id)
+                                                                setSelectedUsers((current) =>
+                                                                    checked ? [...current, user.id] : current.filter((id) => id !== user.id),
                                                                 );
                                                             }}
                                                         />
@@ -442,10 +354,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                         </div>
 
                                         <div className="flex justify-end gap-2">
-                                            <Button
-                                                type="submit"
-                                                disabled={selectedUsers.length < 2 || !groupName.trim()}
-                                            >
+                                            <Button type="submit" disabled={selectedUsers.length < 2 || !groupName.trim()}>
                                                 Create Group
                                             </Button>
                                         </div>
@@ -456,40 +365,28 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                     </div>
                 </div>
 
-                <div
-                    className={`${
-                        isMobileView && !selectedChat ? 'hidden' : 'flex'
-                    } flex-1 flex-col md:flex`}
-                >
+                <div className={`${isMobileView && !selectedChat ? 'hidden' : 'flex'} flex-1 flex-col md:flex`}>
                     {selectedChat ? (
                         <>
                             <div className="border-b p-4">
                                 <div className="flex items-center gap-3">
                                     {isMobileView && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setSelectedChat(null)}
-                                            className="mr-2"
-                                        >
+                                        <Button variant="ghost" size="sm" onClick={() => setSelectedChat(null)} className="mr-2">
                                             <ArrowLeftIcon className="h-5 w-5" />
                                         </Button>
                                     )}
                                     {selectedChat.isGroup ? (
                                         <div className="flex items-center gap-3">
                                             <div className="relative">
-                                                <UserAvatar
-                                                    user={{ name: selectedChat.name, avatar: selectedChat.avatar }}
-                                                    className="size-10"
-                                                />
-                                                <span className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
+                                                <UserAvatar user={{ name: selectedChat.name, avatar: selectedChat.avatar }} className="size-10" />
+                                                <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
                                                     {selectedChat.members.length}
                                                 </span>
                                             </div>
                                             <div>
                                                 <p className="font-medium">{selectedChat.name}</p>
-                                                <p className="text-sm text-gray-500 line-clamp-1">
-                                                    {selectedChat.members.map(m => m.name).join(', ')}
+                                                <p className="line-clamp-1 text-sm text-gray-500">
+                                                    {selectedChat.members.map((m) => m.name).join(', ')}
                                                 </p>
                                             </div>
                                         </div>
@@ -517,26 +414,17 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                             const showAvatar = selectedChat?.isGroup && !isCurrentUser;
 
                                             return (
-                                                <div
-                                                    key={message.id}
-                                                    className={`flex gap-2 ${
-                                                        isCurrentUser ? 'justify-end' : 'justify-start'
-                                                    }`}
-                                                >
+                                                <div key={message.id} className={`flex gap-2 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
                                                     {showAvatar && 'user' in message && (
                                                         <div className="flex flex-col items-center gap-1">
                                                             <UserAvatar user={message.user} className="size-8" />
-                                                            <span className="text-xs text-gray-500">
-                                                                {message.user.name.split(' ')[0]}
-                                                            </span>
+                                                            <span className="text-xs text-gray-500">{message.user.name.split(' ')[0]}</span>
                                                         </div>
                                                     )}
 
                                                     <div
                                                         className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                                                            isCurrentUser
-                                                                ? 'bg-blue-500 text-white'
-                                                                : 'bg-gray-100 dark:bg-gray-800'
+                                                            isCurrentUser ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-800'
                                                         }`}
                                                     >
                                                         {selectedChat?.isGroup && !isCurrentUser && 'user' in message && (
@@ -545,9 +433,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                             </p>
                                                         )}
                                                         <p>{message.content}</p>
-                                                        <p className="mt-1 text-xs opacity-70">
-                                                            {new Date(message.created_at).toLocaleTimeString()}
-                                                        </p>
+                                                        <p className="mt-1 text-xs opacity-70">{new Date(message.created_at).toLocaleTimeString()}</p>
                                                     </div>
                                                 </div>
                                             );

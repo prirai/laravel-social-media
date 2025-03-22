@@ -38,7 +38,47 @@ class UserCrudController extends CrudController
      */
     protected function setupListOperation()
     {
-        CRUD::setFromDb(); // set columns from db columns.
+        // Remove the setFromDb() line and replace with specific columns
+        CRUD::addColumns([
+            'id',
+            'name',
+            'email',
+        ]);
+
+        // Add verification document column
+        CRUD::addColumn([
+            'name' => 'verification_document',
+            'label' => 'Document',
+            'type' => 'closure',
+            'function' => function($entry) {
+                // Get the latest verification document
+                $document = $entry->verificationDocuments()->latest()->first();
+                if ($document) {
+                    $url = asset('storage/' . $document->document_path);
+                    return '<a href="'.$url.'" target="_blank" class="btn btn-sm btn-primary">
+                        <i class="la la-eye"></i> Preview Document
+                    </a>';
+                }
+                return '<span class="text-muted">No document</span>';
+            },
+            'escaped' => false
+        ]);
+
+        CRUD::addColumn([
+            'name' => 'verification_status',
+            'label' => 'Verification Status',
+            'type' => 'closure',
+            'function' => function($entry) {
+                $colors = [
+                    'unverified' => 'secondary',
+                    'pending' => 'warning',
+                    'verified' => 'success'
+                ];
+                $color = $colors[$entry->verification_status] ?? 'secondary';
+                return '<span class="badge bg-'.$color.'">' . ucfirst($entry->verification_status) . '</span>';
+            },
+            'escaped' => false
+        ]);
 
         /**
          * Columns can be defined using the fluent syntax:
@@ -56,10 +96,25 @@ class UserCrudController extends CrudController
     {
         CRUD::setFromDb(); // set fields from db columns.
 
-        /**
-         * Fields can be defined using the fluent syntax:
-         * - CRUD::field('price')->type('number');
-         */
+        // Remove the automatic verification_status field
+        CRUD::removeField('verification_status');
+
+        // Add the custom dropdown
+        CRUD::addField([
+            'name' => 'verification_status',
+            'label' => 'Verification Status',
+            'type' => 'select_from_array',
+            'options' => [
+                'unverified' => 'Unverified',
+                'pending' => 'Pending',
+                'verified' => 'Verified'
+            ],
+            'default' => 'unverified',
+            'allows_null' => false,
+        ]);
+
+        // Modify password field for create operation
+        CRUD::field('password')->type('password');
     }
 
     /**
@@ -70,6 +125,39 @@ class UserCrudController extends CrudController
      */
     protected function setupUpdateOperation()
     {
-        $this->setupCreateOperation();
+        // Start fresh instead of using setupCreateOperation
+        CRUD::setFromDb();
+        
+        // Remove the automatic verification_status field
+        CRUD::removeField('verification_status');
+        
+        // Add the custom dropdown
+        CRUD::addField([
+            'name' => 'verification_status',
+            'label' => 'Verification Status',
+            'type' => 'select_from_array',
+            'options' => [
+                'unverified' => 'Unverified',
+                'pending' => 'Pending',
+                'verified' => 'Verified'
+            ],
+            'allows_null' => false,
+        ]);
+
+        // Add optional password field for update operation
+        CRUD::addField([
+            'name' => 'password',
+            'label' => 'Password',
+            'type' => 'password',
+            'hint' => 'Leave blank to keep the same password',
+        ]);
+
+        // Add password confirmation if needed
+        CRUD::addField([
+            'name' => 'password_confirmation',
+            'label' => 'Password Confirmation',
+            'type' => 'password',
+            'hint' => 'Leave blank to keep the same password',
+        ]);
     }
 }

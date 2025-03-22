@@ -15,7 +15,7 @@ class VerificationController extends Controller
         ]);
 
         $path = $request->file('document')->store('verification-documents', 'public');
-        
+
         VerificationDocument::updateOrCreate(
             ['user_id' => auth()->id()],
             [
@@ -29,4 +29,4 @@ class VerificationController extends Controller
 
         return back()->with('success', 'Verification document submitted successfully');
     }
-} 
+}

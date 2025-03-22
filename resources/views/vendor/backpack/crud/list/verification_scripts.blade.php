@@ -1,60 +1,51 @@
 @push('after_scripts')
 <script>
-$(function() {
-    if (typeof window.verificationHandlersInitialized === 'undefined') {
-        $('body').on('click', '.verify-user-btn', function(e) {
-            e.preventDefault();
-            var button = $(this);
-            var userId = button.data('id');
-            
-            swal({
-                title: "Verify User?",
-                text: "Are you sure you want to verify this user?",
-                icon: "info",
-                buttons: {
-                    cancel: {
-                        text: "Cancel",
-                        value: null,
-                        visible: true,
-                        className: "bg-secondary",
-                        closeModal: true,
-                    },
-                    verify: {
-                        text: "Yes, Verify User",
-                        value: true,
-                        visible: true,
-                        className: "bg-success",
-                    }
-                },
-            }).then((value) => {
-                if (value) {
-                    $.ajax({
-                        url: `${window.location.pathname}/verify-user/${userId}`,
-                        type: 'POST',
-                        data: {
-                            _token: $('meta[name="csrf-token"]').attr('content')
-                        },
-                        success: function(result) {
-                            if (result.success) {
-                                new Noty({
-                                    type: "success",
-                                    text: "User verified successfully"
-                                }).show();
-                                crud.table.ajax.reload();
-                            }
-                        },
-                        error: function() {
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll(".verify-user-btn").forEach(function(button) {
+            button.addEventListener("click", function(e) {
+                e.preventDefault();
+                const userId = this.dataset.id;
+                const button = this;
+                
+                if (confirm("Are you sure you want to verify this user?")) {
+                    fetch(`{{ url(config('backpack.base.route_prefix') . '/verification-document/verify-user') }}/${userId}`, {
+                        method: "POST",
+                        headers: {
+                            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            "Content-Type": "application/json",
+                            "Accept": "application/json"
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update the status badge
+                            const row = button.closest('tr');
+                            const badge = row.querySelector('.badge');
+                            badge.classList.remove('bg-warning');
+                            badge.classList.add('bg-success');
+                            badge.innerHTML = '<i class="la la-check"></i> Verified';
+                            
+                            // Remove the verify button
+                            button.remove();
+                            
+                            // Show success message
                             new Noty({
-                                type: "error",
-                                text: "Error verifying user"
+                                type: 'success',
+                                text: data.message
                             }).show();
                         }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        new Noty({
+                            type: 'error',
+                            text: 'Error verifying user'
+                        }).show();
                     });
                 }
             });
         });
-        window.verificationHandlersInitialized = true;
-    }
-});
+    });
 </script>
 @endpush 

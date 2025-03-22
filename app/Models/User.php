@@ -94,14 +94,26 @@ class User extends Authenticatable
         return $this->hasMany(GroupMessage::class);
     }
 
-    public function verificationDocument()
+    public function verificationDocuments()
     {
-        return $this->hasOne(VerificationDocument::class);
+        return $this->hasMany(VerificationDocument::class);
     }
+
+    // public function verificationDocument()
+    // {
+    //     return $this->hasOne(VerificationDocument::class);
+    // }
 
     public function getVerificationStatusAttribute($value)
     {
         \Log::info('Getting verification status for user ' . $this->id . ': ' . $value);
         return $value ?? 'unverified';
+    }
+
+    public function setPasswordAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['password'] = bcrypt($value);
+        }
     }
 }

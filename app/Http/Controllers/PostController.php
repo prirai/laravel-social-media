@@ -91,7 +91,7 @@ class PostController extends Controller
 
 
         return inertia('dashboard', [
-            'posts' => $posts
+            'posts' => $posts,
         ]);
     }
 }
