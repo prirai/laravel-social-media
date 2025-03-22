@@ -12,7 +12,8 @@ class ProfileController extends Controller
     public function show($username)
     {
         $user = User::where('username', $username)
-            ->with(['posts' => function ($query) {
+            ->with([
+                'posts' => function ($query) {
                 $query->latest()->with(['user', 'likes', 'comments.user']);
             }])
             ->firstOrFail();
@@ -23,6 +24,7 @@ class ProfileController extends Controller
                 'name' => $user->name,
                 'username' => $user->username,
                 'avatar' => $user->avatar,
+                'verification_status' => $user->verification_status,
                 'posts' => $user->posts
             ],
             'isOwnProfile' => auth()->id() === $user->id
@@ -32,12 +34,11 @@ class ProfileController extends Controller
     public function report(Request $request, $username)
     {
         $user = User::where('username', $username)->firstOrFail();
-        
+
         $validated = $request->validate([
             'reason' => 'required|string|max:1000'
         ]);
 
-        // Create report record
         UserReport::create([
             'reported_user_id' => $user->id,
             'reporter_id' => auth()->id(),
@@ -46,4 +47,4 @@ class ProfileController extends Controller
 
         return back()->with('success', 'Report submitted successfully');
     }
-} 
+}

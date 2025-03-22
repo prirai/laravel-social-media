@@ -234,6 +234,18 @@ return [
                 return \App\Models\UserReport::where('status', 'pending')->count() ?: false;
             },
         ],
+
+        // Verification Documents
+        [
+            'name' => 'Verifications',
+            'icon' => 'las la-id-card',
+            'route' => 'verification-document.index',
+            'badge' => function() {
+                return \App\Models\VerificationDocument::whereHas('user', function($query) {
+                    $query->where('verification_status', 'pending');
+                })->count() ?: false;
+            },
+        ],
     ],
 
     // Make sure these UI settings are set for Tabler

@@ -43,6 +43,7 @@ class MarketplaceController extends Controller
                     'name' => $listing->seller->name,
                     'username' => $listing->seller->username,
                     'avatar' => $listing->seller->avatar,
+                    'verification_status' => $listing->seller->verification_status,
                 ] : null,
                 'created_at' => $listing->created_at,
             ];

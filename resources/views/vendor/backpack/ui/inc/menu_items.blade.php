@@ -18,3 +18,13 @@
     badge="{{ \App\Models\Listing::where('status', 'unverified')->count() ?: '' }}"
     badge-class="bg-warning"
 />
+
+<x-backpack::menu-item 
+    title="Verifications" 
+    icon="la la-id-card" 
+    :link="backpack_url('verification-document')"
+    badge="{{ \App\Models\VerificationDocument::whereHas('user', function($query) { 
+        $query->where('verification_status', 'pending');
+    })->count() ?: '' }}"
+    badge-class="bg-warning"
+/>

@@ -17,9 +17,8 @@ class MessagingController extends Controller
      */
     public function index()
     {
-        // Get individual conversations
         $users = User::where('id', '!=', auth()->id())
-            ->select('id', 'name', 'username', 'avatar')
+            ->select('id', 'name', 'username', 'avatar', 'verification_status')
             ->withCount(['receivedMessages as unread_count' => function ($query) {
                 $query->whereNull('read_at')
                     ->where('sender_id', '!=', auth()->id());
@@ -41,6 +40,7 @@ class MessagingController extends Controller
                     'lastMessage' => $lastMessage ? $lastMessage->content : null,
                     'lastMessageTime' => $lastMessage ? $lastMessage->created_at->diffForHumans() : null,
                     'unreadCount' => $user->unread_count,
+                    'verification_status' => $user->verification_status,
                 ];
             });
 
@@ -48,26 +48,26 @@ class MessagingController extends Controller
         $groups = Group::whereHas('users', function ($query) {
             $query->where('user_id', auth()->id());
         })
-        ->with(['latestMessage.user:id,name', 'users:id,name,avatar'])
+        ->with(['latestMessage.user:id,name', 'users:id,name,avatar,verification_status'])
         ->get()
         ->map(function ($group) {
             $lastMessage = $group->latestMessage;
             return [
-                'id' => 'group_' . $group->id, // Add prefix to distinguish from user IDs
+                'id' => 'group_' . $group->id,
                 'name' => $group->name,
                 'avatar' => $group->avatar,
                 'isGroup' => true,
                 'members' => $group->users,
                 'lastMessage' => $lastMessage ? $lastMessage->content : null,
                 'lastMessageTime' => $lastMessage ? $lastMessage->created_at->diffForHumans() : null,
-                'unreadCount' => 0, // Implement unread count for groups if needed
+                'unreadCount' => 0,
             ];
         });
 
         return Inertia::render('messaging', [
             'users' => $users,
             'groups' => $groups,
-            'allUsers' => User::select('id', 'name', 'username', 'avatar')->get(),
+            'allUsers' => User::select('id', 'name', 'username', 'avatar', 'verification_status')->get(),
         ]);
     }
 
@@ -216,4 +216,4 @@ class MessagingController extends Controller
             'messages' => $messages
         ]);
     }
-} 
+}

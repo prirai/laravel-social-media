@@ -5,6 +5,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\MessagingController;
 use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\VerificationController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -31,6 +32,20 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/groups/{group}/messages', [MessagingController::class, 'getGroupMessages'])->name('groups.messages');
     Route::get('/profile/{username}', [ProfileController::class, 'show'])->name('profile.show');
     Route::post('/users/{username}/report', [ProfileController::class, 'report'])->name('users.report');
+});
+
+Route::post('user/submit-verification', [VerificationController::class, 'submit'])->name('user.submit-verification');
+
+Route::get('/debug-verification', function() {
+    dd(\App\Models\VerificationDocument::with('user')->get()->toArray());
+});
+
+Route::get('/test-verification', function() {
+    dd([
+        'count' => \App\Models\VerificationDocument::count(),
+        'first' => \App\Models\VerificationDocument::first(),
+        'all' => \App\Models\VerificationDocument::all()
+    ]);
 });
 
 require __DIR__.'/settings.php';

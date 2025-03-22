@@ -1,16 +1,16 @@
+import { AppHeader } from '@/components/app-header'; // Import AppHeader
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Textarea } from '@/components/ui/textarea';
-import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
-import { ChatBubbleLeftIcon, DocumentIcon, HeartIcon, PhotoIcon, PlusIcon } from '@heroicons/react/24/outline'; // Import like/comment icons
+import UserAvatar from '@/components/user-avatar';
+import { type BreadcrumbItem, type SharedData } from '@/types'; // Import SharedData
+import { ChatBubbleLeftIcon, DocumentIcon, ExclamationCircleIcon, HeartIcon, PhotoIcon, PlusIcon } from '@heroicons/react/24/outline'; // Import like/comment icons
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid'; // Import solid heart icon
 import { Head, useForm, usePage } from '@inertiajs/react'; // Add usePage
 import { useState } from 'react';
-import UserAvatar from '@/components/user-avatar';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -34,6 +34,7 @@ interface Post {
         name: string;
         username: string;
         avatar: string;
+        verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
     };
     likes: Array<{
         id: number;
@@ -48,16 +49,23 @@ interface Post {
         user: {
             name: string;
             username?: string;
-            avatar?: string;
+            avatar: string;
+            verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
         };
     }>;
 }
 
-export default function Dashboard({ posts = [] }: { posts: Post[] }) {
+interface DashboardProps {
+    posts: Post[];
+}
+
+export default function Dashboard({ posts = [] }: DashboardProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [commentOpen, setCommentOpen] = useState(false);
     const [selectedPost, setSelectedPost] = useState<Post | null>(null); // State to hold the post for the comment modal
     const [commentErrors, setCommentErrors] = useState<{ [key: string]: string }>({}); // State for individual comment error.
+    const { auth } = usePage<SharedData>().props;
+    const [isVerificationOpen, setIsVerificationOpen] = useState(false);
 
     const {
         data,
@@ -70,11 +78,12 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
     } = useForm({
         content: '',
         attachments: [] as File[],
+        document: null as File | null,
+        notes: '',
     });
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-    const { props } = usePage();
-    const authUserId = (props.auth as any)?.user?.id; // Get authenticated user ID (handle type casting)
+    const authUserId = auth.user?.id; // Get authenticated user ID (handle type casting)
 
     const handleLike = (postId: number) => {
         post(route('posts.like', { post: postId }));
@@ -85,7 +94,6 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
         setData: setCommentData,
         post: postComment,
         processing: commentProcessing,
-        errors: commentFormErrors,
         reset: resetComment,
     } = useForm({
         content: '',
@@ -107,7 +115,16 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
         }
     };
 
-    // ... (handleSubmit, handleAttachmentChange, removeAttachment methods remain the same)
+    const handleVerificationSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post(route('user.submit-verification'), {
+            forceFormData: true,
+            onSuccess: () => {
+                setIsVerificationOpen(false);
+            },
+        });
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -122,9 +139,8 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
     const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const newFiles = Array.from(e.target.files);
-            const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+            const maxSize = 5 * 1024 * 1024;
 
-            // Check each file for size before adding
             const oversizedFiles: string[] = [];
             const validFiles: File[] = [];
 
@@ -145,7 +161,6 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                     attachments: errorMessage,
                 }));
 
-                // Optional: Create a toast/notification for better visibility
                 alert(`File size error: ${errorMessage}`);
             }
 
@@ -161,9 +176,69 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Dashboard" />
+        <>
+            <AppHeader breadcrumbs={breadcrumbs} /> {/* Use AppHeader directly */}
             <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-4 md:px-0">
+                <Head title="Dashboard" />
+
+                {/* Verification Notice - Moved to top */}
+                {auth.user.verification_status === 'unverified' && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-900/20">
+                        <div className="flex items-center gap-3">
+                            <ExclamationCircleIcon className="h-5 w-5 text-amber-500" />
+                            <div className="flex-1">
+                                <p className="font-medium text-amber-800 dark:text-amber-200">Your account is not yet verified</p>
+                                <p className="text-sm text-amber-700 dark:text-amber-300">Submit a verification document to unlock all features.</p>
+                            </div>
+                            <Dialog open={isVerificationOpen} onOpenChange={setIsVerificationOpen}>
+                                <DialogTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className="border-amber-200 bg-white text-amber-700 hover:bg-amber-50 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900"
+                                    >
+                                        Submit Verification
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Submit Verification Document</DialogTitle>
+                                    </DialogHeader>
+                                    <form onSubmit={handleVerificationSubmit} className="space-y-4">
+                                        <div>
+                                            <Label htmlFor="document">Document</Label>
+                                            <Input
+                                                id="document"
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                onChange={(e) => setData('document', e.target.files?.[0] || null)}
+                                                required
+                                            />
+                                            <p className="mt-1 text-sm text-gray-500">Accepted formats: PDF, JPG, PNG</p>
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="notes">Additional Notes (Optional)</Label>
+                                            <Textarea
+                                                id="notes"
+                                                value={data.notes}
+                                                onChange={(e) => setData('notes', e.target.value)}
+                                                placeholder="Any additional information..."
+                                            />
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <Button type="button" variant="outline" onClick={() => setIsVerificationOpen(false)}>
+                                                Cancel
+                                            </Button>
+                                            <Button type="submit" disabled={processing}>
+                                                Submit
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex justify-end">
                     <Dialog open={isOpen} onOpenChange={setIsOpen}>
                         <DialogTrigger asChild>
@@ -287,7 +362,7 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                                 </div>
 
                                 <div className="space-y-4 p-4">
-                                    <div className="whitespace-pre-wrap text-base">{post.content}</div>
+                                    <div className="text-base whitespace-pre-wrap">{post.content}</div>
 
                                     {post.attachments.length > 0 && (
                                         <div className="grid grid-cols-1 gap-4">
@@ -295,14 +370,14 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                                                 <div key={attachment.id} className="overflow-hidden rounded-lg">
                                                     {attachment.file_type.includes('image') ? (
                                                         <div className="flex justify-center">
-                                                            <img 
-                                                                src={attachment.file_path} 
-                                                                alt="Attachment" 
+                                                            <img
+                                                                src={attachment.file_path}
+                                                                alt="Attachment"
                                                                 className="w-full rounded-lg md:max-w-[600px] md:object-contain"
-                                                                style={{ 
+                                                                style={{
                                                                     maxHeight: '80vh',
                                                                     width: '100%',
-                                                                    height: 'auto'
+                                                                    height: 'auto',
                                                                 }}
                                                             />
                                                         </div>
@@ -324,8 +399,8 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
 
                                 <div className="border-t px-4 py-3">
                                     <div className="flex items-center gap-6">
-                                        <button 
-                                            onClick={() => handleLike(post.id)} 
+                                        <button
+                                            onClick={() => handleLike(post.id)}
                                             className="flex items-center gap-2 text-gray-500 hover:text-blue-500"
                                         >
                                             {post.likes.some((like) => like.user_id === authUserId) ? (
@@ -359,6 +434,7 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                                                         <div className="flex items-center gap-2">
                                                             <span className="font-medium">{comment.user.name}</span>
                                                             <span className="text-sm text-gray-500">@{comment.user.username}</span>
+                                                            <span className="text-sm text-gray-500">({comment.user.verification_status})</span>{' '}
                                                         </div>
                                                         <p className="text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
                                                     </div>
@@ -405,6 +481,6 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                     </DialogContent>
                 </Dialog>
             </div>
-        </AppLayout>
+        </>
     );
 }

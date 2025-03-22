@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import UserAvatar from '@/components/user-avatar';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, SharedData } from '@/types';
 import { FlagIcon, EnvelopeIcon, ChatBubbleLeftIcon, DocumentIcon, HeartIcon } from '@heroicons/react/24/outline';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
@@ -53,7 +53,7 @@ interface UserProfile {
 
 export default function ShowProfile({ user, isOwnProfile = false }: { user: UserProfile, isOwnProfile: boolean }) {
     const [isReportOpen, setIsReportOpen] = useState(false);
-    
+
     const { data, setData, post, processing, reset } = useForm({
         reason: '',
     });
@@ -92,7 +92,7 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`${user.name}'s Profile`} />
-            
+
             <div className="mx-auto max-w-3xl px-4 py-8 md:px-0">
                 {/* Profile Header */}
                 <div className="mb-8 rounded-xl border p-6">
@@ -104,7 +104,7 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                                 <p className="text-gray-500">@{user.username}</p>
                             </div>
                         </div>
-                        
+
                         {!isOwnProfile && (
                             <div className="flex gap-2">
                                 <Button
@@ -189,11 +189,11 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                                                 <div key={attachment.id} className="overflow-hidden rounded-lg">
                                                     {attachment.file_type.includes('image') ? (
                                                         <div className="flex justify-center">
-                                                            <img 
-                                                                src={attachment.file_path} 
-                                                                alt="Attachment" 
+                                                            <img
+                                                                src={attachment.file_path}
+                                                                alt="Attachment"
                                                                 className="w-full rounded-lg md:max-w-[600px] md:object-contain"
-                                                                style={{ 
+                                                                style={{
                                                                     maxHeight: '80vh',
                                                                     width: '100%',
                                                                     height: 'auto'
@@ -218,8 +218,8 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
 
                                 <div className="border-t px-4 py-3">
                                     <div className="flex items-center gap-6">
-                                        <button 
-                                            onClick={() => handleLike(post.id)} 
+                                        <button
+                                            onClick={() => handleLike(post.id)}
                                             className="flex items-center gap-2 text-gray-500 hover:text-blue-500"
                                         >
                                             {post.likes?.some((like) => like.user_id === authUserId) ? (
@@ -266,4 +266,4 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
             </div>
         </AppLayout>
     );
-} 
+}

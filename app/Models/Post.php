@@ -12,6 +12,7 @@ class Post extends Model
     use HasFactory;
 
     protected $fillable = ['content', 'user_id'];
+    protected $with = ['user'];
 
     public function user(): BelongsTo
     {

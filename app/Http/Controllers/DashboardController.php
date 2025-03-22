@@ -10,7 +10,7 @@ class DashboardController extends Controller
 {
     public function index()
         {
-            $posts = Post::with(['user:id,name,username,avatar', 'attachments', 'likes', 'comments' => function($query) {
+            $posts = Post::with(['user:id,name,username,avatar,verification_status', 'attachments', 'likes', 'comments' => function($query) {
                 $query->with('user:id,name,username');
             }])->latest()->get();
 

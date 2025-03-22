@@ -22,7 +22,11 @@ class AdminController extends Controller
                 'class'      => 'col-md-6',
                 'content'    => [new \App\Widgets\UserReportsWidget()]
             ]),
-            // ... other widgets ...
+            Widget::make([
+                'type'       => 'div',
+                'class'      => 'col-md-6',
+                'content'    => [new \App\Widgets\VerificationDocumentsWidget()]
+            ]),
         ]);
 
         return view(backpack_view('dashboard'), $this->data);

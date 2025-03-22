@@ -72,8 +72,26 @@ class PostController extends Controller
             'user_id' => auth()->id(),
             'post_id' => $post->id,
             'content' => $validated['content'],
+            'verification_status' => $post->id->verification_status,
         ]);
 
         return redirect()->back();
+    }
+
+    public function index()
+    {
+        $posts = Post::with(['user' => function($query) {
+                    $query->select('id', 'name', 'username', 'avatar', 'verification_status');
+                }, 'comments.user' => function ($query) {
+                    $query->select('id', 'user_id', 'post_id', 'content', 'created_at')
+                          ->with(['user' => function ($userQuery) {
+                              $userQuery->select('id', 'name', 'username', 'avatar', 'verification_status');
+                          }]);
+                }])->latest()->get();
+
+
+        return inertia('dashboard', [
+            'posts' => $posts
+        ]);
     }
 }

@@ -24,6 +24,7 @@ interface User {
     name: string;
     username: string;
     avatar: string | null;
+    verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
     lastMessage: string | null;
     lastMessageTime: string | null;
     unreadCount: number;
@@ -41,6 +42,7 @@ interface AllUser {
     name: string;
     username: string;
     avatar: string | null;
+    verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
 }
 
 interface Group {
@@ -52,6 +54,7 @@ interface Group {
         id: number;
         name: string;
         avatar: string | null;
+        verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
     }>;
     lastMessage: string | null;
     lastMessageTime: string | null;
@@ -64,6 +67,7 @@ interface GroupMessage extends Message {
         name: string;
         username: string;
         avatar: string | null;
+        verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
     };
 }
 
@@ -93,7 +97,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
     useEffect(() => {
         if (selectedChat) {
             setLoading(true);
-            const endpoint = selectedChat.isGroup 
+            const endpoint = selectedChat.isGroup
                 ? route('groups.messages', selectedChat.id.replace('group_', ''))
                 : route('messages.get', selectedChat.id);
 
@@ -123,29 +127,47 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
             let response;
             if (selectedChat.isGroup) {
                 response = await axios.post(
-                    route('groups.message', selectedChat.id.replace('group_', '')), 
+                    route('groups.message', selectedChat.id.replace('group_', '')),
                     data
                 );
             } else {
                 response = await axios.post(route('messages.send', selectedChat.id), data);
             }
-            
+
             const newMessage = response.data.message;
             setMessages([...messages, newMessage]);
 
-            if (selectedChat.isGroup) {
-                setGroups(currentGroups => {
-                    return currentGroups.map(group => {
-                        if (group.id === selectedChat.id) {
-                            return {
-                                ...group,
-                                lastMessage: data.content,
-                                lastMessageTime: 'Just now'
-                            };
-                        }
-                        return group;
+            if ('isGroup' in selectedChat) {
+                if (selectedChat.isGroup) {
+                    setGroups(currentGroups => {
+                        return currentGroups.map(group => {
+                            if (group.id === selectedChat.id) {
+                                return {
+                                    ...group,
+                                    lastMessage: data.content,
+                                    lastMessageTime: 'Just now'
+                                };
+                            }
+                            return group;
+                        });
                     });
-                });
+                } else {
+                    setUsers(currentUsers => {
+                        const existingUserIndex = currentUsers.findIndex(u => u.id === selectedChat.id);
+                        const updatedUser = {
+                            ...selectedChat,
+                            lastMessage: data.content,
+                            lastMessageTime: 'Just now'
+                        };
+
+                        if (existingUserIndex !== -1) {
+                            const newUsers = [...currentUsers];
+                            newUsers[existingUserIndex] = updatedUser;
+                            return newUsers;
+                        }
+                        return [updatedUser, ...currentUsers];
+                    });
+                }
             } else {
                 setUsers(currentUsers => {
                     const existingUserIndex = currentUsers.findIndex(u => u.id === selectedChat.id);
@@ -171,7 +193,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         }
     };
 
-    const filteredUsers = allUsers.filter(user => 
+    const filteredUsers = allUsers.filter(user =>
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.username.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -230,7 +252,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         return (
             <div className="border-b p-4">
                 <div className="flex items-center gap-3">
-                    {selectedChat.isGroup ? (
+                    {'isGroup' in selectedChat && selectedChat.isGroup ? (
                         <div className="flex items-center gap-3">
                             <div className="relative">
                                 <UserAvatar
@@ -264,7 +286,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
 
     const isCurrentUserMessage = (message: Message | GroupMessage) => {
         if (!auth.user) return false;
-        
+
         if ('user' in message) {
             return message.user.id === auth.user.id;
         }
@@ -275,7 +297,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Messages" />
             <div className="flex h-[calc(100vh-12rem)] flex-1 overflow-hidden rounded-xl border">
-                <div 
+                <div
                     className={`${
                         isMobileView && selectedChat ? 'hidden' : 'flex'
                     } w-full flex-col border-r md:w-80 md:flex`}
@@ -296,7 +318,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                     <button
                                         key={chat.id}
                                         onClick={() => setSelectedChat(chat)}
-                                        className={`flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-200/70 dark:hover:bg-gray-800 
+                                        className={`flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-200/70 dark:hover:bg-gray-800
                                             ${selectedChat?.id === chat.id ? 'bg-gray-200/70 dark:bg-gray-800' : ''}`}
                                     >
                                         {chat.isGroup ? (
@@ -393,7 +415,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                 required
                                             />
                                         </div>
-                                        
+
                                         <div>
                                             <Label>Select Members</Label>
                                             <div className="mt-2 max-h-[40vh] space-y-2 overflow-y-auto rounded-md border p-2">
@@ -434,7 +456,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                     </div>
                 </div>
 
-                <div 
+                <div
                     className={`${
                         isMobileView && !selectedChat ? 'hidden' : 'flex'
                     } flex-1 flex-col md:flex`}
@@ -562,4 +584,4 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
             </div>
         </AppLayout>
     );
-} 
+}

@@ -24,7 +24,8 @@ class User extends Authenticatable
         'username',
         'email',
         'password',
-        'avatar'
+        'avatar',
+        'verification_status',
     ];
 
     /**
@@ -42,13 +43,19 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'verification_status' => 'string',
+    ];
+
+    protected $visible = [
+        'id',
+        'name',
+        'username',
+        'avatar',
+        'verification_status'
+    ];
 
     public function posts(): HasMany
     {
@@ -85,5 +92,16 @@ class User extends Authenticatable
     public function groupMessages()
     {
         return $this->hasMany(GroupMessage::class);
+    }
+
+    public function verificationDocument()
+    {
+        return $this->hasOne(VerificationDocument::class);
+    }
+
+    public function getVerificationStatusAttribute($value)
+    {
+        \Log::info('Getting verification status for user ' . $this->id . ': ' . $value);
+        return $value ?? 'unverified';
     }
 }
