@@ -4,12 +4,12 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class AddVerificationToUsers extends Migration
+return new class extends Migration
 {
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->enum('verification_status', ['unverified', 'pending', 'verified'])->default('unverified');
+            $table->string('verification_status')->default('unverified');
         });
     }
 
@@ -19,4 +19,4 @@ class AddVerificationToUsers extends Migration
             $table->dropColumn('verification_status');
         });
     }
-} 
+}; 
