@@ -42,7 +42,14 @@ class PostController extends Controller
             }
         }
 
-        return redirect()->back();
+        // Load the post with its relationships and add is_friend property
+        $post->load(['user:id,name,username,avatar,verification_status', 'attachments', 'likes', 'comments' => function($query) {
+            $query->with('user:id,name,username');
+        }]);
+        
+        $post->user = (object) array_merge((array) $post->user, ['is_friend' => auth()->user()->isFriendsWith($post->user)]);
+
+        return back()->with('post', $post);
     }
 
     public function like(Request $request, Post $post)
@@ -68,14 +75,19 @@ class PostController extends Controller
             'content' => 'required|string',
         ]);
 
-        Comment::create([
+        $comment = Comment::create([
             'user_id' => auth()->id(),
             'post_id' => $post->id,
             'content' => $validated['content'],
-            'verification_status' => $post->id->verification_status,
         ]);
 
-        return redirect()->back();
+        // Load the comment with its user data
+        $comment->load(['user' => function($query) {
+            $query->select('id', 'name', 'username', 'avatar', 'verification_status');
+        }]);
+
+        // Return an Inertia response
+        return back()->with('comment', $comment);
     }
 
     public function index()

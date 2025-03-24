@@ -10,6 +10,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
@@ -108,6 +109,18 @@ class User extends Authenticatable
     {
         \Log::info('Getting verification status for user ' . $this->id . ': ' . $value);
         return $value ?? 'unverified';
+    }
+
+    public function friends(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'friendships', 'user_id', 'friend_id')
+            ->withTimestamps();
+    }
+
+    public function isFriendsWith(User $user): bool
+    {
+        return $this->friends()->where('friend_id', $user->id)->exists() ||
+               $user->friends()->where('friend_id', $this->id)->exists();
     }
 
     // public function setPasswordAttribute($value)

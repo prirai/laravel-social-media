@@ -7,6 +7,7 @@ use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\FriendRequestController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -33,6 +34,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/groups/{group}/messages', [MessagingController::class, 'getGroupMessages'])->name('groups.messages');
     Route::get('/profile/{username}', [ProfileController::class, 'show'])->name('profile.show');
     Route::post('/users/{username}/report', [ProfileController::class, 'report'])->name('users.report');
+    Route::post('/users/{username}/friend-request', [FriendRequestController::class, 'send'])->name('friend-requests.send');
+    Route::post('/friend-requests/{friendRequest}/accept', [FriendRequestController::class, 'accept'])->name('friend-requests.accept');
+    Route::post('/friend-requests/{friendRequest}/reject', [FriendRequestController::class, 'reject'])->name('friend-requests.reject');
+    Route::delete('/friend-requests/{friendRequest}', [FriendRequestController::class, 'cancel'])->name('friend-requests.cancel');
 });
 
 Route::post('user/submit-verification', [VerificationController::class, 'submit'])->name('user.submit-verification');

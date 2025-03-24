@@ -19,52 +19,59 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+interface Comment {
+    id: number;
+    content: string;
+    created_at: string;
+    user: {
+        id: number;
+        name: string;
+        username?: string;
+        avatar?: string | null;
+        verification_status?: 'unverified' | 'pending' | 'verified';
+    };
+}
+
 interface Post {
     id: number;
     content: string;
-    user_id: number;
     created_at: string;
-    updated_at: string;
+    user: {
+        id: number;
+        name: string;
+        username: string;
+        avatar: string;
+        verification_status?: 'unverified' | 'pending' | 'verified';
+        is_friend?: boolean;
+    };
     attachments: Array<{
         id: number;
         file_path: string;
         file_type: string;
     }>;
-    user: {
-        name: string;
-        username: string;
-        avatar: string;
-        verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
-    };
     likes: Array<{
         id: number;
         user_id: number;
         post_id: number;
     }>;
-    comments: Array<{
-        id: number;
-        user_id: number;
-        post_id: number;
-        content: string;
-        user: {
-            name: string;
-            username?: string;
-            avatar?: string;
-            // verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
-        };
-    }>;
+    comments: Comment[];
+}
+
+interface PageProps {
+    comment?: Comment;
 }
 
 interface DashboardProps {
     posts: Post[];
 }
 
-export default function Dashboard({ posts = [] }: DashboardProps) {
+export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) {
+    const [posts, setPosts] = useState<Post[]>(initialPosts);
     const [isOpen, setIsOpen] = useState(false);
     const [commentOpen, setCommentOpen] = useState(false);
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
     const [commentErrors, setCommentErrors] = useState<{ [key: string]: string }>({});
-    const { auth } = usePage<SharedData>().props;
+    const { auth } = usePage<SharedData & PageProps>().props;
     const [isVerificationOpen, setIsVerificationOpen] = useState(false);
 
     const {
@@ -102,7 +109,21 @@ export default function Dashboard({ posts = [] }: DashboardProps) {
         e.preventDefault();
         if (selectedPost) {
             postComment(route('posts.comment', { post: selectedPost.id }), {
-                onSuccess: () => {
+                onSuccess: (page) => {
+                    const newComment = page.props.comment as Comment;
+                    if (newComment) {
+                        // Update the posts state with the new comment from the Inertia response
+                        setPosts((prevPosts) =>
+                            prevPosts.map((post) =>
+                                post.id === selectedPost.id
+                                    ? {
+                                          ...post,
+                                          comments: [...post.comments, newComment],
+                                      }
+                                    : post
+                            )
+                        );
+                    }
                     resetComment();
                     setCommentOpen(false);
                     setSelectedPost(null);
@@ -128,7 +149,11 @@ export default function Dashboard({ posts = [] }: DashboardProps) {
         e.preventDefault();
 
         post(route('posts.store'), {
-            onSuccess: () => {
+            onSuccess: (page) => {
+                const newPost = page.props.post as Post;
+                if (newPost) {
+                    setPosts((prevPosts) => [newPost, ...prevPosts]);
+                }
                 reset();
                 setIsOpen(false);
             },
@@ -153,11 +178,9 @@ export default function Dashboard({ posts = [] }: DashboardProps) {
 
             if (oversizedFiles.length > 0) {
                 const errorMessage = `The following files exceed the 5MB limit: ${oversizedFiles.join(', ')}`;
-
-                setData('attachments', [...data.attachments, ...validFiles]); //Add files even if some are too big
-                //Show the errors after the files have been added.
-                setErrors((prev) => ({
-                    ...prev,
+                setData('attachments', [...data.attachments, ...validFiles]);
+                setCommentErrors((prevErrors) => ({
+                    ...prevErrors,
                     attachments: errorMessage,
                 }));
             } else {
@@ -349,6 +372,9 @@ export default function Dashboard({ posts = [] }: DashboardProps) {
                                             <p className="font-medium">{post.user.name}</p>
                                             <div className="flex items-center gap-2 text-sm text-gray-500">
                                                 <span>@{post.user.username}</span>
+                                                {post.user.is_friend && (
+                                                    <span className="text-xs text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20 px-2 py-0.5 rounded-full">Friends</span>
+                                                )}
                                                 <span>•</span>
                                                 <span>{new Date(post.created_at).toLocaleString()}</span>
                                             </div>

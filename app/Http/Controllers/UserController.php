@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 
+// For searches
 class UserController extends Controller
 {
     public function search(Request $request)

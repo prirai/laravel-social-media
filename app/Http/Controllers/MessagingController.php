@@ -11,6 +11,7 @@ use App\Models\Group;
 use App\Models\GroupMessage;
 use Illuminate\Support\Facades\Storage;
 use App\Models\MessageAttachment;
+use App\Models\GroupMessageAttachment;
 
 class MessagingController extends Controller
 {
@@ -19,8 +20,10 @@ class MessagingController extends Controller
      */
     public function index()
     {
-        $currentUser = auth()->user();
-        $users = User::where('id', '!=', $currentUser->id)
+        $user = auth()->user();
+        
+        // Get all users who are friends with the current user
+        $users = User::where('id', '!=', $user->id)
             ->select('id', 'name', 'username', 'avatar', 'verification_status')
             ->withCount(['receivedMessages as unread_count' => function ($query) {
                 $query->whereNull('read_at')
@@ -33,34 +36,36 @@ class MessagingController extends Controller
                 });
             }])
             ->get()
-            ->map(function ($user) {
-                $lastMessage = $user->latestMessage;
+            ->map(function ($friend) use ($user) {
+                $lastMessage = $friend->latestMessage;
                 return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'username' => $user->username,
-                    'avatar' => $user->avatar,
+                    'id' => $friend->id,
+                    'name' => $friend->name,
+                    'username' => $friend->username,
+                    'avatar' => $friend->avatar,
                     'lastMessage' => $lastMessage ? $lastMessage->content : null,
                     'lastMessageTime' => $lastMessage ? $lastMessage->created_at->diffForHumans() : null,
-                    'unreadCount' => $user->unread_count,
-                    'verification_status' => $user->verification_status,
+                    'unreadCount' => $friend->unread_count,
+                    'verification_status' => $friend->verification_status,
+                    'isFriend' => $user->isFriendsWith($friend),
                 ];
             });
 
-        // Add current user to the beginning of the list
-        $currentUserData = [
-            'id' => $currentUser->id,
-            'name' => $currentUser->name,
-            'username' => $currentUser->username,
-            'avatar' => $currentUser->avatar,
+        // Add current user's profile to the list
+        $currentUser = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'username' => $user->username,
+            'avatar' => $user->avatar,
+            'verification_status' => $user->verification_status,
             'lastMessage' => null,
             'lastMessageTime' => null,
             'unreadCount' => 0,
-            'verification_status' => $currentUser->verification_status,
             'isCurrentUser' => true,
+            'isFriend' => false,
         ];
 
-        $users = collect([$currentUserData])->concat($users);
+        $users = collect([$currentUser])->concat($users);
 
         // Get group conversations
         $groups = Group::whereHas('users', function ($query) {
@@ -204,6 +209,10 @@ class MessagingController extends Controller
     {
         $validated = $request->validate([
             'content' => 'required|string|max:1000',
+            'attachments.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf,mp4,mp3,wav|max:5120', // 5MB max
+        ], [
+            'attachments.*.max' => 'Each file must be less than 5MB.',
+            'attachments.*.mimes' => 'Only JPEG, PNG, JPG, GIF, PDF, MP4, MP3, and WAV files are allowed.',
         ]);
 
         // Verify user is in group
@@ -217,8 +226,22 @@ class MessagingController extends Controller
             'content' => $validated['content'],
         ]);
 
-        // Load the message with user information
-        $message->load('user:id,name,username,avatar');
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store('message-attachments/' . auth()->id(), 'public');
+
+                GroupMessageAttachment::create([
+                    'group_message_id' => $message->id,
+                    'file_path' => Storage::url($path),
+                    'file_type' => $file->getMimeType(),
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_size' => $file->getSize(),
+                ]);
+            }
+        }
+
+        // Load the message with user information and attachments
+        $message->load(['user:id,name,username,avatar', 'attachments']);
 
         return response()->json([
             'message' => array_merge($message->toArray(), [

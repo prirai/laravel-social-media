@@ -150,6 +150,7 @@ class UserCrudController extends CrudController
             'label' => 'Password',
             'type' => 'password',
             'hint' => 'Leave blank to keep the same password',
+            'validationRules' => 'nullable|min:8',
         ]);
 
         // Add password confirmation if needed
@@ -158,6 +159,36 @@ class UserCrudController extends CrudController
             'label' => 'Password Confirmation',
             'type' => 'password',
             'hint' => 'Leave blank to keep the same password',
+            'validationRules' => 'nullable|same:password',
         ]);
+    }
+
+    /**
+     * Update the specified resource in the database.
+     *
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function update()
+    {
+        $data = CRUD::getRequest()->all();
+        
+        // If password is empty, remove it from the data
+        if (empty($data['password'])) {
+            unset($data['password']);
+        }
+        
+        // If password is provided, hash it
+        if (!empty($data['password'])) {
+            $data['password'] = bcrypt($data['password']);
+        }
+        
+        // Remove password confirmation as it's not needed in the database
+        unset($data['password_confirmation']);
+        
+        // Update the user
+        $user = CRUD::getCurrentEntry();
+        $user->update($data);
+        
+        return redirect()->back();
     }
 }
