@@ -7,9 +7,9 @@ import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import UserAvatar from '@/components/user-avatar';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { ArrowLeftIcon, MagnifyingGlassIcon, PaperAirplaneIcon, PlusIcon, UsersIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, MagnifyingGlassIcon, PaperAirplaneIcon, PlusIcon, UsersIcon, ClockIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Paperclip, X, FileText, File } from 'lucide-react';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage, router } from '@inertiajs/react';
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -42,15 +42,25 @@ interface MessageUser {
     verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
 }
 
-interface Message {
+interface DirectMessage {
     id: number;
     content: string;
     sender_id: number;
     created_at: string;
     expires_at: string;
-    user?: MessageUser;
     attachments?: MessageAttachment[];
 }
+
+interface GroupMessage {
+    id: number;
+    content: string;
+    user_id: number;
+    created_at: string;
+    user: MessageUser;
+    attachments?: MessageAttachment[];
+}
+
+type Message = DirectMessage | GroupMessage;
 
 interface MessageAttachment {
     id: number;
@@ -84,16 +94,6 @@ interface Group {
     unreadCount: number;
 }
 
-interface GroupMessage extends Message {
-    user: {
-        id: number;
-        name: string;
-        username: string;
-        avatar: string | null;
-        verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
-    };
-}
-
 type Chat = User | Group;
 
 function isGroup(chat: Chat): chat is Group {
@@ -111,6 +111,14 @@ interface MessagingProps {
         verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
     }>;
 }
+
+const isGroupMessage = (message: Message): message is GroupMessage => {
+    return 'user_id' in message && 'user' in message && !('sender_id' in message);
+};
+
+const isDirectMessage = (message: Message): message is DirectMessage => {
+    return 'sender_id' in message && !('user_id' in message);
+};
 
 export default function Messaging({ users: initialUsers = [], groups: initialGroups = [], allUsers = [] }: MessagingProps) {
     const { auth } = usePage<SharedData>().props;
@@ -283,9 +291,14 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         setIsNewMessageOpen(false);
     };
 
-    const isCurrentUserMessage = (message: Message): boolean => {
+    const isCurrentUserMessage = (message: DirectMessage): boolean => {
         if (!auth.user) return false;
         return message.sender_id === auth.user.id;
+    };
+
+    const isCurrentUserGroupMessage = (message: GroupMessage): boolean => {
+        if (!auth.user) return false;
+        return message.user_id === auth.user.id;
     };
 
     const formatExpirationTime = (expiresAt: string) => {
@@ -296,6 +309,21 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         if (diffInHours <= 0) return 'Expired';
         if (diffInHours < 24) return `Expires in ${diffInHours}h`;
         return `Expires in ${Math.round(diffInHours / 24)}d`;
+    };
+
+    const handleDeleteMessage = (messageId: number) => {
+        if (!selectedChat) return;
+
+        // Optimistically update the UI
+        setMessages((prevMessages) => prevMessages.filter((message) => message.id !== messageId));
+
+        router.delete(route('messages.destroy', messageId), {
+            preserveScroll: true,
+            onError: () => {
+                // Revert the optimistic update on error
+                setMessages((prevMessages) => [...prevMessages]);
+            },
+        });
     };
 
     return (
@@ -516,20 +544,24 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                 </div>
                                             )}
                                             {messages.map((message, index) => {
-                                                const isCurrentUser = isCurrentUserMessage(message);
+                                                const isCurrentUser = isGroup(selectedChat) 
+                                                    ? isGroupMessage(message) && isCurrentUserGroupMessage(message)
+                                                    : isDirectMessage(message) && isCurrentUserMessage(message);
                                                 const showAvatar = isGroup(selectedChat) && !isCurrentUser;
                                                 const prevMessage = messages[index - 1];
                                                 const isConsecutiveMessage = prevMessage && 
                                                     isGroup(selectedChat) && 
                                                     !isCurrentUser && 
-                                                    prevMessage.user?.id === message.user?.id;
+                                                    isGroupMessage(prevMessage) && 
+                                                    isGroupMessage(message) && 
+                                                    prevMessage.user_id === message.user_id;
 
                                                 return (
                                                     <div
                                                         key={message.id}
                                                         className={`mb-4 flex ${isCurrentUser || isConsecutiveMessage ? 'justify-end' : 'justify-start'}`}
                                                     >
-                                                        {showAvatar && !isConsecutiveMessage && message.user && (
+                                                        {showAvatar && !isConsecutiveMessage && isGroupMessage(message) && (
                                                             <div className="flex flex-col items-center gap-1">
                                                                 <UserAvatar user={message.user} className="size-8" />
                                                                 <span className="text-xs text-gray-500 dark:text-gray-400">{message.user.name.split(' ')[0]}</span>
@@ -543,13 +575,25 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                                     : 'bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white'
                                                             }`}
                                                         >
-                                                            {isGroup(selectedChat) && !isCurrentUser && message.user && !isConsecutiveMessage && (
+                                                            {isGroup(selectedChat) && !isCurrentUser && isGroupMessage(message) && !isConsecutiveMessage && (
                                                                 <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
                                                                     {message.user.name}
                                                                 </p>
                                                             )}
                                                             <div className="flex flex-col gap-1">
-                                                                <p className="text-sm">{message.content}</p>
+                                                                <div className="flex items-start justify-between gap-2">
+                                                                    <p className="text-sm">{message.content}</p>
+                                                                    {!isGroup(selectedChat) && isCurrentUser && (
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-6 w-6 text-white/70 hover:text-white hover:bg-white/10"
+                                                                            onClick={() => handleDeleteMessage(message.id)}
+                                                                        >
+                                                                            <TrashIcon className="h-4 w-4" />
+                                                                        </Button>
+                                                                    )}
+                                                                </div>
                                                                 {message.attachments && message.attachments.length > 0 && (
                                                                     <div className="flex flex-wrap gap-2 mt-2">
                                                                         {message.attachments.map((attachment) => (

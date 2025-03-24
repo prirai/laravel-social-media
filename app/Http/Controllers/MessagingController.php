@@ -241,12 +241,17 @@ class MessagingController extends Controller
         }
 
         // Load the message with user information and attachments
-        $message->load(['user:id,name,username,avatar', 'attachments']);
+        $message->load(['user:id,name,username,avatar,verification_status', 'attachments']);
 
         return response()->json([
-            'message' => array_merge($message->toArray(), [
+            'message' => [
+                'id' => $message->id,
+                'content' => $message->content,
+                'user_id' => $message->user_id,
                 'created_at' => $message->created_at->toISOString(),
-            ])
+                'user' => $message->user,
+                'attachments' => $message->attachments,
+            ]
         ]);
     }
 
@@ -258,17 +263,54 @@ class MessagingController extends Controller
         }
 
         $messages = $group->messages()
-            ->with('user:id,name,username,avatar')
+            ->with(['user:id,name,username,avatar,verification_status', 'attachments'])
             ->orderBy('created_at', 'asc')
             ->get()
             ->map(function ($message) {
-                return array_merge($message->toArray(), [
+                return [
+                    'id' => $message->id,
+                    'content' => $message->content,
+                    'user_id' => $message->user_id,
                     'created_at' => $message->created_at->toISOString(),
-                ]);
+                    'user' => [
+                        'id' => $message->user->id,
+                        'name' => $message->user->name,
+                        'username' => $message->user->username,
+                        'avatar' => $message->user->avatar,
+                        'verification_status' => $message->user->verification_status,
+                    ],
+                    'attachments' => $message->attachments,
+                ];
             });
 
         return response()->json([
             'messages' => $messages
         ]);
+    }
+
+    /**
+     * Delete a direct message and its attachments.
+     */
+    public function destroy(Message $message)
+    {
+        // Check if the authenticated user is the sender of the message
+        if ($message->sender_id !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Delete any attachments associated with the message
+        if ($message->attachments) {
+            foreach ($message->attachments as $attachment) {
+                // Remove the storage prefix from the file path
+                $filePath = str_replace('storage/', '', $attachment->file_path);
+                Storage::disk('public')->delete($filePath);
+                $attachment->delete();
+            }
+        }
+
+        // Delete the message
+        $message->delete();
+
+        return back();
     }
 }
