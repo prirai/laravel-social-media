@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Listing;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Storage;
 
 class MarketplaceController extends Controller
 {
@@ -88,5 +89,29 @@ class MarketplaceController extends Controller
 
         return redirect()->route('marketplace.index')
             ->with('success', 'Listing created successfully!');
+    }
+
+    public function destroy(Listing $listing)
+    {
+        // Check if the user owns the listing
+        if ($listing->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Delete the listing's images from storage
+        if ($listing->images) {
+            foreach ($listing->images as $image) {
+                $path = str_replace('/storage/', '', $image);
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
+            }
+        }
+
+        // Delete the listing
+        $listing->delete();
+
+        return redirect()->route('marketplace.index')
+            ->with('success', 'Listing deleted successfully!');
     }
 }

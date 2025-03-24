@@ -5,9 +5,9 @@ import { Label } from '@/components/ui/label';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
-import { CurrencyRupeeIcon, PhotoIcon, PlusIcon, TagIcon, ExclamationCircleIcon, CheckCircleIcon, ComputerDesktopIcon, TruckIcon, HomeIcon, TrophyIcon, ShoppingBagIcon, BookOpenIcon, Squares2X2Icon, EllipsisHorizontalCircleIcon } from '@heroicons/react/24/outline';
-import { Head, useForm } from '@inertiajs/react';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { CurrencyRupeeIcon, PhotoIcon, PlusIcon, TagIcon, ExclamationCircleIcon, CheckCircleIcon, ComputerDesktopIcon, TruckIcon, HomeIcon, TrophyIcon, ShoppingBagIcon, BookOpenIcon, Squares2X2Icon, EllipsisHorizontalCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import UserAvatar from '@/components/user-avatar';
 
@@ -53,10 +53,29 @@ const categories = [
     },
 ] as const;
 
-export default function Marketplace({ listings = [], flash = {} }: { listings: any[], flash: any }) {
+interface Listing {
+    id: number;
+    title: string;
+    price: number;
+    category: string;
+    description: string;
+    images: string[];
+    status: 'unverified' | 'verified';
+    seller: {
+        name: string;
+        username: string;
+        avatar: string | null;
+        verification_status: 'unverified' | 'verified' | 'pending';
+    } | null;
+    created_at: string;
+}
+
+export default function Marketplace({ listings: initialListings = [], flash = {} }: { listings: Listing[], flash: any }) {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('All Categories');
     const [loadedImages, setLoadedImages] = useState<{ [key: string]: boolean }>({});
+    const [listings, setListings] = useState<Listing[]>(initialListings);
+    const { auth } = usePage<SharedData>().props;
     
     // Add this function to filter listings
     const filteredListings = useMemo(() => {
@@ -65,6 +84,20 @@ export default function Marketplace({ listings = [], flash = {} }: { listings: a
         }
         return listings.filter(listing => listing.category === selectedCategory);
     }, [listings, selectedCategory]);
+
+    const handleDeleteListing = (listingId: number) => {
+        if (confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
+            // Optimistically update the UI
+            setListings((prevListings) => prevListings.filter((listing) => listing.id !== listingId));
+
+            router.delete(route('marketplace.destroy', listingId), {
+                onError: () => {
+                    // Revert the optimistic update on error
+                    setListings((prevListings) => [...prevListings]);
+                },
+            });
+        }
+    };
 
     const { data, setData, post, processing, errors, reset, progress } = useForm({
         title: '',
@@ -333,7 +366,9 @@ export default function Marketplace({ listings = [], flash = {} }: { listings: a
                                                 </span>
                                             )}
                                         </div>
-                                        <span className="text-lg font-bold">₹{listing.price}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-lg font-bold">₹{listing.price}</span>
+                                        </div>
                                     </div>
                                     <p className="mb-2 text-sm text-gray-600">{listing.description}</p>
                                     <div className="flex items-center justify-between">
@@ -349,13 +384,24 @@ export default function Marketplace({ listings = [], flash = {} }: { listings: a
                                                 user={listing.seller || { 
                                                     name: 'Unknown User',
                                                     avatar: null,
-                                                    username: 'unknown'
+                                                    username: 'unknown',
+                                                    verification_status: 'unverified'
                                                 }} 
                                                 className="size-6" 
                                             />
                                             <span className="text-sm text-gray-500">
                                                 {listing.seller?.name || 'Unknown User'}
                                             </span>
+                                            {auth.user && listing.seller?.username === auth.user.username && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-gray-500 hover:text-red-500"
+                                                    onClick={() => handleDeleteListing(listing.id)}
+                                                >
+                                                    <TrashIcon className="h-5 w-5" />
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

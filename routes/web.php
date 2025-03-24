@@ -26,11 +26,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/messages/{user}', [MessagingController::class, 'getMessages'])->name('messages.get');
         Route::post('/messages/{user}', [MessagingController::class, 'sendMessage'])->name('messages.send');
         Route::post('/messages/{user}/read', [MessagingController::class, 'markAsRead'])->name('messages.read');
+        Route::delete('/messages/{message}', [MessagingController::class, 'destroy'])->name('messages.destroy');
     });
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace.index');
     Route::post('/marketplace', [MarketplaceController::class, 'store'])->name('marketplace.store');
+    Route::delete('/marketplace/{listing}', [MarketplaceController::class, 'destroy'])->name('marketplace.destroy');
     Route::post('/groups', [MessagingController::class, 'createGroup'])->name('groups.create');
     Route::post('/groups/{group}/messages', [MessagingController::class, 'sendGroupMessage'])->name('groups.message');
     Route::get('/groups/{group}/messages', [MessagingController::class, 'getGroupMessages'])->name('groups.messages');
