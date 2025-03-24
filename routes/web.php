@@ -16,6 +16,8 @@ Route::get('/', function () {
 Route::middleware(['auth'])->group(function () {
         Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
         Route::post('/posts', [App\Http\Controllers\PostController::class, 'store'])->name('posts.store');
+        Route::delete('/posts/{post}', [App\Http\Controllers\PostController::class, 'destroy'])->name('posts.destroy');
+        Route::delete('/comments/{comment}', [App\Http\Controllers\PostController::class, 'destroyComment'])->name('comments.destroy');
         Route::post('/posts/{post}/like', [App\Http\Controllers\PostController::class, 'like'])->name('posts.like');
         Route::post('/posts/{post}/comment', [App\Http\Controllers\PostController::class, 'comment'])->name('posts.comment');
         Route::post('/profile', [App\Http\Controllers\Settings\ProfileController::class, 'update'])->name('profile.update');

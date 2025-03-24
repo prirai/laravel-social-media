@@ -15,6 +15,11 @@ class PostController extends Controller
 {
     public function store(Request $request)
     {
+        // Check if user is verified
+        if (auth()->user()->verification_status !== 'verified') {
+            return back()->with('error', 'Only verified users can create posts.');
+        }
+
         $validated = $request->validate([
                 'content' => 'required|string',
                 'attachments.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:5120', // 5MB max
@@ -105,5 +110,27 @@ class PostController extends Controller
         return inertia('dashboard', [
             'posts' => $posts,
         ]);
+    }
+
+    public function destroy(Post $post)
+    {
+        // Check if user owns the post
+        if ($post->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $post->delete();
+        return back();
+    }
+
+    public function destroyComment(Comment $comment)
+    {
+        // Check if user owns the comment
+        if ($comment->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $comment->delete();
+        return back();
     }
 }

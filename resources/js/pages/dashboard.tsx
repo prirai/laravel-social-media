@@ -7,9 +7,9 @@ import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Textarea } from '@/components/ui/textarea';
 import UserAvatar from '@/components/user-avatar';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { ChatBubbleLeftIcon, DocumentIcon, ExclamationCircleIcon, HeartIcon, PhotoIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftIcon, DocumentIcon, ExclamationCircleIcon, HeartIcon, PhotoIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -73,6 +73,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
     const [commentErrors, setCommentErrors] = useState<{ [key: string]: string }>({});
     const { auth } = usePage<SharedData & PageProps>().props;
     const [isVerificationOpen, setIsVerificationOpen] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const {
         data,
@@ -218,8 +219,48 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
         });
     };
 
+    const handleDeletePost = (postId: number) => {
+        if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+            router.delete(route('posts.destroy', postId), {
+                onSuccess: () => {
+                    setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+                },
+            });
+        }
+    };
+
+    const handleDeleteComment = (commentId: number) => {
+        if (confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
+            // Optimistically update the UI
+            setPosts((prevPosts) =>
+                prevPosts.map((post) => ({
+                    ...post,
+                    comments: post.comments.filter((comment) => comment.id !== commentId),
+                }))
+            );
+
+            router.delete(route('comments.destroy', commentId), {
+                onError: () => {
+                    // Revert the optimistic update on error
+                    setPosts((prevPosts) =>
+                        prevPosts.map((post) => ({
+                            ...post,
+                            comments: post.comments.filter((comment) => comment.id !== commentId),
+                        }))
+                    );
+                },
+            });
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
+
+        if (auth.user.verification_status !== 'verified') {
+            setError('Only verified users can create posts.');
+            return;
+        }
 
         post(route('posts.store'), {
             onSuccess: (page) => {
@@ -229,6 +270,9 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                 }
                 reset();
                 setIsOpen(false);
+            },
+            onError: (errors) => {
+                setError(errors.content || 'An error occurred while creating the post.');
             },
         });
     };
@@ -345,6 +389,18 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                             </DialogHeader>
 
                             <form onSubmit={handleSubmit} className="space-y-4">
+                                {error && (
+                                    <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
+                                        <div className="flex">
+                                            <div className="flex-shrink-0">
+                                                <ExclamationCircleIcon className="h-5 w-5 text-red-400" aria-hidden="true" />
+                                            </div>
+                                            <div className="ml-3">
+                                                <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="space-y-2">
                                     <Label htmlFor="content">Post Content</Label>
                                     <Textarea
@@ -455,6 +511,16 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                 <span>{new Date(post.created_at).toLocaleString()}</span>
                                             </div>
                                         </div>
+                                        {post.user.id === authUserId && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="text-gray-500 hover:text-red-500"
+                                                onClick={() => handleDeletePost(post.id)}
+                                            >
+                                                <TrashIcon className="h-5 w-5" />
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
 
@@ -532,7 +598,19 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                         <div className="flex items-center gap-2">
                                                             <span className="font-medium">{comment.user.name}</span>
                                                             <span className="text-sm text-gray-500">@{comment.user.username}</span>
-                                                            <span className="text-sm text-gray-500">({comment.user.verification_status})</span>
+                                                            {comment.user.verification_status && (
+                                                                <span className="text-sm text-gray-500">({comment.user.verification_status})</span>
+                                                            )}
+                                                            {comment.user.id === authUserId && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="ml-auto h-6 w-6 text-gray-500 hover:text-red-500"
+                                                                    onClick={() => handleDeleteComment(comment.id)}
+                                                                >
+                                                                    <TrashIcon className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                         <p className="text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
                                                     </div>
