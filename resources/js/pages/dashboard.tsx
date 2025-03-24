@@ -92,7 +92,35 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
     const authUserId = auth.user?.id;
 
     const handleLike = (postId: number) => {
-        post(route('posts.like', { post: postId }));
+        setPosts((prevPosts) =>
+            prevPosts.map((post) =>
+                post.id === postId
+                    ? {
+                          ...post,
+                          likes: post.likes.some((like) => like.user_id === authUserId)
+                              ? post.likes.filter((like) => like.user_id !== authUserId)
+                              : [...post.likes, { id: Date.now(), user_id: authUserId, post_id: postId }],
+                      }
+                    : post
+            )
+        );
+
+        post(route('posts.like', { post: postId }), {
+            onError: () => {
+                setPosts((prevPosts) =>
+                    prevPosts.map((post) =>
+                        post.id === postId
+                            ? {
+                                  ...post,
+                                  likes: post.likes.some((like) => like.user_id === authUserId)
+                                      ? post.likes.filter((like) => like.user_id !== authUserId)
+                                      : post.likes.slice(0, -1),
+                              }
+                            : post
+                    )
+                );
+            },
+        });
     };
 
     const {
@@ -108,28 +136,73 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
     const handleCommentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedPost) {
+            // Create an optimistic comment
+            const optimisticComment: Comment = {
+                id: Date.now(), // Temporary ID
+                content: commentData.content,
+                created_at: new Date().toISOString(),
+                user: {
+                    id: auth.user.id,
+                    name: auth.user.name,
+                    username: typeof auth.user.username === 'string' ? auth.user.username : undefined,
+                    avatar: auth.user.avatar || null,
+                    verification_status: auth.user.verification_status as 'unverified' | 'pending' | 'verified' | undefined,
+                },
+            };
+
+            // Update UI immediately with optimistic comment
+            setPosts((prevPosts) =>
+                prevPosts.map((post) =>
+                    post.id === selectedPost.id
+                        ? {
+                              ...post,
+                              comments: [...post.comments, optimisticComment],
+                          }
+                        : post
+                )
+            );
+
+            // Clear comment input and close dialog
+            setCommentData('content', '');
+            setCommentOpen(false);
+            setSelectedPost(null);
+
+            // Send request to server
             postComment(route('posts.comment', { post: selectedPost.id }), {
                 onSuccess: (page) => {
                     const newComment = page.props.comment as Comment;
                     if (newComment) {
-                        // Update the posts state with the new comment from the Inertia response
+                        // Update with the real comment from server
                         setPosts((prevPosts) =>
                             prevPosts.map((post) =>
                                 post.id === selectedPost.id
                                     ? {
                                           ...post,
-                                          comments: [...post.comments, newComment],
+                                          comments: post.comments.map((comment) =>
+                                              comment.id === optimisticComment.id ? newComment : comment
+                                          ),
                                       }
                                     : post
                             )
                         );
                     }
-                    resetComment();
-                    setCommentOpen(false);
-                    setSelectedPost(null);
                 },
                 onError: (errors) => {
+                    // Remove the optimistic comment on error
+                    setPosts((prevPosts) =>
+                        prevPosts.map((post) =>
+                            post.id === selectedPost.id
+                                ? {
+                                      ...post,
+                                      comments: post.comments.filter((comment) => comment.id !== optimisticComment.id),
+                                  }
+                                : post
+                        )
+                    );
                     setCommentErrors(errors);
+                    setCommentData('content', commentData.content);
+                    setCommentOpen(true);
+                    setSelectedPost(selectedPost);
                 },
             });
         }
@@ -374,6 +447,9 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                 <span>@{post.user.username}</span>
                                                 {post.user.is_friend && (
                                                     <span className="text-xs text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20 px-2 py-0.5 rounded-full">Friends</span>
+                                                )}
+                                                {post.user.verification_status && (
+                                                    <span className="text-xs text-gray-500">({post.user.verification_status})</span>
                                                 )}
                                                 <span>•</span>
                                                 <span>{new Date(post.created_at).toLocaleString()}</span>

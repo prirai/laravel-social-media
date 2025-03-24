@@ -24,6 +24,7 @@ interface Post {
         name: string;
         username: string;
         avatar: string;
+        verification_status?: 'unverified' | 'pending' | 'verified';
     };
     likes: Array<{
         id: number;
@@ -39,6 +40,7 @@ interface Post {
             name: string;
             username?: string;
             avatar?: string;
+            verification_status?: 'unverified' | 'pending' | 'verified';
         };
     }>;
 }
@@ -48,6 +50,7 @@ interface UserProfile {
     name: string;
     username: string;
     avatar: string | null;
+    verification_status?: 'unverified' | 'pending' | 'verified';
     posts: Post[];
     friend_request?: {
         id: number;
@@ -146,7 +149,12 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                             <UserAvatar user={user} className="size-20" linkable={false} />
                             <div>
                                 <h1 className="text-2xl font-bold">{user.name}</h1>
-                                <p className="text-gray-500">@{user.username}</p>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-gray-500">@{user.username}</p>
+                                    {user.verification_status && (
+                                        <span className="text-sm text-gray-500">({user.verification_status})</span>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -276,6 +284,9 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                                                 <p className="font-medium">{post.user.name}</p>
                                                 <div className="flex items-center gap-2 text-sm text-gray-500">
                                                     <span>@{post.user.username}</span>
+                                                    {post.user.verification_status && (
+                                                        <span className="text-xs text-gray-500">({post.user.verification_status})</span>
+                                                    )}
                                                     <span>•</span>
                                                     <span>{new Date(post.created_at).toLocaleString()}</span>
                                                 </div>
@@ -350,6 +361,9 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                                                             <div className="flex items-center gap-2">
                                                                 <span className="font-medium">{comment.user.name}</span>
                                                                 <span className="text-sm text-gray-500">@{comment.user.username}</span>
+                                                                {comment.user.verification_status && (
+                                                                    <span className="text-sm text-gray-500">({comment.user.verification_status})</span>
+                                                                )}
                                                             </div>
                                                             <p className="text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
                                                         </div>

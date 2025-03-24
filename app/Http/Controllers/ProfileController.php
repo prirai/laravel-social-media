@@ -40,6 +40,7 @@ class ProfileController extends Controller
                 'name' => $user->name,
                 'username' => $user->username,
                 'avatar' => $user->avatar,
+                'verification_status' => $user->verification_status,
                 'posts' => $user->posts,
                 'friend_request' => $user->friend_request,
                 'is_friend' => $user->is_friend ?? false,
