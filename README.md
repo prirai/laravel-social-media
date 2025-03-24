@@ -103,6 +103,7 @@ A modern social media platform built with Laravel 12 and React, featuring user a
    ```bash
    php artisan migrate
    php artisan storage:link
+   php artisan db:seed
    ```
 
 4. **Admin Panel Setup**

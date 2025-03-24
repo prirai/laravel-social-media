@@ -17,7 +17,8 @@ class MessagingController extends Controller
      */
     public function index()
     {
-        $users = User::where('id', '!=', auth()->id())
+        $currentUser = auth()->user();
+        $users = User::where('id', '!=', $currentUser->id)
             ->select('id', 'name', 'username', 'avatar', 'verification_status')
             ->withCount(['receivedMessages as unread_count' => function ($query) {
                 $query->whereNull('read_at')
@@ -43,6 +44,21 @@ class MessagingController extends Controller
                     'verification_status' => $user->verification_status,
                 ];
             });
+
+        // Add current user to the beginning of the list
+        $currentUserData = [
+            'id' => $currentUser->id,
+            'name' => $currentUser->name,
+            'username' => $currentUser->username,
+            'avatar' => $currentUser->avatar,
+            'lastMessage' => null,
+            'lastMessageTime' => null,
+            'unreadCount' => 0,
+            'verification_status' => $currentUser->verification_status,
+            'isCurrentUser' => true,
+        ];
+
+        $users = collect([$currentUserData])->concat($users);
 
         // Get group conversations
         $groups = Group::whereHas('users', function ($query) {
@@ -90,12 +106,14 @@ class MessagingController extends Controller
             $query->where('sender_id', $user->id)
                 ->where('receiver_id', auth()->id());
         })
+        ->active() // Only get non-expired messages
         ->with('sender:id,name,username,avatar')
         ->orderBy('created_at', 'asc')
         ->get()
         ->map(function ($message) {
             return array_merge($message->toArray(), [
                 'created_at' => $message->created_at->toISOString(),
+                'expires_at' => $message->expires_at->toISOString(),
             ]);
         });
 
@@ -111,12 +129,16 @@ class MessagingController extends Controller
     {
         $validated = $request->validate([
             'content' => 'required|string|max:1000',
+            'expires_in' => 'nullable|integer|min:1|max:24', // Hours until expiration
         ]);
 
         $message = Message::create([
             'sender_id' => auth()->id(),
             'receiver_id' => $user->id,
             'content' => $validated['content'],
+            'expires_at' => isset($validated['expires_in']) 
+                ? now()->addHours($validated['expires_in'])
+                : now()->addDay(), // Default to 24 hours
         ]);
 
         // Load the message with sender information
@@ -126,6 +148,7 @@ class MessagingController extends Controller
         return response()->json([
             'message' => array_merge($message->toArray(), [
                 'created_at' => $message->created_at->toISOString(),
+                'expires_at' => $message->expires_at->toISOString(),
             ])
         ]);
     }

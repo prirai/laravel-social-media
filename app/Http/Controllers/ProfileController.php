@@ -14,8 +14,14 @@ class ProfileController extends Controller
         $user = User::where('username', $username)
             ->with([
                 'posts' => function ($query) {
-                $query->latest()->with(['user', 'likes', 'comments.user']);
-            }])
+                    $query->latest()->with([
+                        'user', 
+                        'attachments',
+                        'likes', 
+                        'comments.user'
+                    ]);
+                }
+            ])
             ->firstOrFail();
 
         return Inertia::render('profile/show', [

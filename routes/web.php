@@ -6,6 +6,7 @@ use App\Http\Controllers\MessagingController;
 use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\UserController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -35,6 +36,8 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::post('user/submit-verification', [VerificationController::class, 'submit'])->name('user.submit-verification');
+
+Route::get('/users/search', [UserController::class, 'search'])->name('users.search');
 
 // Route::get('/debug-verification', function() {
 //     dd(\App\Models\VerificationDocument::with('user')->get()->toArray());

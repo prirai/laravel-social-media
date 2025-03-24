@@ -7,10 +7,11 @@ import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import UserAvatar from '@/components/user-avatar';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { ArrowLeftIcon, MagnifyingGlassIcon, PaperAirplaneIcon, PlusIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, MagnifyingGlassIcon, PaperAirplaneIcon, PlusIcon, UsersIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -28,6 +29,16 @@ interface User {
     lastMessage: string | null;
     lastMessageTime: string | null;
     unreadCount: number;
+    isGroup?: false;
+    isCurrentUser?: boolean;
+}
+
+interface MessageUser {
+    id: number;
+    name: string;
+    username: string;
+    avatar: string | null;
+    verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
 }
 
 interface Message {
@@ -35,6 +46,8 @@ interface Message {
     content: string;
     sender_id: number;
     created_at: string;
+    expires_at: string;
+    user?: MessageUser;
 }
 
 interface AllUser {
@@ -59,6 +72,7 @@ interface Group {
     lastMessage: string | null;
     lastMessageTime: string | null;
     unreadCount: number;
+    isCurrentUser?: false;
 }
 
 interface GroupMessage extends Message {
@@ -71,11 +85,25 @@ interface GroupMessage extends Message {
     };
 }
 
-export default function Messaging({ users: initialUsers = [], groups: initialGroups = [], allUsers = [] }) {
+type Chat = User | Group;
+
+interface MessagingProps {
+    users: User[];
+    groups: Group[];
+    allUsers: Array<{
+        id: number;
+        name: string;
+        username: string;
+        avatar: string | null;
+        verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
+    }>;
+}
+
+export default function Messaging({ users: initialUsers = [], groups: initialGroups = [], allUsers = [] }: MessagingProps) {
     const { auth } = usePage<SharedData>().props;
-    const [users, setUsers] = useState(initialUsers);
-    const [groups, setGroups] = useState(initialGroups);
-    const [selectedChat, setSelectedChat] = useState<(User | Group) | null>(null);
+    const [users, setUsers] = useState<User[]>(initialUsers);
+    const [groups, setGroups] = useState<Group[]>(initialGroups);
+    const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(false);
@@ -85,9 +113,12 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
     const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
     const [groupName, setGroupName] = useState('');
     const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
+    const [expiresIn, setExpiresIn] = useState(24);
+    const [showExpirationOptions, setShowExpirationOptions] = useState(false);
 
     const { data, setData, reset } = useForm({
         content: '',
+        expires_in: 24,
     });
 
     const scrollToBottom = () => {
@@ -129,28 +160,42 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
             if (selectedChat.isGroup) {
                 response = await axios.post(route('groups.message', selectedChat.id.replace('group_', '')), data);
             } else {
-                response = await axios.post(route('messages.send', selectedChat.id), data);
+                response = await axios.post(route('messages.send', selectedChat.id), {
+                    ...data,
+                    expires_in: expiresIn,
+                });
             }
 
             setMessages((prevMessages) => [...prevMessages, response.data.message]);
+            setShowExpirationOptions(false);
+            setExpiresIn(24);
 
-            const updateLastMessage = (chat: User | Group) => ({
-                ...chat,
-                lastMessage: data.content,
-                lastMessageTime: 'Just now',
-            });
-
-            if ('isGroup' in selectedChat && selectedChat.isGroup) {
-                setGroups((currentGroups) => currentGroups.map((group) => (group.id === selectedChat.id ? updateLastMessage(group) : group)));
+            if (selectedChat.isGroup) {
+                setGroups((currentGroups) => 
+                    currentGroups.map((group) => 
+                        group.id === selectedChat.id 
+                            ? { ...group, lastMessage: data.content, lastMessageTime: 'Just now' }
+                            : group
+                    )
+                );
             } else {
                 setUsers((currentUsers) => {
                     const existingUserIndex = currentUsers.findIndex((u) => u.id === selectedChat.id);
                     if (existingUserIndex !== -1) {
                         const newUsers = [...currentUsers];
-                        newUsers[existingUserIndex] = updateLastMessage(selectedChat);
+                        newUsers[existingUserIndex] = {
+                            ...newUsers[existingUserIndex],
+                            lastMessage: data.content,
+                            lastMessageTime: 'Just now',
+                        };
                         return newUsers;
                     }
-                    return [updateLastMessage(selectedChat), ...currentUsers];
+                    const newUser: User = {
+                        ...(selectedChat as User),
+                        lastMessage: data.content,
+                        lastMessageTime: 'Just now',
+                    };
+                    return [newUser, ...currentUsers];
                 });
             }
 
@@ -171,6 +216,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
             lastMessage: null,
             lastMessageTime: null,
             unreadCount: 0,
+            isGroup: false,
         };
         setSelectedChat(newUser);
         setIsNewMessageOpen(false);
@@ -190,19 +236,18 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
             const response = await axios.post(route('groups.create'), formData);
             const newGroup = response.data.group;
 
-            setGroups((currentGroups) => [
-                {
-                    id: `group_${newGroup.id}`,
-                    name: newGroup.name,
-                    avatar: newGroup.avatar,
-                    isGroup: true,
-                    members: newGroup.users,
-                    lastMessage: null,
-                    lastMessageTime: null,
-                    unreadCount: 0,
-                },
-                ...currentGroups,
-            ]);
+            const group: Group = {
+                id: `group_${newGroup.id}`,
+                name: newGroup.name,
+                avatar: newGroup.avatar,
+                isGroup: true,
+                members: newGroup.users,
+                lastMessage: null,
+                lastMessageTime: null,
+                unreadCount: 0,
+            };
+
+            setGroups((currentGroups) => [group, ...currentGroups]);
 
             setIsNewGroupOpen(false);
             setSelectedUsers([]);
@@ -212,13 +257,19 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         }
     };
 
-    const isCurrentUserMessage = (message: Message | GroupMessage) => {
+    const isCurrentUserMessage = (message: Message): boolean => {
         if (!auth.user) return false;
-
-        if ('user' in message) {
-            return message.user.id === auth.user.id;
-        }
         return message.sender_id === auth.user.id;
+    };
+
+    const formatExpirationTime = (expiresAt: string) => {
+        const expirationDate = new Date(expiresAt);
+        const now = new Date();
+        const diffInHours = Math.round((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+        
+        if (diffInHours <= 0) return 'Expired';
+        if (diffInHours < 24) return `Expires in ${diffInHours}h`;
+        return `Expires in ${Math.round(diffInHours / 24)}d`;
     };
 
     return (
@@ -234,6 +285,9 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                         <div className="space-y-2">
                             {[...users, ...groups]
                                 .sort((a, b) => {
+                                    if ('isCurrentUser' in a && a.isCurrentUser) return -1;
+                                    if ('isCurrentUser' in b && b.isCurrentUser) return 1;
+                                    
                                     if (!a.lastMessageTime) return 1;
                                     if (!b.lastMessageTime) return -1;
                                     return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
@@ -252,10 +306,24 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                 </span>
                                             </div>
                                         ) : (
-                                            <UserAvatar user={chat} className="size-12" />
+                                            <div className="relative">
+                                                <UserAvatar user={chat} className="size-12" />
+                                                {'isCurrentUser' in chat && chat.isCurrentUser && (
+                                                    <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-green-500 text-xs text-white">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
+                                                            <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 011.06 0l4.5 4.5a.75.75 0 01-1.06 1.06l-3.22-3.22V16.5a.75.75 0 01-1.5 0V4.81L8.03 8.03a.75.75 0 01-1.06-1.06l4.5-4.5zM3 15.75a.75.75 0 01.75-.75H13a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </span>
+                                                )}
+                                            </div>
                                         )}
                                         <div className="flex-1 overflow-hidden">
-                                            <p className="font-medium">{chat.name}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-medium">{chat.name}</p>
+                                                {'isCurrentUser' in chat && chat.isCurrentUser && (
+                                                    <span className="text-xs text-gray-500">(You)</span>
+                                                )}
+                                            </div>
                                             {chat.isGroup && <p className="text-xs text-gray-500">{chat.members.map((m) => m.name).join(', ')}</p>}
                                             <p className="truncate text-sm text-gray-500">{chat.lastMessage || `Start chatting in ${chat.name}`}</p>
                                         </div>
@@ -409,13 +477,23 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
+                                        {!selectedChat.isGroup && (
+                                            <div className="flex justify-center">
+                                                <div className="rounded-full bg-gray-100 px-4 py-1 text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                                    Messages will expire in {expiresIn} {expiresIn === 1 ? 'hour' : 'hours'}
+                                                </div>
+                                            </div>
+                                        )}
                                         {messages.map((message) => {
                                             const isCurrentUser = isCurrentUserMessage(message);
                                             const showAvatar = selectedChat?.isGroup && !isCurrentUser;
 
                                             return (
-                                                <div key={message.id} className={`flex gap-2 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                                                    {showAvatar && 'user' in message && (
+                                                <div
+                                                    key={message.id}
+                                                    className={`mb-4 flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                                                >
+                                                    {showAvatar && message.user && (
                                                         <div className="flex flex-col items-center gap-1">
                                                             <UserAvatar user={message.user} className="size-8" />
                                                             <span className="text-xs text-gray-500">{message.user.name.split(' ')[0]}</span>
@@ -423,17 +501,21 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                     )}
 
                                                     <div
-                                                        className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                                                            isCurrentUser ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-800'
+                                                        className={`max-w-[70%] rounded-lg p-3 ${
+                                                            isCurrentUser
+                                                                ? 'bg-blue-500 text-white'
+                                                                : 'bg-gray-200 dark:bg-gray-800'
                                                         }`}
                                                     >
-                                                        {selectedChat?.isGroup && !isCurrentUser && 'user' in message && (
+                                                        {selectedChat?.isGroup && !isCurrentUser && message.user && (
                                                             <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
                                                                 {message.user.name}
                                                             </p>
                                                         )}
                                                         <p>{message.content}</p>
-                                                        <p className="mt-1 text-xs opacity-70">{new Date(message.created_at).toLocaleTimeString()}</p>
+                                                        <div className="mt-1 flex items-center justify-end text-xs opacity-70">
+                                                            <span>{new Date(message.created_at).toLocaleTimeString()}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             );
@@ -444,16 +526,39 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                             </div>
 
                             <form onSubmit={sendMessage} className="border-t p-4">
-                                <div className="flex gap-2">
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setShowExpirationOptions(!showExpirationOptions)}
+                                    >
+                                        <ClockIcon className="h-4 w-4" />
+                                    </Button>
+                                    {showExpirationOptions && (
+                                        <div className="absolute bottom-full left-0 mb-2 w-48 rounded-lg border bg-white p-2 shadow-lg dark:bg-gray-800">
+                                            <Label>Message expires in:</Label>
+                                            <Select value={expiresIn.toString()} onValueChange={(value) => setExpiresIn(Number(value))}>
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="1">1 hour</SelectItem>
+                                                    <SelectItem value="6">6 hours</SelectItem>
+                                                    <SelectItem value="12">12 hours</SelectItem>
+                                                    <SelectItem value="24">24 hours</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
                                     <Input
-                                        type="text"
                                         value={data.content}
                                         onChange={(e) => setData('content', e.target.value)}
                                         placeholder="Type a message..."
                                         className="flex-1"
                                     />
                                     <Button type="submit" disabled={!data.content.trim()}>
-                                        <PaperAirplaneIcon className="size-5" />
+                                        <PaperAirplaneIcon className="h-4 w-4" />
                                     </Button>
                                 </div>
                             </form>
