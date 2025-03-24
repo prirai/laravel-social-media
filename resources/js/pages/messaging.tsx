@@ -7,12 +7,11 @@ import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import UserAvatar from '@/components/user-avatar';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { ArrowLeftIcon, MagnifyingGlassIcon, PaperAirplaneIcon, PlusIcon, UsersIcon, ClockIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { Paperclip, X, FileText, File } from 'lucide-react';
-import { Head, useForm, usePage, router } from '@inertiajs/react';
+import { ArrowLeftIcon, MagnifyingGlassIcon, PaperAirplaneIcon, PlusIcon, TrashIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import axios from 'axios';
+import { File, FileText, Paperclip, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -200,12 +199,10 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
             setSelectedFiles([]);
 
             if (isGroup(selectedChat)) {
-                setGroups((currentGroups) => 
-                    currentGroups.map((group) => 
-                        group.id === selectedChat.id 
-                            ? { ...group, lastMessage: message, lastMessageTime: 'Just now' }
-                            : group
-                    )
+                setGroups((currentGroups) =>
+                    currentGroups.map((group) =>
+                        group.id === selectedChat.id ? { ...group, lastMessage: message, lastMessageTime: 'Just now' } : group,
+                    ),
                 );
             } else {
                 setUsers((currentUsers) => {
@@ -305,7 +302,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         const expirationDate = new Date(expiresAt);
         const now = new Date();
         const diffInHours = Math.round((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60));
-        
+
         if (diffInHours <= 0) return 'Expired';
         if (diffInHours < 24) return `Expires in ${diffInHours}h`;
         return `Expires in ${Math.round(diffInHours / 24)}d`;
@@ -330,12 +327,14 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Messages" />
             <div className="flex h-screen flex-1 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
-                <div className={`${isMobileView && selectedChat ? 'hidden' : 'flex'} fixed inset-y-0 left-0 z-20 w-full flex-col border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-black md:static md:w-80`}>
-                    <div className="flex flex-col border-b border-gray-200 dark:border-gray-800">
-                        <div className="p-4">
+                <div
+                    className={`${isMobileView && selectedChat ? 'hidden' : 'flex'} fixed inset-y-0 left-0 z-20 w-full flex-col border-r border-gray-200 bg-white md:static md:w-80 dark:border-gray-800 dark:bg-black`}
+                >
+                    <div className="flex flex-col">
+                        <div className="border-b border-gray-200 p-4 dark:border-gray-800">
                             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Messages</h2>
                         </div>
-                        <div className="flex gap-2 px-4 pb-4">
+                        <div className="flex gap-2 border-b border-gray-200 bg-white px-4 py-4 dark:border-gray-800 dark:bg-black">
                             <Dialog open={isNewMessageOpen} onOpenChange={setIsNewMessageOpen}>
                                 <DialogTrigger asChild>
                                     <Button className="flex-1" variant="outline">
@@ -440,7 +439,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                 .sort((a, b) => {
                                     if ('isCurrentUser' in a && a.isCurrentUser) return -1;
                                     if ('isCurrentUser' in b && b.isCurrentUser) return 1;
-                                    
+
                                     if (!a.lastMessageTime) return 1;
                                     if (!b.lastMessageTime) return -1;
                                     return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
@@ -465,8 +464,17 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                 <UserAvatar user={chat} className="size-12" />
                                                 {'isCurrentUser' in chat && chat.isCurrentUser && (
                                                     <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-green-500 text-xs text-white">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
-                                                            <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 011.06 0l4.5 4.5a.75.75 0 01-1.06 1.06l-3.22-3.22V16.5a.75.75 0 01-1.5 0V4.81L8.03 8.03a.75.75 0 01-1.06-1.06l4.5-4.5zM3 15.75a.75.75 0 01.75-.75H13a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z" clipRule="evenodd" />
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            viewBox="0 0 24 24"
+                                                            fill="currentColor"
+                                                            className="h-3 w-3"
+                                                        >
+                                                            <path
+                                                                fillRule="evenodd"
+                                                                d="M11.47 2.47a.75.75 0 011.06 0l4.5 4.5a.75.75 0 01-1.06 1.06l-3.22-3.22V16.5a.75.75 0 01-1.5 0V4.81L8.03 8.03a.75.75 0 01-1.06-1.06l4.5-4.5zM3 15.75a.75.75 0 01.75-.75H13a.75.75 0 010 1.5H3.75a.75.75 0 01-.75-.75z"
+                                                                clipRule="evenodd"
+                                                            />
                                                         </svg>
                                                     </span>
                                                 )}
@@ -479,19 +487,27 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                     <span className="text-xs text-gray-500 dark:text-gray-400">(You)</span>
                                                 )}
                                                 {'isFriend' in chat && chat.isFriend && (
-                                                    <span className="text-xs text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20 px-2 py-0.5 rounded-full">Friends</span>
+                                                    <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-600 dark:bg-green-900/20 dark:text-green-400">
+                                                        Friends
+                                                    </span>
                                                 )}
                                             </div>
-                                                    {isGroup(chat) && <p className="text-xs text-gray-500 dark:text-gray-400">{chat.members.map((m: { name: string }) => m.name).join(', ')}</p>}
-                                                    <p className="truncate text-sm text-gray-500 dark:text-gray-400">{chat.lastMessage || `Start chatting with ${chat.name}`}</p>
-                                                </div>
-                                            </button>
-                                        ))}
+                                            {isGroup(chat) && (
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    {chat.members.map((m: { name: string }) => m.name).join(', ')}
+                                                </p>
+                                            )}
+                                            <p className="truncate text-sm text-gray-500 dark:text-gray-400">
+                                                {chat.lastMessage || `Start chatting with ${chat.name}`}
+                                            </p>
+                                        </div>
+                                    </button>
+                                ))}
                         </div>
                     </div>
                 </div>
 
-                <div className={`${isMobileView && !selectedChat ? 'hidden' : 'flex'} flex-1 flex-col`}>
+                <div className={`${isMobileView && !selectedChat ? 'hidden' : 'flex'} flex-1 flex-col overflow-hidden`}>
                     {selectedChat ? (
                         <>
                             <div className="sticky top-0 z-10 border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-black">
@@ -528,130 +544,142 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto">
-                                <div className="flex min-h-full flex-col justify-end p-4 pb-[180px]">
-                                    {loading ? (
-                                        <div className="flex h-full items-center justify-center">
-                                            <div className="text-gray-500 dark:text-gray-400">Loading messages...</div>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {!isGroup(selectedChat) && (
-                                                <div className="flex justify-center">
-                                                    <div className="rounded-full bg-gray-100 px-4 py-1 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-                                                        Messages will expire in {expiresIn} {expiresIn === 1 ? 'hour' : 'hours'}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {messages.map((message, index) => {
-                                                const isCurrentUser = isGroup(selectedChat) 
-                                                    ? isGroupMessage(message) && isCurrentUserGroupMessage(message)
-                                                    : isDirectMessage(message) && isCurrentUserMessage(message);
-                                                const showAvatar = isGroup(selectedChat) && !isCurrentUser;
-                                                const prevMessage = messages[index - 1];
-                                                const isConsecutiveMessage = prevMessage && 
-                                                    isGroup(selectedChat) && 
-                                                    !isCurrentUser && 
-                                                    isGroupMessage(prevMessage) && 
-                                                    isGroupMessage(message) && 
-                                                    prevMessage.user_id === message.user_id;
-
-                                                return (
-                                                    <div
-                                                        key={message.id}
-                                                        className={`mb-4 flex ${isCurrentUser || isConsecutiveMessage ? 'justify-end' : 'justify-start'}`}
-                                                    >
-                                                        {showAvatar && !isConsecutiveMessage && isGroupMessage(message) && (
-                                                            <div className="flex flex-col items-center gap-1">
-                                                                <UserAvatar user={message.user} className="size-8" />
-                                                                <span className="text-xs text-gray-500 dark:text-gray-400">{message.user.name.split(' ')[0]}</span>
-                                                            </div>
-                                                        )}
-
-                                                        <div
-                                                            className={`max-w-[70%] rounded-lg p-3 ${
-                                                                isCurrentUser || isConsecutiveMessage
-                                                                    ? 'bg-blue-500 text-white'
-                                                                    : 'bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white'
-                                                            }`}
-                                                        >
-                                                            {isGroup(selectedChat) && !isCurrentUser && isGroupMessage(message) && !isConsecutiveMessage && (
-                                                                <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
-                                                                    {message.user.name}
-                                                                </p>
-                                                            )}
-                                                            <div className="flex flex-col gap-1">
-                                                                <div className="flex items-start justify-between gap-2">
-                                                                    <p className="text-sm">{message.content}</p>
-                                                                    {!isGroup(selectedChat) && isCurrentUser && (
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            className="h-6 w-6 text-white/70 hover:text-white hover:bg-white/10"
-                                                                            onClick={() => handleDeleteMessage(message.id)}
-                                                                        >
-                                                                            <TrashIcon className="h-4 w-4" />
-                                                                        </Button>
-                                                                    )}
-                                                                </div>
-                                                                {message.attachments && message.attachments.length > 0 && (
-                                                                    <div className="flex flex-wrap gap-2 mt-2">
-                                                                        {message.attachments.map((attachment) => (
-                                                                            <div key={attachment.id} className="relative group">
-                                                                                {attachment.file_type.startsWith('image/') ? (
-                                                                                    <img
-                                                                                        src={attachment.file_path}
-                                                                                        alt={attachment.file_name}
-                                                                                        className="max-w-[200px] rounded-lg"
-                                                                                    />
-                                                                                ) : attachment.file_type.startsWith('video/') ? (
-                                                                                    <video
-                                                                                        src={attachment.file_path}
-                                                                                        controls
-                                                                                        className="max-w-[200px] rounded-lg"
-                                                                                    />
-                                                                                ) : attachment.file_type.startsWith('audio/') ? (
-                                                                                    <audio
-                                                                                        src={attachment.file_path}
-                                                                                        controls
-                                                                                        className="w-full"
-                                                                                    />
-                                                                                ) : attachment.file_type === 'application/pdf' ? (
-                                                                                    <a
-                                                                                        href={attachment.file_path}
-                                                                                        target="_blank"
-                                                                                        rel="noopener noreferrer"
-                                                                                        className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900 rounded-lg p-2 hover:bg-gray-200 dark:hover:bg-gray-800"
-                                                                                    >
-                                                                                        <FileText className="h-5 w-5" />
-                                                                                        <span className="text-sm truncate max-w-[150px] text-gray-900 dark:text-white">{attachment.file_name}</span>
-                                                                                    </a>
-                                                                                ) : (
-                                                                                    <a
-                                                                                        href={attachment.file_path}
-                                                                                        target="_blank"
-                                                                                        rel="noopener noreferrer"
-                                                                                        className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900 rounded-lg p-2 hover:bg-gray-200 dark:hover:bg-gray-800"
-                                                                                    >
-                                                                                        <File className="h-5 w-5" />
-                                                                                        <span className="text-sm truncate max-w-[150px] text-gray-900 dark:text-white">{attachment.file_name}</span>
-                                                                                    </a>
-                                                                                )}
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <div className="mt-1 flex items-center justify-end text-xs opacity-70">
-                                                                <span>{new Date(message.created_at).toLocaleTimeString()}</span>
-                                                            </div>
+                            <div>
+                                <div className="mb-4 h-[calc(100vh-180px)] flex-1 overflow-y-auto">
+                                    <div className="flex min-h-full flex-col justify-end p-4 pb-[180px]">
+                                        {loading ? (
+                                            <div className="flex h-full items-center justify-center">
+                                                <div className="text-gray-500 dark:text-gray-400">Loading messages...</div>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                {!isGroup(selectedChat) && (
+                                                    <div className="flex justify-center">
+                                                        <div className="rounded-full bg-gray-100 px-4 py-1 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+                                                            Messages will expire in {expiresIn} {expiresIn === 1 ? 'hour' : 'hours'}
                                                         </div>
                                                     </div>
-                                                );
-                                            })}
-                                            <div ref={messagesEndRef} />
-                                        </div>
-                                    )}
+                                                )}
+                                                {messages.map((message, index) => {
+                                                    const isCurrentUser = isGroup(selectedChat)
+                                                        ? isGroupMessage(message) && isCurrentUserGroupMessage(message)
+                                                        : isDirectMessage(message) && isCurrentUserMessage(message);
+                                                    const showAvatar = isGroup(selectedChat) && !isCurrentUser;
+                                                    const prevMessage = messages[index - 1];
+                                                    const isConsecutiveMessage =
+                                                        prevMessage &&
+                                                        isGroup(selectedChat) &&
+                                                        !isCurrentUser &&
+                                                        isGroupMessage(prevMessage) &&
+                                                        isGroupMessage(message) &&
+                                                        prevMessage.user_id === message.user_id;
+
+                                                    return (
+                                                        <div
+                                                            key={message.id}
+                                                            className={`mb-4 flex ${isCurrentUser || isConsecutiveMessage ? 'justify-end' : 'justify-start'}`}
+                                                        >
+                                                            {showAvatar && !isConsecutiveMessage && isGroupMessage(message) && (
+                                                                <div className="flex flex-col items-center gap-1">
+                                                                    <UserAvatar user={message.user} className="size-8" />
+                                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                                        {message.user.name.split(' ')[0]}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+
+                                                            <div
+                                                                className={`max-w-[70%] rounded-lg p-3 ${
+                                                                    isCurrentUser || isConsecutiveMessage
+                                                                        ? 'bg-blue-500 text-white'
+                                                                        : 'bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-white'
+                                                                }`}
+                                                            >
+                                                                {isGroup(selectedChat) &&
+                                                                    !isCurrentUser &&
+                                                                    isGroupMessage(message) &&
+                                                                    !isConsecutiveMessage && (
+                                                                        <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                                                            {message.user.name}
+                                                                        </p>
+                                                                    )}
+                                                                <div className="flex flex-col gap-1">
+                                                                    <div className="flex items-start justify-between gap-2">
+                                                                        <p className="text-sm">{message.content}</p>
+                                                                        {!isGroup(selectedChat) && isCurrentUser && (
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className="h-6 w-6 text-white/70 hover:bg-white/10 hover:text-white"
+                                                                                onClick={() => handleDeleteMessage(message.id)}
+                                                                            >
+                                                                                <TrashIcon className="h-4 w-4" />
+                                                                            </Button>
+                                                                        )}
+                                                                    </div>
+                                                                    {message.attachments && message.attachments.length > 0 && (
+                                                                        <div className="mt-2 flex flex-wrap gap-2">
+                                                                            {message.attachments.map((attachment) => (
+                                                                                <div key={attachment.id} className="group relative">
+                                                                                    {attachment.file_type.startsWith('image/') ? (
+                                                                                        <img
+                                                                                            src={attachment.file_path}
+                                                                                            alt={attachment.file_name}
+                                                                                            className="max-w-[200px] rounded-lg"
+                                                                                        />
+                                                                                    ) : attachment.file_type.startsWith('video/') ? (
+                                                                                        <video
+                                                                                            src={attachment.file_path}
+                                                                                            controls
+                                                                                            className="max-w-[200px] rounded-lg"
+                                                                                        />
+                                                                                    ) : attachment.file_type.startsWith('audio/') ? (
+                                                                                        <audio
+                                                                                            src={attachment.file_path}
+                                                                                            controls
+                                                                                            className="w-full"
+                                                                                        />
+                                                                                    ) : attachment.file_type === 'application/pdf' ? (
+                                                                                        <a
+                                                                                            href={attachment.file_path}
+                                                                                            target="_blank"
+                                                                                            rel="noopener noreferrer"
+                                                                                            className="flex items-center gap-2 rounded-lg bg-gray-100 p-2 hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800"
+                                                                                        >
+                                                                                            <FileText className="h-5 w-5" />
+                                                                                            <span className="max-w-[150px] truncate text-sm text-gray-900 dark:text-white">
+                                                                                                {attachment.file_name}
+                                                                                            </span>
+                                                                                        </a>
+                                                                                    ) : (
+                                                                                        <a
+                                                                                            href={attachment.file_path}
+                                                                                            target="_blank"
+                                                                                            rel="noopener noreferrer"
+                                                                                            className="flex items-center gap-2 rounded-lg bg-gray-100 p-2 hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800"
+                                                                                        >
+                                                                                            <File className="h-5 w-5" />
+                                                                                            <span className="max-w-[150px] truncate text-sm text-gray-900 dark:text-white">
+                                                                                                {attachment.file_name}
+                                                                                            </span>
+                                                                                        </a>
+                                                                                    )}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="mt-1 flex items-center justify-end text-xs opacity-70">
+                                                                    <span>{new Date(message.created_at).toLocaleTimeString()}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                                <div ref={messagesEndRef} />
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </>
@@ -665,7 +693,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                     )}
                 </div>
 
-                <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-black border-t border-gray-200 dark:border-gray-800 md:left-[320px]">
+                <div className="fixed right-0 bottom-0 left-0 border-t border-gray-200 bg-white md:left-[320px] dark:border-gray-800 dark:bg-black">
                     {selectedChat ? (
                         <>
                             <form onSubmit={sendMessage} className="flex items-center justify-center gap-2 p-4">
@@ -674,9 +702,9 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                         value={message}
                                         onChange={(e) => setMessage(e.target.value)}
                                         placeholder="Type a message..."
-                                        className="rounded-full pr-24 h-12 md:h-14 text-base border-0 bg-gray-100 dark:bg-gray-900 focus-visible:ring-0 focus-visible:ring-offset-0 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                                        className="h-12 rounded-full border-0 bg-gray-100 pr-24 text-base text-gray-900 placeholder-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 md:h-14 dark:bg-gray-900 dark:text-white dark:placeholder-gray-400"
                                     />
-                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                    <div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-2">
                                         <input
                                             type="file"
                                             multiple
@@ -694,14 +722,14 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                         />
                                         <label
                                             htmlFor="file-upload"
-                                            className="flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-gray-900 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800"
+                                            className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-200 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
                                         >
                                             <Paperclip className="h-5 w-5" />
                                         </label>
-                                        <Button 
-                                            type="submit" 
+                                        <Button
+                                            type="submit"
                                             disabled={!message.trim() && !selectedFiles.length}
-                                            className="rounded-full h-10 px-4 bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-2"
+                                            className="flex h-10 items-center gap-2 rounded-full bg-blue-500 px-4 text-white hover:bg-blue-600"
                                         >
                                             <span className="text-sm">Send</span>
                                             <PaperAirplaneIcon className="h-4 w-4" />
@@ -711,13 +739,13 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                             </form>
 
                             {selectedFiles.length > 0 && (
-                                <div className="px-4 py-2 border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-black">
+                                <div className="border-t border-gray-200 bg-white px-4 py-2 dark:border-gray-800 dark:bg-black">
                                     <div className="flex flex-wrap gap-2">
                                         {selectedFiles.map((file, index) => (
-                                            <div key={index} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900 rounded-lg p-2">
-                                                <span className="text-sm truncate max-w-[150px] text-gray-900 dark:text-white">{file.name}</span>
+                                            <div key={index} className="flex items-center gap-2 rounded-lg bg-gray-100 p-2 dark:bg-gray-900">
+                                                <span className="max-w-[150px] truncate text-sm text-gray-900 dark:text-white">{file.name}</span>
                                                 <button
-                                                    onClick={() => setSelectedFiles(files => files.filter((_, i) => i !== index))}
+                                                    onClick={() => setSelectedFiles((files) => files.filter((_, i) => i !== index))}
                                                     className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                                 >
                                                     <X className="h-4 w-4" />
