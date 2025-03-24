@@ -32,7 +32,7 @@ Route::group([
     Route::crud('verification-document', 'VerificationCrudController');
     Route::post('verification-document/{id}/verify', 'VerificationCrudController@verify')
         ->name('verification-document.verify');
-}); // this should be the absolute last line of this file
+});
 
 /**
  * DO NOT ADD ANYTHING HERE.
