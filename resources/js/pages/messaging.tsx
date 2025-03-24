@@ -8,6 +8,7 @@ import UserAvatar from '@/components/user-avatar';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { ArrowLeftIcon, MagnifyingGlassIcon, PaperAirplaneIcon, PlusIcon, UsersIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { Paperclip, X, FileText, File } from 'lucide-react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
@@ -48,6 +49,15 @@ interface Message {
     created_at: string;
     expires_at: string;
     user?: MessageUser;
+    attachments?: MessageAttachment[];
+}
+
+interface MessageAttachment {
+    id: number;
+    file_path: string;
+    file_type: string;
+    file_name: string;
+    file_size: number;
 }
 
 interface AllUser {
@@ -115,6 +125,8 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
     const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
     const [expiresIn, setExpiresIn] = useState(24);
     const [showExpirationOptions, setShowExpirationOptions] = useState(false);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [message, setMessage] = useState('');
 
     const { data, setData, reset } = useForm({
         content: '',
@@ -153,28 +165,30 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
 
     const sendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedChat || !data.content.trim()) return;
+        if (!selectedChat || (!message.trim() && !selectedFiles.length)) return;
+
+        const formData = new FormData();
+        formData.append('content', message);
+        selectedFiles.forEach((file) => {
+            formData.append('attachments[]', file);
+        });
 
         try {
-            let response;
-            if (selectedChat.isGroup) {
-                response = await axios.post(route('groups.message', selectedChat.id.replace('group_', '')), data);
-            } else {
-                response = await axios.post(route('messages.send', selectedChat.id), {
-                    ...data,
-                    expires_in: expiresIn,
-                });
-            }
+            const response = await axios.post(`/messages/${selectedChat.id}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
 
-            setMessages((prevMessages) => [...prevMessages, response.data.message]);
-            setShowExpirationOptions(false);
-            setExpiresIn(24);
+            setMessages((prev) => [...prev, response.data.message]);
+            setMessage('');
+            setSelectedFiles([]);
 
             if (selectedChat.isGroup) {
                 setGroups((currentGroups) => 
                     currentGroups.map((group) => 
                         group.id === selectedChat.id 
-                            ? { ...group, lastMessage: data.content, lastMessageTime: 'Just now' }
+                            ? { ...group, lastMessage: message, lastMessageTime: 'Just now' }
                             : group
                     )
                 );
@@ -185,17 +199,17 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                         const newUsers = [...currentUsers];
                         newUsers[existingUserIndex] = {
                             ...newUsers[existingUserIndex],
-                            lastMessage: data.content,
+                            lastMessage: message,
                             lastMessageTime: 'Just now',
                         };
                         return newUsers;
                     }
                     const newUser: User = {
                         ...(selectedChat as User),
-                        lastMessage: data.content,
+                        lastMessage: message,
                         lastMessageTime: 'Just now',
                     };
-                    return [newUser, ...currentUsers];
+                    return [...currentUsers, newUser];
                 });
             }
 
@@ -512,7 +526,56 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                                 {message.user.name}
                                                             </p>
                                                         )}
-                                                        <p>{message.content}</p>
+                                                        <div className="flex flex-col gap-1">
+                                                            <p className="text-sm">{message.content}</p>
+                                                            {message.attachments && message.attachments.length > 0 && (
+                                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                                    {message.attachments.map((attachment) => (
+                                                                        <div key={attachment.id} className="relative group">
+                                                                            {attachment.file_type.startsWith('image/') ? (
+                                                                                <img
+                                                                                    src={attachment.file_path}
+                                                                                    alt={attachment.file_name}
+                                                                                    className="max-w-[200px] rounded-lg"
+                                                                                />
+                                                                            ) : attachment.file_type.startsWith('video/') ? (
+                                                                                <video
+                                                                                    src={attachment.file_path}
+                                                                                    controls
+                                                                                    className="max-w-[200px] rounded-lg"
+                                                                                />
+                                                                            ) : attachment.file_type.startsWith('audio/') ? (
+                                                                                <audio
+                                                                                    src={attachment.file_path}
+                                                                                    controls
+                                                                                    className="w-full"
+                                                                                />
+                                                                            ) : attachment.file_type === 'application/pdf' ? (
+                                                                                <a
+                                                                                    href={attachment.file_path}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-2 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                                                                >
+                                                                                    <FileText className="h-5 w-5" />
+                                                                                    <span className="text-sm truncate max-w-[150px]">{attachment.file_name}</span>
+                                                                                </a>
+                                                                            ) : (
+                                                                                <a
+                                                                                    href={attachment.file_path}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-2 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                                                                >
+                                                                                    <File className="h-5 w-5" />
+                                                                                    <span className="text-sm truncate max-w-[150px]">{attachment.file_name}</span>
+                                                                                </a>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         <div className="mt-1 flex items-center justify-end text-xs opacity-70">
                                                             <span>{new Date(message.created_at).toLocaleTimeString()}</span>
                                                         </div>
@@ -525,43 +588,60 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                 )}
                             </div>
 
-                            <form onSubmit={sendMessage} className="border-t p-4">
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={() => setShowExpirationOptions(!showExpirationOptions)}
-                                    >
-                                        <ClockIcon className="h-4 w-4" />
-                                    </Button>
-                                    {showExpirationOptions && (
-                                        <div className="absolute bottom-full left-0 mb-2 w-48 rounded-lg border bg-white p-2 shadow-lg dark:bg-gray-800">
-                                            <Label>Message expires in:</Label>
-                                            <Select value={expiresIn.toString()} onValueChange={(value) => setExpiresIn(Number(value))}>
-                                                <SelectTrigger>
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="1">1 hour</SelectItem>
-                                                    <SelectItem value="6">6 hours</SelectItem>
-                                                    <SelectItem value="12">12 hours</SelectItem>
-                                                    <SelectItem value="24">24 hours</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    )}
+                            <form onSubmit={sendMessage} className="flex items-center gap-2 p-4 border-t">
+                                <div className="relative flex-1">
                                     <Input
-                                        value={data.content}
-                                        onChange={(e) => setData('content', e.target.value)}
+                                        value={message}
+                                        onChange={(e) => setMessage(e.target.value)}
                                         placeholder="Type a message..."
-                                        className="flex-1"
+                                        className="pr-24"
                                     />
-                                    <Button type="submit" disabled={!data.content.trim()}>
-                                        <PaperAirplaneIcon className="h-4 w-4" />
-                                    </Button>
+                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                        <input
+                                            type="file"
+                                            multiple
+                                            accept="image/*,video/*,audio/*,.pdf"
+                                            onChange={(e) => {
+                                                const files = Array.from(e.target.files || []);
+                                                if (files.length > 5) {
+                                                    alert('You can only upload up to 5 files at once');
+                                                    return;
+                                                }
+                                                setSelectedFiles(files);
+                                            }}
+                                            className="hidden"
+                                            id="file-upload"
+                                        />
+                                        <label
+                                            htmlFor="file-upload"
+                                            className="cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                                        >
+                                            <Paperclip className="h-5 w-5" />
+                                        </label>
+                                        <Button type="submit" disabled={!message.trim() && !selectedFiles.length}>
+                                            Send
+                                        </Button>
+                                    </div>
                                 </div>
                             </form>
+
+                            {selectedFiles.length > 0 && (
+                                <div className="px-4 py-2 border-t">
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedFiles.map((file, index) => (
+                                            <div key={index} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-2">
+                                                <span className="text-sm truncate max-w-[150px]">{file.name}</span>
+                                                <button
+                                                    onClick={() => setSelectedFiles(files => files.filter((_, i) => i !== index))}
+                                                    className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </>
                     ) : (
                         <div className="hidden flex-1 items-center justify-center md:flex">

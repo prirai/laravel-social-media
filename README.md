@@ -88,45 +88,45 @@ A modern social media platform built with Laravel 12 and React, featuring user a
 ## Setup Instructions
 
 1. **Install Dependencies**
-   ```bash
-   composer install
+    ```bash
+    composer install
    npm install
-   ```
+    ```
 
 2. **Environment Setup**
-   ```bash
+    ```bash
    cp .env.example .env
-   php artisan key:generate
-   ```
+    php artisan key:generate
+    ```
 
 3. **Database Setup**
-   ```bash
-   php artisan migrate
+    ```bash
+    php artisan migrate
    php artisan storage:link
    php artisan db:seed
    ```
 
 4. **Admin Panel Setup**
-   ```bash
-   composer require backpack/crud
-   php artisan backpack:install
-   ```
+    ```bash
+    composer require backpack/crud
+    php artisan backpack:install
+    ```
 
 5. **Create Admin User**
-   ```bash
-   php artisan tinker
-   ```
-   ```php
-   User::create([
-       'name' => 'Admin',
-       'email' => 'admin@example.com',
+```bash
+php artisan tinker
+```
+```php
+User::create([
+    'name' => 'Admin',
+    'email' => 'admin@example.com',
        'password' => Hash::make('password'),
        'is_admin' => true,
-   ]);
-   ```
+]);
+```
 
 6. **Start Development Servers**
-   ```bash
+```bash
    composer run dev
    ```
 

@@ -9,6 +9,8 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use App\Models\Group;
 use App\Models\GroupMessage;
+use Illuminate\Support\Facades\Storage;
+use App\Models\MessageAttachment;
 
 class MessagingController extends Controller
 {
@@ -107,7 +109,7 @@ class MessagingController extends Controller
                 ->where('receiver_id', auth()->id());
         })
         ->active() // Only get non-expired messages
-        ->with('sender:id,name,username,avatar')
+        ->with(['sender:id,name,username,avatar', 'attachments'])
         ->orderBy('created_at', 'asc')
         ->get()
         ->map(function ($message) {
@@ -125,31 +127,38 @@ class MessagingController extends Controller
     /**
      * Send a message to a user.
      */
-    public function sendMessage(Request $request, User $user)
+    public function sendMessage(Request $request, $userId)
     {
         $validated = $request->validate([
-            'content' => 'required|string|max:1000',
-            'expires_in' => 'nullable|integer|min:1|max:24', // Hours until expiration
+            'content' => 'required|string',
+            'attachments.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf,mp4,mp3,wav|max:5120', // 5MB max
+        ], [
+            'attachments.*.max' => 'Each file must be less than 5MB.',
+            'attachments.*.mimes' => 'Only JPEG, PNG, JPG, GIF, PDF, MP4, MP3, and WAV files are allowed.',
         ]);
 
         $message = Message::create([
             'sender_id' => auth()->id(),
-            'receiver_id' => $user->id,
+            'receiver_id' => $userId,
             'content' => $validated['content'],
-            'expires_at' => isset($validated['expires_in']) 
-                ? now()->addHours($validated['expires_in'])
-                : now()->addDay(), // Default to 24 hours
         ]);
 
-        // Load the message with sender information
-        $message->load('sender:id,name,username,avatar');
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store('message-attachments/' . auth()->id(), 'public');
 
-        // Format the response to include all necessary information
+                MessageAttachment::create([
+                    'message_id' => $message->id,
+                    'file_path' => Storage::url($path),
+                    'file_type' => $file->getMimeType(),
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_size' => $file->getSize(),
+                ]);
+            }
+        }
+
         return response()->json([
-            'message' => array_merge($message->toArray(), [
-                'created_at' => $message->created_at->toISOString(),
-                'expires_at' => $message->expires_at->toISOString(),
-            ])
+            'message' => $message->load('attachments', 'sender:id,name,username,avatar')
         ]);
     }
 
