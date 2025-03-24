@@ -58,6 +58,8 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const searchRef = useRef<HTMLDivElement>(null);
 
     const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+    const [showNotifications, setShowNotifications] = useState(false);
+    const notificationsRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const localTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -121,6 +123,17 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+                setShowNotifications(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const toggleTheme = () => {
         if (theme === 'dark') {
             setTheme('light');
@@ -133,7 +146,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
 
     return (
         <>
-            <div className="border-sidebar-border/80 border-b">
+            <div className="fixed top-0 left-0 right-0 z-50 border-sidebar-border/80 border-b bg-background">
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Mobile Menu */}
                     <div className="lg:hidden">
@@ -288,6 +301,44 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                                 </TooltipContent>
                                             </Tooltip>
                                         </TooltipProvider>
+                                    ) : item.title === 'Notifications' ? (
+                                        <div key={item.title} className="relative" ref={notificationsRef}>
+                                            <TooltipProvider delayDuration={0}>
+                                                <Tooltip>
+                                                    <TooltipTrigger>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-9 w-9"
+                                                            onClick={() => setShowNotifications(!showNotifications)}
+                                                        >
+                                                            <Bell className="h-5 w-5 opacity-80 group-hover:opacity-100" />
+                                                            <span className="sr-only">{item.title}</span>
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>{item.title}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                            {showNotifications && (
+                                                <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-lg border bg-white p-4 shadow-lg dark:bg-gray-800">
+                                                    <div className="flex items-center justify-between">
+                                                        <h3 className="font-semibold">Notifications</h3>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setShowNotifications(false)}
+                                                        >
+                                                            Close
+                                                        </Button>
+                                                    </div>
+                                                    <div className="mt-4 text-center text-sm text-gray-500">
+                                                        No notifications yet
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     ) : (
                                         <TooltipProvider key={item.title} delayDuration={0}>
                                             <Tooltip>
@@ -346,12 +397,14 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                 </div>
             </div>
             {breadcrumbs.length > 1 && (
-                <div className="border-sidebar-border/70 flex w-full border-b">
+                <div className="fixed top-16 left-0 right-0 z-50 border-sidebar-border/70 flex w-full border-b bg-background">
                     <div className="mx-auto flex h-12 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl">
                         <Breadcrumbs breadcrumbs={breadcrumbs} />
                     </div>
                 </div>
             )}
+            {/* Add padding to the main content to account for fixed header */}
+            <div className={`${breadcrumbs.length > 1 ? 'pt-28' : 'pt-16'}`} />
         </>
     );
 }
