@@ -36,7 +36,11 @@ class ListingCrudController extends CrudController
             [
                 'name' => 'category',
                 'label' => 'Category',
-                'type' => 'text',
+                'type' => 'array',
+                'wrapper' => [
+                    'element' => 'span',
+                    'class' => 'badge badge-info',
+                ],
             ],
             [
                 'name' => 'seller.username',
@@ -63,6 +67,53 @@ class ListingCrudController extends CrudController
 
         // Add custom buttons
         CRUD::addButtonFromModelFunction('line', 'verify', 'verifyButton', 'beginning');
+    }
+
+    protected function setupShowOperation()
+    {
+        CRUD::addColumns([
+            [
+                'name' => 'title',
+                'label' => 'Title',
+                'type' => 'text',
+            ],
+            [
+                'name' => 'price',
+                'label' => 'Price',
+                'type' => 'number',
+                'prefix' => '$',
+            ],
+            [
+                'name' => 'category',
+                'label' => 'Category',
+                'type' => 'array',
+                'wrapper' => [
+                    'element' => 'span',
+                    'class' => 'badge badge-info',
+                ],
+            ],
+            [
+                'name' => 'seller.username',
+                'label' => 'Seller',
+                'type' => 'text',
+            ],
+            [
+                'name' => 'status',
+                'label' => 'Status',
+                'type' => 'text',
+                'wrapper' => [
+                    'element' => 'span',
+                    'class' => function ($crud, $column, $entry) {
+                        return 'badge badge-' . ($entry->status === 'verified' ? 'success' : 'warning');
+                    }
+                ],
+            ],
+            [
+                'name' => 'created_at',
+                'label' => 'Created',
+                'type' => 'datetime',
+            ],
+        ]);
     }
 
     public function verifyListing($id)
