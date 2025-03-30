@@ -35,6 +35,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace.index');
     Route::post('/marketplace', [MarketplaceController::class, 'store'])->name('marketplace.store');
     Route::delete('/marketplace/{listing}', [MarketplaceController::class, 'destroy'])->name('marketplace.destroy');
+    Route::get('/marketplace/payment/{listing}', [MarketplaceController::class, 'showPayment'])->name('marketplace.payment');
     Route::post('/groups', [MessagingController::class, 'createGroup'])->name('groups.create');
     Route::post('/groups/{group}/messages', [MessagingController::class, 'sendGroupMessage'])->name('groups.message');
     Route::get('/groups/{group}/messages', [MessagingController::class, 'getGroupMessages'])->name('groups.messages');

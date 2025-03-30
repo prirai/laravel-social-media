@@ -119,4 +119,38 @@ class MarketplaceController extends Controller
         return redirect()->route('marketplace.index')
             ->with('success', 'Listing deleted successfully!');
     }
+
+    /**
+     * Show the payment page for a specific listing.
+     *
+     * @param  \App\Models\Listing  $listing
+     * @return \Inertia\Response
+     */
+    public function showPayment(Listing $listing)
+    {
+        // Load the seller relationship
+        $listing->load('seller');
+        
+        // Format the listing data with seller information
+        $formattedListing = [
+            'id' => $listing->id,
+            'title' => $listing->title,
+            'price' => $listing->price,
+            'description' => $listing->description,
+            'images' => $listing->images ?? [],
+            'category' => $listing->category,
+            'status' => $listing->status ?? 'unverified',
+            'seller' => $listing->seller ? [
+                'name' => $listing->seller->name,
+                'username' => $listing->seller->username,
+                'avatar' => $listing->seller->avatar,
+                'verification_status' => $listing->seller->verification_status,
+            ] : null,
+            'created_at' => $listing->created_at,
+        ];
+        
+        return Inertia::render('marketplace-payment', [
+            'listing' => $formattedListing
+        ]);
+    }
 }

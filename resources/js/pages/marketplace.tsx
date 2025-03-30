@@ -127,14 +127,17 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
         });
 
         post(route('marketplace.store'), {
-        
             forceFormData: true,
-            data: formData,
             onSuccess: () => {
                 reset();
                 setIsOpen(false);
             },
-        });
+        }, formData);
+    };
+
+    // Inside the Marketplace component, add a new function to handle clicking on a listing
+    const handleListingClick = (listingId: number) => {
+        router.get(route('marketplace.payment', listingId));
     };
 
     return (
@@ -328,7 +331,11 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                 {filteredListings.length > 0 ? (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {filteredListings.map((listing) => (
-                            <div key={listing.id} className="overflow-hidden rounded-xl border shadow-sm">
+                            <div 
+                                key={listing.id} 
+                                className="overflow-hidden rounded-xl border shadow-sm cursor-pointer transition-shadow hover:shadow-md"
+                                onClick={() => handleListingClick(listing.id)}
+                            >
                                 <div className="relative h-[200px] w-full flex justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
                                     {listing.images[0] ? (
                                         <>
@@ -403,18 +410,25 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                                             <span className="text-sm text-gray-500">
                                                 {listing.seller?.name || 'Unknown User'}
                                             </span>
-                                            {auth.user && listing.seller?.username === auth.user.username && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="text-gray-500 hover:text-red-500"
-                                                    onClick={() => handleDeleteListing(listing.id)}
-                                                >
-                                                    <TrashIcon className="h-5 w-5" />
-                                                </Button>
-                                            )}
                                         </div>
                                     </div>
+                                    
+                                    {/* Separate the delete button to prevent navigation */}
+                                    {auth.user && listing.seller?.username === auth.user.username && (
+                                        <div className="mt-2 flex justify-end">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="text-gray-500 hover:text-red-500"
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // Prevent navigation when clicking delete
+                                                    handleDeleteListing(listing.id);
+                                                }}
+                                            >
+                                                <TrashIcon className="h-5 w-5" />
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
