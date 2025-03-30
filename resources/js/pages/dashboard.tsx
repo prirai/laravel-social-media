@@ -1,14 +1,15 @@
+import { AppHeader } from '@/components/app-header';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Textarea } from '@/components/ui/textarea';
-import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
-import { ChatBubbleLeftIcon, DocumentIcon, HeartIcon, PhotoIcon, PlusIcon } from '@heroicons/react/24/outline'; // Import like/comment icons
-import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid'; // Import solid heart icon
-import { Head, useForm, usePage } from '@inertiajs/react'; // Add usePage
+import UserAvatar from '@/components/user-avatar';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { ChatBubbleLeftIcon, DocumentIcon, ExclamationCircleIcon, HeartIcon, PhotoIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
+import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -18,45 +19,62 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+interface Comment {
+    id: number;
+    content: string;
+    created_at: string;
+    user: {
+        id: number;
+        name: string;
+        username?: string;
+        avatar?: string | null;
+        verification_status?: 'unverified' | 'pending' | 'verified';
+    };
+}
+
 interface Post {
     id: number;
     content: string;
-    user_id: number;
     created_at: string;
-    updated_at: string;
+    user: {
+        id: number;
+        name: string;
+        username: string;
+        avatar: string;
+        verification_status?: 'unverified' | 'pending' | 'verified';
+        is_friend?: boolean;
+    };
     attachments: Array<{
         id: number;
         file_path: string;
         file_type: string;
     }>;
-    user: {
-        name: string;
-        username: string;
-        avatar: string;
-    };
     likes: Array<{
         id: number;
         user_id: number;
         post_id: number;
     }>;
-    comments: Array<{
-        id: number;
-        user_id: number;
-        post_id: number;
-        content: string;
-        user: {
-            name: string;
-            username?: string;
-            avatar?: string;
-        };
-    }>;
+    comments: Comment[];
 }
 
-export default function Dashboard({ posts = [] }: { posts: Post[] }) {
+interface PageProps {
+    comment?: Comment;
+}
+
+interface DashboardProps {
+    posts: Post[];
+}
+
+export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) {
+    const [posts, setPosts] = useState<Post[]>(initialPosts);
     const [isOpen, setIsOpen] = useState(false);
     const [commentOpen, setCommentOpen] = useState(false);
-    const [selectedPost, setSelectedPost] = useState<Post | null>(null); // State to hold the post for the comment modal
-    const [commentErrors, setCommentErrors] = useState<{ [key: string]: string }>({}); // State for individual comment error.
+    const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+    const [commentErrors, setCommentErrors] = useState<{ [key: string]: string }>({});
+    const { auth } = usePage<SharedData & PageProps>().props;
+    const [isVerificationOpen, setIsVerificationOpen] = useState(false);
+    const [isEmailVerificationOpen, setIsEmailVerificationOpen] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const {
         data,
@@ -69,14 +87,42 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
     } = useForm({
         content: '',
         attachments: [] as File[],
+        document: null as File | null,
+        notes: '',
     });
-    const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-    const { props } = usePage();
-    const authUserId = (props.auth as any)?.user?.id; // Get authenticated user ID (handle type casting)
+    const authUserId = auth.user?.id;
 
     const handleLike = (postId: number) => {
-        post(route('posts.like', { post: postId }));
+        setPosts((prevPosts) =>
+            prevPosts.map((post) =>
+                post.id === postId
+                    ? {
+                          ...post,
+                          likes: post.likes.some((like) => like.user_id === authUserId)
+                              ? post.likes.filter((like) => like.user_id !== authUserId)
+                              : [...post.likes, { id: Date.now(), user_id: authUserId, post_id: postId }],
+                      }
+                    : post
+            )
+        );
+
+        post(route('posts.like', { post: postId }), {
+            onError: () => {
+                setPosts((prevPosts) =>
+                    prevPosts.map((post) =>
+                        post.id === postId
+                            ? {
+                                  ...post,
+                                  likes: post.likes.some((like) => like.user_id === authUserId)
+                                      ? post.likes.filter((like) => like.user_id !== authUserId)
+                                      : post.likes.slice(0, -1),
+                              }
+                            : post
+                    )
+                );
+            },
+        });
     };
 
     const {
@@ -84,7 +130,6 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
         setData: setCommentData,
         post: postComment,
         processing: commentProcessing,
-        errors: commentFormErrors,
         reset: resetComment,
     } = useForm({
         content: '',
@@ -93,27 +138,147 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
     const handleCommentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedPost) {
+            // Create an optimistic comment
+            const optimisticComment: Comment = {
+                id: Date.now(), // Temporary ID
+                content: commentData.content,
+                created_at: new Date().toISOString(),
+                user: {
+                    id: auth.user.id,
+                    name: auth.user.name,
+                    username: typeof auth.user.username === 'string' ? auth.user.username : undefined,
+                    avatar: auth.user.avatar || null,
+                    verification_status: auth.user.verification_status as 'unverified' | 'pending' | 'verified' | undefined,
+                },
+            };
+
+            // Update UI immediately with optimistic comment
+            setPosts((prevPosts) =>
+                prevPosts.map((post) =>
+                    post.id === selectedPost.id
+                        ? {
+                              ...post,
+                              comments: [...post.comments, optimisticComment],
+                          }
+                        : post
+                )
+            );
+
+            // Clear comment input and close dialog
+            setCommentData('content', '');
+            setCommentOpen(false);
+            setSelectedPost(null);
+
+            // Send request to server
             postComment(route('posts.comment', { post: selectedPost.id }), {
-                onSuccess: () => {
-                    resetComment();
-                    setCommentOpen(false);
-                    setSelectedPost(null); // Clear the selected post
+                onSuccess: (page) => {
+                    const newComment = page.props.comment as Comment;
+                    if (newComment) {
+                        // Update with the real comment from server
+                        setPosts((prevPosts) =>
+                            prevPosts.map((post) =>
+                                post.id === selectedPost.id
+                                    ? {
+                                          ...post,
+                                          comments: post.comments.map((comment) =>
+                                              comment.id === optimisticComment.id ? newComment : comment
+                                          ),
+                                      }
+                                    : post
+                            )
+                        );
+                    }
                 },
                 onError: (errors) => {
+                    // Remove the optimistic comment on error
+                    setPosts((prevPosts) =>
+                        prevPosts.map((post) =>
+                            post.id === selectedPost.id
+                                ? {
+                                      ...post,
+                                      comments: post.comments.filter((comment) => comment.id !== optimisticComment.id),
+                                  }
+                                : post
+                        )
+                    );
                     setCommentErrors(errors);
+                    setCommentData('content', commentData.content);
+                    setCommentOpen(true);
+                    setSelectedPost(selectedPost);
                 },
             });
         }
     };
 
-    // ... (handleSubmit, handleAttachmentChange, removeAttachment methods remain the same)
+    const handleVerificationSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post(route('user.submit-verification'), {
+            forceFormData: true,
+            onSuccess: () => {
+                setIsVerificationOpen(false);
+            },
+        });
+    };
+
+    const handleDeletePost = (postId: number) => {
+        if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+            router.delete(route('posts.destroy', postId), {
+                onSuccess: () => {
+                    setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+                },
+            });
+        }
+    };
+
+    const handleDeleteComment = (commentId: number) => {
+        if (confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
+            // Optimistically update the UI
+            setPosts((prevPosts) =>
+                prevPosts.map((post) => ({
+                    ...post,
+                    comments: post.comments.filter((comment) => comment.id !== commentId),
+                }))
+            );
+
+            router.delete(route('comments.destroy', commentId), {
+                onError: () => {
+                    // Revert the optimistic update on error
+                    setPosts((prevPosts) =>
+                        prevPosts.map((post) => ({
+                            ...post,
+                            comments: post.comments.filter((comment) => comment.id !== commentId),
+                        }))
+                    );
+                },
+            });
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
+
+        // if (auth.user.verification_status !== 'verified') {
+        //     setError('Only verified users can create posts.');
+        //     return;
+        // }
+        if (!auth.user.email_verified_at) {
+            setError('You must verify your email to create a post.');
+            return;
+        }
+          
 
         post(route('posts.store'), {
-            onSuccess: () => {
+            onSuccess: (page) => {
+                const newPost = page.props.post as Post;
+                if (newPost) {
+                    setPosts((prevPosts) => [newPost, ...prevPosts]);
+                }
                 reset();
                 setIsOpen(false);
+            },
+            onError: (errors) => {
+                setError(errors.content || 'An error occurred while creating the post.');
             },
         });
     };
@@ -121,9 +286,8 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
     const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const newFiles = Array.from(e.target.files);
-            const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+            const maxSize = 5 * 1024 * 1024;
 
-            // Check each file for size before adding
             const oversizedFiles: string[] = [];
             const validFiles: File[] = [];
 
@@ -135,21 +299,16 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                 }
             });
 
-            // Show error for oversized files
             if (oversizedFiles.length > 0) {
-                // Set error message for too large files
                 const errorMessage = `The following files exceed the 5MB limit: ${oversizedFiles.join(', ')}`;
-                setErrors((prev) => ({
-                    ...prev,
+                setData('attachments', [...data.attachments, ...validFiles]);
+                setCommentErrors((prevErrors) => ({
+                    ...prevErrors,
                     attachments: errorMessage,
                 }));
-
-                // Optional: Create a toast/notification for better visibility
-                alert(`File size error: ${errorMessage}`);
+            } else {
+                setData('attachments', [...data.attachments, ...validFiles]);
             }
-
-            // Add only valid files to the form data
-            setData('attachments', [...data.attachments, ...validFiles]);
         }
     };
 
@@ -159,15 +318,116 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
         setData('attachments', updatedAttachments);
     };
 
+    const handleEmailVerificationSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+    
+        post(route('user.verify-email'), {
+            onSuccess: () => {
+                setIsEmailVerificationOpen(false);
+            },
+        });
+    };
+    
+
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                <div className="mb-4 flex justify-end">
+        <>
+            <AppHeader breadcrumbs={breadcrumbs} />
+            <div className="mx-auto flex h-full w-full max-w-3xl flex-1 flex-col gap-4 px-4 py-4 md:px-0">
+                <Head title="Dashboard" />
+
+                {auth.user.verification_status === 'unverified' && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-900/20">
+                        <div className="flex items-center gap-3">
+                            <ExclamationCircleIcon className="h-5 w-5 text-amber-500" />
+                            <div className="flex-1">
+                                <p className="font-medium text-amber-800 dark:text-amber-200">Your account is not yet verified</p>
+                                <p className="text-sm text-amber-700 dark:text-amber-300">Submit a verification document to unlock all features.</p>
+                            </div>
+
+                            <Dialog open={isVerificationOpen} onOpenChange={setIsVerificationOpen}>
+                                <DialogTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className="border-amber-200 bg-white text-amber-700 hover:bg-amber-50 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900"
+                                    >
+                                        Submit Verification
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Submit Verification Document</DialogTitle>
+                                    </DialogHeader>
+                                    <form onSubmit={handleVerificationSubmit} className="space-y-4">
+                                        <div>
+                                            <Label htmlFor="document">Document</Label>
+                                            <Input
+                                                id="document"
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                onChange={(e) => setData('document', e.target.files?.[0] || null)}
+                                                required
+                                            />
+                                            <p className="mt-1 text-sm text-gray-500">Accepted formats: PDF, JPG, PNG</p>
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="notes">Additional Notes (Optional)</Label>
+                                            <Textarea
+                                                id="notes"
+                                                value={data.notes}
+                                                onChange={(e) => setData('notes', e.target.value)}
+                                                placeholder="Any additional information..."
+                                            />
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <Button type="button" variant="outline" onClick={() => setIsVerificationOpen(false)}>
+                                                Cancel
+                                            </Button>
+                                            <Button type="submit" disabled={processing}>
+                                                Submit
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </DialogContent>
+                            </Dialog>
+                            {!auth.user.email_verified_at && (
+                            <Dialog open={isEmailVerificationOpen} onOpenChange={setIsEmailVerificationOpen}>
+                            <DialogTrigger asChild>
+                            <Button
+                                variant="outline"
+                                className="border-blue-200 bg-white text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
+                            >
+                                Verify Email
+                            </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Verify Your Email</DialogTitle>
+                                    <DialogDescription>We will send a verification link to your registered email.</DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleEmailVerificationSubmit} className="space-y-4">
+                                    <p className="text-sm text-gray-500 dark:text-gray-300">
+                                        Click the button below to receive a verification email.
+                                    </p>
+                                    <div className="flex justify-end gap-2">
+                                        <Button type="button" variant="outline" onClick={() => setIsEmailVerificationOpen(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button type="submit" disabled={processing} >Send Verification Email</Button>
+                                    </div>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+{/* POST */}
+                <div className="flex justify-end">
                     <Dialog open={isOpen} onOpenChange={setIsOpen}>
                         <DialogTrigger asChild>
-                            <Button className="flex items-center gap-2">
-                                <PlusIcon className="h-5 w-5" />
+                            <Button className="w-full md:w-auto">
+                                <PlusIcon className="mr-2 h-5 w-5" />
                                 Create Post
                             </Button>
                         </DialogTrigger>
@@ -177,6 +437,19 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                             </DialogHeader>
 
                             <form onSubmit={handleSubmit} className="space-y-4">
+                                {error && (
+                                    <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
+                                        <div className="flex">
+                                            <div className="flex-shrink-0">
+                                                <ExclamationCircleIcon className="h-5 w-5 text-red-400" aria-hidden="true" />
+                                            </div>
+                                            <div className="ml-3">
+                                                <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                
                                 <div className="space-y-2">
                                     <Label htmlFor="content">Post Content</Label>
                                     <Textarea
@@ -212,7 +485,6 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                                         />
                                     </div>
 
-                                    {/* Preview attachments */}
                                     {data.attachments.length > 0 && (
                                         <div className="mt-2 space-y-2">
                                             <p className="text-sm font-medium">Selected files:</p>
@@ -267,97 +539,139 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                     </Dialog>
                 </div>
 
-                {/* Post List */}
                 <div className="space-y-4">
                     {posts.length > 0 ? (
                         posts.map((post) => (
-                            <div key={post.id} className="rounded-xl border p-4 shadow-sm">
-                                {/* User Info (remains the same) */}
+                            <div key={post.id} className="rounded-xl border shadow-sm">
+                                <div className="border-b p-4">
+                                    <div className="flex items-center gap-3">
+                                        <UserAvatar user={post.user} className="size-10" />
+                                        <div className="flex-1">
+                                            <p className="font-medium">{post.user.name}</p>
+                                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                <span>@{post.user.username}</span>
+                                                {post.user.is_friend && (
+                                                    <span className="text-xs text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20 px-2 py-0.5 rounded-full">Friends</span>
+                                                )}
+                                                {post.user.verification_status && (
+                                                    <span className="text-xs text-gray-500">({post.user.verification_status})</span>
+                                                )}
+                                                <span>•</span>
+                                                <span>{new Date(post.created_at).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                        {post.user.id === authUserId && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="text-gray-500 hover:text-red-500"
+                                                onClick={() => handleDeletePost(post.id)}
+                                            >
+                                                <TrashIcon className="h-5 w-5" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
 
-                                <div className="mb-3 flex items-center gap-3">
-                                    {post.user.avatar ? (
-                                        <img
-                                            src={post.user.avatar.startsWith('avatars/') ? `/storage/${post.user.avatar}` : post.user.avatar} // Use /storage path directly, assuming paths are relative to public/storage now.
-                                            alt={`Avatar of ${post.user.name}`}
-                                            className="h-10 w-10 rounded-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200">
-                                            {post.user.name.charAt(0)}
+                                <div className="space-y-4 p-4">
+                                    <div className="text-base whitespace-pre-wrap">{post.content}</div>
+
+                                    {post.attachments.length > 0 && (
+                                        <div className="grid grid-cols-1 gap-4">
+                                            {post.attachments.map((attachment) => (
+                                                <div key={attachment.id} className="overflow-hidden rounded-lg">
+                                                    {attachment.file_type.includes('image') ? (
+                                                        <div className="flex justify-center">
+                                                            <img
+                                                                src={attachment.file_path}
+                                                                alt="Attachment"
+                                                                className="w-full rounded-lg md:max-w-[600px] md:object-contain"
+                                                                style={{
+                                                                    maxHeight: '80vh',
+                                                                    width: '100%',
+                                                                    height: 'auto',
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <a
+                                                            href={attachment.file_path}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="mx-auto flex w-full max-w-[600px] items-center justify-center rounded-lg bg-gray-100 p-6 dark:bg-gray-800"
+                                                        >
+                                                            <DocumentIcon className="h-10 w-10" />
+                                                            <span className="ml-2">View PDF</span>
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
-                                    <div>
-                                        <p className="font-medium">{post.user.name}</p>
-                                        <p className="text-sm text-gray-500">@{post.user.username}</p>
-                                        <p className="text-sm text-gray-500">{new Date(post.created_at).toLocaleString()}</p>
+                                </div>
+
+                                <div className="border-t px-4 py-3">
+                                    <div className="flex items-center gap-6">
+                                        <button
+                                            onClick={() => handleLike(post.id)}
+                                            className="flex items-center gap-2 text-gray-500 hover:text-blue-500"
+                                        >
+                                            {post.likes.some((like) => like.user_id === authUserId) ? (
+                                                <HeartIconSolid className="h-6 w-6 text-red-500" />
+                                            ) : (
+                                                <HeartIcon className="h-6 w-6" />
+                                            )}
+                                            <span className="text-sm font-medium">{post.likes.length}</span>
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                setSelectedPost(post);
+                                                setCommentOpen(true);
+                                            }}
+                                            className="flex items-center gap-2 text-gray-500 hover:text-blue-500"
+                                        >
+                                            <ChatBubbleLeftIcon className="h-6 w-6" />
+                                            <span className="text-sm font-medium">{post.comments.length}</span>
+                                        </button>
                                     </div>
                                 </div>
-                                <div className="mb-3 whitespace-pre-wrap">{post.content}</div>
-                                {post.attachments.length > 0 && (
-                                    <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3">
-                                        {post.attachments.map((attachment) => (
-                                            <div key={attachment.id} className="relative overflow-hidden rounded-lg">
-                                                {attachment.file_type.includes('image') ? (
-                                                    <img src={attachment.file_path} alt="Attachment" className="h-auto w-full object-cover" />
-                                                ) : (
-                                                    <a
-                                                        href={attachment.file_path}
-                                                        target="_blank"
-                                                        className="flex items-center justify-center rounded-lg bg-gray-100 p-4 dark:bg-gray-800"
-                                                    >
-                                                        <DocumentIcon className="h-10 w-10" />
-                                                        <span className="ml-2">View PDF</span>
-                                                    </a>
-                                                )}
-                                            </div>
-                                        ))}
+
+                                {post.comments.length > 0 && (
+                                    <div className="border-t bg-gray-50 px-4 py-3 dark:bg-gray-900/50">
+                                        <div className="space-y-3">
+                                            {post.comments.map((comment) => (
+                                                <div key={comment.id} className="flex items-start gap-3">
+                                                    <UserAvatar user={comment.user} className="size-8" />
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium">{comment.user.name}</span>
+                                                            <span className="text-sm text-gray-500">@{comment.user.username}</span>
+                                                            {comment.user.verification_status && (
+                                                                <span className="text-sm text-gray-500">({comment.user.verification_status})</span>
+                                                            )}
+                                                            {comment.user.id === authUserId && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="ml-auto h-6 w-6 text-gray-500 hover:text-red-500"
+                                                                    onClick={() => handleDeleteComment(comment.id)}
+                                                                >
+                                                                    <TrashIcon className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
-                                {/* Like and Comment Buttons */}
-                                <div className="mt-2 flex items-center gap-4">
-                                    <button onClick={() => handleLike(post.id)} className="flex items-center gap-1 text-gray-500 hover:text-blue-500">
-                                        {post.likes.some((like) => like.user_id === authUserId) ? (
-                                            <HeartIconSolid className="h-5 w-5 text-red-500" />
-                                        ) : (
-                                            <HeartIcon className="h-5 w-5" />
-                                        )}
-                                        <span>{post.likes.length}</span>
-                                    </button>
-
-                                    <button
-                                        onClick={() => {
-                                            setSelectedPost(post);
-                                            setCommentOpen(true);
-                                        }}
-                                        className="flex items-center gap-1 text-gray-500 hover:text-blue-500"
-                                    >
-                                        <ChatBubbleLeftIcon className="h-5 w-5" />
-                                        <span>{post.comments.length}</span>
-                                    </button>
-                                </div>
-
-                                {/* Comment Section */}
-                                <div className="mt-4 space-y-2">
-                                    {post.comments.map((comment) => (
-                                        <div key={comment.id} className="border-t pt-2">
-                                            <div className="flex items-start gap-2">
-                                                {/*  Add avatar to comment user */}
-                                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200">
-                                                    {comment.user.name.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-medium">{comment.user.name}</p>
-                                                    <p className="text-sm text-gray-600">@{comment.user.username}</p>
-                                                    <p className="text-sm text-gray-600">{comment.content}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
                             </div>
                         ))
                     ) : (
-                        <div className="border-sidebar-border/70 dark:border-sidebar-border relative flex min-h-[50vh] flex-col items-center justify-center overflow-hidden rounded-xl border">
+                        <div className="flex min-h-[50vh] flex-col items-center justify-center rounded-xl border">
                             <p className="mb-4 text-lg font-medium">No posts yet</p>
                             <Button onClick={() => setIsOpen(true)} className="flex items-center gap-2">
                                 <PlusIcon className="h-5 w-5" />
@@ -369,7 +683,7 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                 </div>
 
                 <Dialog open={commentOpen} onOpenChange={setCommentOpen}>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[425px]">
                         <DialogHeader>
                             <DialogTitle>Add a Comment</DialogTitle>
                             {selectedPost && <DialogDescription>Replying to {selectedPost.user.name}'s post</DialogDescription>}
@@ -392,6 +706,6 @@ export default function Dashboard({ posts = [] }: { posts: Post[] }) {
                     </DialogContent>
                 </Dialog>
             </div>
-        </AppLayout>
+        </>
     );
 }

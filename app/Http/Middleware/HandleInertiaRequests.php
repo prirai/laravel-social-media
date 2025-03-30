@@ -43,9 +43,21 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
+            // 'auth' => [
+            //     'user' => $request->user(),
+            // ],
             'auth' => [
-                'user' => $request->user(),
-            ],
+                    'user' => $request->user() ? [
+                        'id' => $request->user()->id,
+                        'name' => $request->user()->name,
+                        'email' => $request->user()->email,
+                        'email_verified_at' => $request->user()->email_verified_at,
+                        'verification_status' => $request->user()->verification_status,
+                        'username' => $request->user()->username ?? null,
+                        'avatar' => $request->user()->avatar ?? null,
+                    ] : null,
+                    ],
+
             'ziggy' => fn (): array => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),

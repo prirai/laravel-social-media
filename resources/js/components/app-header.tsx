@@ -1,20 +1,21 @@
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Icon } from '@/components/icon';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { NavigationMenu, NavigationMenuItem, NavigationMenuList, navigationMenuTriggerStyle } from '@/components/ui/navigation-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { UserMenuContent } from '@/components/user-menu-content';
-import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { Bell, LayoutGrid, Mail, Menu, Moon, Search, ShoppingBag, Sun } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
+import UserAvatar from '@/components/user-avatar';
+import axios from 'axios';
 
 const mainNavItems: NavItem[] = [
     {
@@ -42,7 +43,7 @@ const rightNavItems: NavItem[] = [
     },
 ];
 
-const activeItemStyles = 'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
+const activeItemStyles = 'bg-blue-50/70 text-blue-500 dark:bg-blue-900/20 dark:text-blue-300';
 
 interface AppHeaderProps {
     breadcrumbs?: BreadcrumbItem[];
@@ -51,9 +52,14 @@ interface AppHeaderProps {
 export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const page = usePage<SharedData>();
     const { auth } = page.props;
-    const getInitials = useInitials();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<Array<{ id: number; name: string; username: string; avatar: string | null }>>([]);
+    const [showSearchResults, setShowSearchResults] = useState(false);
+    const searchRef = useRef<HTMLDivElement>(null);
 
     const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+    const [showNotifications, setShowNotifications] = useState(false);
+    const notificationsRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const localTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -84,6 +90,50 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
         }
     }, [theme]);
 
+    useEffect(() => {
+        const searchUsers = async () => {
+            if (searchQuery.trim().length < 2) {
+                setSearchResults([]);
+                return;
+            }
+
+            try {
+                const response = await axios.get(route('users.search'), {
+                    params: { query: searchQuery }
+                });
+                setSearchResults(response.data.users);
+                setShowSearchResults(true);
+            } catch (error) {
+                console.error('Error searching users:', error);
+            }
+        };
+
+        const timeoutId = setTimeout(searchUsers, 300);
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setShowSearchResults(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+                setShowNotifications(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const toggleTheme = () => {
         if (theme === 'dark') {
             setTheme('light');
@@ -96,7 +146,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
 
     return (
         <>
-            <div className="border-sidebar-border/80 border-b">
+            <div className="fixed top-0 left-0 right-0 z-50 border-sidebar-border/80 border-b bg-background">
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Mobile Menu */}
                     <div className="lg:hidden">
@@ -164,14 +214,14 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                             className={cn(
                                                 navigationMenuTriggerStyle(),
                                                 page.url === item.url && activeItemStyles,
-                                                'h-9 cursor-pointer px-3',
+                                                'h-9 cursor-pointer px-3 hover:bg-blue-50/70 hover:text-blue-500 dark:hover:bg-blue-900/20 dark:hover:text-blue-300',
                                             )}
                                         >
                                             {item.icon && <Icon iconNode={item.icon} className="mr-2 h-4 w-4" />}
                                             {item.title}
                                         </Link>
                                         {page.url === item.url && (
-                                            <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"></div>
+                                            <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-blue-500 dark:bg-blue-300"></div>
                                         )}
                                     </NavigationMenuItem>
                                 ))}
@@ -181,9 +231,53 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
 
                     <div className="ml-auto flex items-center space-x-2">
                         <div className="relative flex items-center space-x-1">
-                            <Button variant="ghost" size="icon" className="group h-9 w-9 cursor-pointer">
-                                <Search className="!size-5 opacity-80 group-hover:opacity-100" />
-                            </Button>
+                            <div className="relative" ref={searchRef}>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="group h-9 w-9 cursor-pointer"
+                                    onClick={() => setShowSearchResults(!showSearchResults)}
+                                >
+                                    <Search className="!size-5 opacity-80 group-hover:opacity-100" />
+                                </Button>
+                                {showSearchResults && (
+                                    <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-lg border bg-white p-2 shadow-lg dark:bg-gray-800">
+                                        <Input
+                                            type="text"
+                                            placeholder="Search users..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="mb-2"
+                                            autoFocus
+                                        />
+                                        <div className="max-h-96 space-y-1 overflow-y-auto">
+                                            {searchResults.map((user) => (
+                                                <Link
+                                                    key={user.id}
+                                                    href={`/profile/${user.username}`}
+                                                    className="flex items-center gap-2 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                    onClick={() => {
+                                                        setShowSearchResults(false);
+                                                        setSearchQuery('');
+                                                        setSearchResults([]);
+                                                    }}
+                                                >
+                                                    <UserAvatar user={user} className="size-8" asLink={false} />
+                                                    <div>
+                                                        <p className="font-medium">{user.name}</p>
+                                                        <p className="text-sm text-gray-500">@{user.username}</p>
+                                                    </div>
+                                                </Link>
+                                            ))}
+                                            {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+                                                <div className="p-2 text-center text-sm text-gray-500">
+                                                    No users found
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                             <div className="hidden lg:flex">
                                 {rightNavItems.map((item) =>
                                     item.url.startsWith('http') ? (
@@ -207,6 +301,44 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                                 </TooltipContent>
                                             </Tooltip>
                                         </TooltipProvider>
+                                    ) : item.title === 'Notifications' ? (
+                                        <div key={item.title} className="relative" ref={notificationsRef}>
+                                            <TooltipProvider delayDuration={0}>
+                                                <Tooltip>
+                                                    <TooltipTrigger>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-9 w-9"
+                                                            onClick={() => setShowNotifications(!showNotifications)}
+                                                        >
+                                                            <Bell className="h-5 w-5 opacity-80 group-hover:opacity-100" />
+                                                            <span className="sr-only">{item.title}</span>
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>{item.title}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                            {showNotifications && (
+                                                <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-lg border bg-white p-4 shadow-lg dark:bg-gray-800">
+                                                    <div className="flex items-center justify-between">
+                                                        <h3 className="font-semibold">Notifications</h3>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => setShowNotifications(false)}
+                                                        >
+                                                            Close
+                                                        </Button>
+                                                    </div>
+                                                    <div className="mt-4 text-center text-sm text-gray-500">
+                                                        No notifications yet
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     ) : (
                                         <TooltipProvider key={item.title} delayDuration={0}>
                                             <Tooltip>
@@ -254,19 +386,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="size-10 rounded-full p-1">
-                                    <Avatar className="size-8 overflow-hidden rounded-full">
-                                        <AvatarImage
-                                            src={
-                                                auth.user.avatar && auth.user.avatar.startsWith('avatars/')
-                                                    ? `/storage/${auth.user.avatar}`
-                                                    : auth.user.avatar
-                                            }
-                                            alt={auth.user.name}
-                                        />
-                                        <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
-                                            {getInitials(auth.user.name)}
-                                        </AvatarFallback>
-                                    </Avatar>
+                                    <UserAvatar user={auth.user} className="size-8" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56" align="end">
@@ -277,12 +397,14 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                 </div>
             </div>
             {breadcrumbs.length > 1 && (
-                <div className="border-sidebar-border/70 flex w-full border-b">
+                <div className="fixed top-16 left-0 right-0 z-50 border-sidebar-border/70 flex w-full border-b bg-background">
                     <div className="mx-auto flex h-12 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl">
                         <Breadcrumbs breadcrumbs={breadcrumbs} />
                     </div>
                 </div>
             )}
+            {/* Add padding to the main content to account for fixed header */}
+            <div className={`${breadcrumbs.length > 1 ? 'pt-28' : 'pt-16'}`} />
         </>
     );
 }

@@ -144,4 +144,36 @@ return [
         'tableWrapper' => null,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Menu
+    |--------------------------------------------------------------------------
+    */
+    'menu' => [
+        [
+            'type'         => 'navbar-item',
+            'name'         => 'Dashboard',
+            'icon'         => 'la-home',
+            'route'        => 'backpack.dashboard',
+        ],
+        [
+            'type'         => 'navbar-item',
+            'name'         => 'Users',
+            'icon'         => 'la-users',
+            'route'        => 'user.index',
+        ],
+        [
+            'type'         => 'navbar-item',
+            'name'         => 'User Reports',
+            'icon'         => 'la-flag',
+            'route'        => 'user-report.index',
+            'badge'        => [
+                'class'     => 'badge bg-danger',
+                'text'      => function() {
+                    return \App\Models\UserReport::where('status', 'pending')->count() ?: '';
+                }
+            ]
+        ],
+    ],
+
 ];

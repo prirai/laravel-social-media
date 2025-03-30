@@ -1,11 +1,15 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\UserReportCrudController;
+use App\Http\Controllers\Admin\ListingCrudController;
+use App\Http\Controllers\Admin\VerificationCrudController;
+use App\Http\Controllers\Admin\VerificationDocumentCrudController;
 
 // --------------------------
 // Custom Backpack Routes
 // --------------------------
-// This route file is loaded automatically by Backpack\CRUD.
+// This route file is loaded automatically by Backpack\Base.
 // Routes you generate using Backpack\Generators will be placed here.
 
 Route::group([
@@ -17,7 +21,18 @@ Route::group([
     'namespace' => 'App\Http\Controllers\Admin',
 ], function () { // custom admin routes
     Route::crud('user', 'UserCrudController');
-}); // this should be the absolute last line of this file
+    Route::crud('user-report', 'UserReportCrudController');
+    Route::get('delete-reported-user/{user}', [UserReportCrudController::class, 'deleteReportedUser'])
+        ->name('admin.delete-reported-user');
+    Route::crud('listing', 'ListingCrudController');
+    Route::get('verify-listing/{id}', [ListingCrudController::class, 'verifyListing'])
+        ->name('admin.verify-listing');
+    Route::crud('verifications', 'VerificationCrudController');
+    Route::post('verifications/{id}/verify', 'VerificationCrudController@verify');
+    Route::crud('verification-document', 'VerificationCrudController');
+    Route::post('verification-document/{id}/verify', 'VerificationCrudController@verify')
+        ->name('verification-document.verify');
+});
 
 /**
  * DO NOT ADD ANYTHING HERE.

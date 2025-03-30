@@ -191,4 +191,66 @@ return [
     */
 
     'token_username' => env('BACKPACK_TOKEN_USERNAME', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Look & feel customizations
+    |--------------------------------------------------------------------------
+    */
+    'view_namespace' => 'backpack::',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Menu Items
+    |--------------------------------------------------------------------------
+    */
+    'menu' => [
+        // Dashboard
+        [
+            'name' => 'Dashboard',
+            'icon' => 'las la-home',
+            'route' => 'backpack.dashboard',
+        ],
+        
+        // User Management Header
+        [
+            'name' => 'User Management',
+            'type' => 'header',
+        ],
+        
+        // Users
+        [
+            'name' => 'Users',
+            'icon' => 'las la-users',
+            'route' => 'user.index',
+        ],
+        
+        // User Reports
+        [
+            'name' => 'User Reports',
+            'icon' => 'las la-flag',
+            'route' => 'user-report.index',
+            'badge' => function() {
+                return \App\Models\UserReport::where('status', 'pending')->count() ?: false;
+            },
+        ],
+
+        // Verification Documents
+        [
+            'name' => 'Verifications',
+            'icon' => 'las la-id-card',
+            'route' => 'verification-document.index',
+            'badge' => function() {
+                return \App\Models\VerificationDocument::whereHas('user', function($query) {
+                    $query->where('verification_status', 'pending');
+                })->count() ?: false;
+            },
+        ],
+    ],
+
+    // Make sure these UI settings are set for Tabler
+    'ui' => [
+        'theme' => 'tabler',
+        'enabled' => true,
+    ],
 ];
