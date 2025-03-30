@@ -109,7 +109,11 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
+        if (auth.user.verification_status !== 'verified') {
+            alert('Only users with verified documents can create listings.');
+            return;
+        }
         // Create FormData object to properly handle file uploads
         const formData = new FormData();
         formData.append('title', data.title);
@@ -123,6 +127,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
         });
 
         post(route('marketplace.store'), {
+        
             forceFormData: true,
             data: formData,
             onSuccess: () => {
@@ -140,6 +145,12 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                 {flash.success && (
                     <div className="rounded-md bg-green-50 p-4 text-green-700 dark:bg-green-900/50 dark:text-green-300">
                         {flash.success}
+                    </div>
+                )}
+
+                {flash.error && (
+                    <div className="rounded-md bg-red-50 p-4 text-red-700 dark:bg-red-900/50 dark:text-red-300">
+                        {flash.error}
                     </div>
                 )}
                 

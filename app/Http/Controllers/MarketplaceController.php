@@ -53,13 +53,18 @@ class MarketplaceController extends Controller
         return Inertia::render('marketplace', [
             'listings' => $formattedListings,
             'flash' => [
-                'success' => session('success')
+                'success' => session('success'),
+                'error' => session('error'),
             ],
         ]);
     }
 
     public function store(Request $request)
     {
+
+        if (auth()->user()->verification_status !== 'verified') {
+            return redirect()->back()->with('error', 'You must verify your documents before posting a listing.');
+        }
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
