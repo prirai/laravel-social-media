@@ -73,6 +73,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
     const [commentErrors, setCommentErrors] = useState<{ [key: string]: string }>({});
     const { auth } = usePage<SharedData & PageProps>().props;
     const [isVerificationOpen, setIsVerificationOpen] = useState(false);
+    const [isEmailVerificationOpen, setIsEmailVerificationOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const {
@@ -257,10 +258,15 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
         e.preventDefault();
         setError(null);
 
-        if (auth.user.verification_status !== 'verified') {
-            setError('Only verified users can create posts.');
+        // if (auth.user.verification_status !== 'verified') {
+        //     setError('Only verified users can create posts.');
+        //     return;
+        // }
+        if (!auth.user.email_verified_at) {
+            setError('You must verify your email to create a post.');
             return;
         }
+          
 
         post(route('posts.store'), {
             onSuccess: (page) => {
@@ -312,6 +318,17 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
         setData('attachments', updatedAttachments);
     };
 
+    const handleEmailVerificationSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+    
+        post(route('user.verify-email'), {
+            onSuccess: () => {
+                setIsEmailVerificationOpen(false);
+            },
+        });
+    };
+    
+
     return (
         <>
             <AppHeader breadcrumbs={breadcrumbs} />
@@ -326,6 +343,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                 <p className="font-medium text-amber-800 dark:text-amber-200">Your account is not yet verified</p>
                                 <p className="text-sm text-amber-700 dark:text-amber-300">Submit a verification document to unlock all features.</p>
                             </div>
+
                             <Dialog open={isVerificationOpen} onOpenChange={setIsVerificationOpen}>
                                 <DialogTrigger asChild>
                                     <Button
@@ -371,10 +389,40 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     </form>
                                 </DialogContent>
                             </Dialog>
+                            {!auth.user.email_verified_at && (
+                            <Dialog open={isEmailVerificationOpen} onOpenChange={setIsEmailVerificationOpen}>
+                            <DialogTrigger asChild>
+                            <Button
+                                variant="outline"
+                                className="border-blue-200 bg-white text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
+                            >
+                                Verify Email
+                            </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Verify Your Email</DialogTitle>
+                                    <DialogDescription>We will send a verification link to your registered email.</DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleEmailVerificationSubmit} className="space-y-4">
+                                    <p className="text-sm text-gray-500 dark:text-gray-300">
+                                        Click the button below to receive a verification email.
+                                    </p>
+                                    <div className="flex justify-end gap-2">
+                                        <Button type="button" variant="outline" onClick={() => setIsEmailVerificationOpen(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button type="submit" disabled={processing} >Send Verification Email</Button>
+                                    </div>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                            )}
                         </div>
                     </div>
                 )}
 
+{/* POST */}
                 <div className="flex justify-end">
                     <Dialog open={isOpen} onOpenChange={setIsOpen}>
                         <DialogTrigger asChild>
@@ -401,6 +449,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         </div>
                                     </div>
                                 )}
+                                
                                 <div className="space-y-2">
                                     <Label htmlFor="content">Post Content</Label>
                                     <Textarea

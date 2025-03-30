@@ -16,8 +16,11 @@ class PostController extends Controller
     public function store(Request $request)
     {
         // Check if user is verified
-        if (auth()->user()->verification_status !== 'verified') {
-            return back()->with('error', 'Only verified users can create posts.');
+        // if (auth()->user()->verification_status !== 'verified') {
+        //     return back()->with('error', 'Only verified users can create posts.');
+        // }
+        if (!auth()->user()->hasVerifiedEmail()) {
+            return back()->with('error', 'You must verify your email to create a post.');
         }
 
         $validated = $request->validate([
