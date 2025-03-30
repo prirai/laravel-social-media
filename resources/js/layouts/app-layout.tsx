@@ -6,9 +6,10 @@ import { useEffect } from 'react';
 interface AppLayoutProps {
     children: ReactNode;
     breadcrumbs?: BreadcrumbItem[];
+    fullWidth?: boolean;
 }
 
-export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => {
+export default ({ children, breadcrumbs, fullWidth, ...props }: AppLayoutProps) => {
     useEffect(() => {
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -25,7 +26,9 @@ export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => {
 
     return (
         <AppLayoutTemplate breadcrumbs={breadcrumbs} {...props}>
-            {children}
+            <main className={`mx-auto flex h-full w-full flex-1 flex-col gap-4 rounded-xl ${fullWidth ? '' : 'max-w-7xl'}`}>
+                {children}
+            </main>
         </AppLayoutTemplate>
     );
 };

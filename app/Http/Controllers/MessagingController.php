@@ -20,54 +20,39 @@ class MessagingController extends Controller
      */
     public function index()
     {
-        $user = auth()->user();
+        $currentUser = auth()->user();
         
-        // Get all users who are friends with the current user
-        $users = User::where('id', '!=', $user->id)
-            ->select('id', 'name', 'username', 'avatar', 'verification_status')
-            ->withCount(['receivedMessages as unread_count' => function ($query) {
-                $query->whereNull('read_at')
-                    ->where('sender_id', '!=', auth()->id());
-            }])
-            ->with(['latestMessage' => function ($query) {
-                $query->where(function ($q) {
-                    $q->where('sender_id', auth()->id())
-                        ->orWhere('receiver_id', auth()->id());
-                });
-            }])
+        // Get users with their last direct message
+        $users = User::where('id', '!=', $currentUser->id)
             ->get()
-            ->map(function ($friend) use ($user) {
-                $lastMessage = $friend->latestMessage;
+            ->map(function($user) use ($currentUser) {
+                // Get the last message between the current user and this user
+                $lastMessage = Message::where(function($query) use ($currentUser, $user) {
+                        $query->where('sender_id', $currentUser->id)
+                              ->where('receiver_id', $user->id);
+                    })
+                    ->orWhere(function($query) use ($currentUser, $user) {
+                        $query->where('sender_id', $user->id)
+                              ->where('receiver_id', $currentUser->id);
+                    })
+                    ->latest()
+                    ->first();
+                
                 return [
-                    'id' => $friend->id,
-                    'name' => $friend->name,
-                    'username' => $friend->username,
-                    'avatar' => $friend->avatar,
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'username' => $user->username,
+                    'avatar' => $user->avatar,
+                    'verification_status' => $user->verification_status,
                     'lastMessage' => $lastMessage ? $lastMessage->content : null,
                     'lastMessageTime' => $lastMessage ? $lastMessage->created_at->diffForHumans() : null,
-                    'unreadCount' => $friend->unread_count,
-                    'verification_status' => $friend->verification_status,
-                    'isFriend' => $user->isFriendsWith($friend),
+                    'unreadCount' => 0,
+                    'isCurrentUser' => $user->id === $currentUser->id,
+                    'isFriend' => $currentUser->friends->contains($user->id)
                 ];
             });
-
-        // Add current user's profile to the list
-        $currentUser = [
-            'id' => $user->id,
-            'name' => $user->name,
-            'username' => $user->username,
-            'avatar' => $user->avatar,
-            'verification_status' => $user->verification_status,
-            'lastMessage' => null,
-            'lastMessageTime' => null,
-            'unreadCount' => 0,
-            'isCurrentUser' => true,
-            'isFriend' => false,
-        ];
-
-        $users = collect([$currentUser])->concat($users);
-
-        // Get group conversations
+        
+        // Get groups with their last message
         $groups = Group::whereHas('users', function ($query) {
             $query->where('user_id', auth()->id());
         })
@@ -90,7 +75,7 @@ class MessagingController extends Controller
         return Inertia::render('messaging', [
             'users' => $users,
             'groups' => $groups,
-            'allUsers' => User::select('id', 'name', 'username', 'avatar', 'verification_status')->get(),
+            'allUsers' => User::where('id', '!=', $currentUser->id)->get()
         ]);
     }
 

@@ -205,24 +205,11 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                     ),
                 );
             } else {
-                setUsers((currentUsers) => {
-                    const existingUserIndex = currentUsers.findIndex((u) => u.id === selectedChat.id);
-                    if (existingUserIndex !== -1) {
-                        const newUsers = [...currentUsers];
-                        newUsers[existingUserIndex] = {
-                            ...newUsers[existingUserIndex],
-                            lastMessage: message,
-                            lastMessageTime: 'Just now',
-                        };
-                        return newUsers;
-                    }
-                    const newUser: User = {
-                        ...selectedChat,
-                        lastMessage: message,
-                        lastMessageTime: 'Just now',
-                    };
-                    return [...currentUsers, newUser];
-                });
+                setUsers((currentUsers) =>
+                    currentUsers.map((user) =>
+                        user.id === selectedChat.id ? { ...user, lastMessage: message, lastMessageTime: 'Just now' } : user,
+                    ),
+                );
             }
 
             reset('content');
@@ -324,112 +311,116 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout breadcrumbs={breadcrumbs} fullWidth={true}>
             <Head title="Messages" />
-            <div className="flex h-screen flex-1 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+            <div className="flex h-[calc(100vh-4rem)] flex-1 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
                 <div
                     className={`${isMobileView && selectedChat ? 'hidden' : 'flex'} fixed inset-y-0 left-0 z-20 w-full flex-col border-r border-gray-200 bg-white md:static md:w-80 dark:border-gray-800 dark:bg-black`}
                 >
                     <div className="flex flex-col">
                         <div className="border-b border-gray-200 p-4 dark:border-gray-800">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Messages</h2>
-                        </div>
-                        <div className="flex gap-2 border-b border-gray-200 bg-white px-4 py-4 dark:border-gray-800 dark:bg-black">
-                            <Dialog open={isNewMessageOpen} onOpenChange={setIsNewMessageOpen}>
-                                <DialogTrigger asChild>
-                                    <Button className="flex-1" variant="outline">
-                                        <PlusIcon className="mr-2 h-5 w-5" />
-                                        New Message
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-[425px]">
-                                    <DialogHeader>
-                                        <DialogTitle>New Message</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="mt-4 space-y-4">
-                                        <div className="relative">
-                                            <MagnifyingGlassIcon className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                                            <Input
-                                                type="text"
-                                                placeholder="Search users..."
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
-                                                className="pl-10"
-                                            />
-                                        </div>
-                                        <div className="max-h-[60vh] space-y-2 overflow-y-auto">
-                                            {filteredUsers.map((user) => (
-                                                <button
-                                                    key={user.id}
-                                                    onClick={() => startNewConversation(user)}
-                                                    className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
-                                                >
-                                                    <UserAvatar user={user} className="size-10" />
-                                                    <div>
-                                                        <p className="font-medium">{user.name}</p>
-                                                        <p className="text-sm text-gray-500">@{user.username}</p>
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
-
-                            <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
-                                <DialogTrigger asChild>
-                                    <Button className="flex-1" variant="outline">
-                                        <UsersIcon className="mr-2 h-5 w-5" />
-                                        New Group
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-[425px]">
-                                    <DialogHeader>
-                                        <DialogTitle>Create New Group</DialogTitle>
-                                    </DialogHeader>
-                                    <form onSubmit={createGroup} className="mt-4 space-y-4">
-                                        <div>
-                                            <Label htmlFor="groupName">Group Name</Label>
-                                            <Input
-                                                id="groupName"
-                                                value={groupName}
-                                                onChange={(e) => setGroupName(e.target.value)}
-                                                placeholder="Enter group name"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <Label>Select Members</Label>
-                                            <div className="mt-2 max-h-[40vh] space-y-2 overflow-y-auto rounded-md border p-2">
-                                                {allUsers.map((user) => (
-                                                    <label
+                            <div className="flex items-center gap-2">
+                                <div className="relative flex-1">
+                                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                    <Input
+                                        type="text"
+                                        placeholder="Search messages..."
+                                        className="h-9 pl-9 text-sm"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
+                                <Dialog open={isNewMessageOpen} onOpenChange={setIsNewMessageOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9">
+                                            <PlusIcon className="h-5 w-5" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-[425px]">
+                                        <DialogHeader>
+                                            <DialogTitle>New Message</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="mt-4 space-y-4">
+                                            <div className="relative">
+                                                <MagnifyingGlassIcon className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                                                <Input
+                                                    type="text"
+                                                    placeholder="Search users..."
+                                                    value={searchQuery}
+                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    className="pl-10"
+                                                />
+                                            </div>
+                                            <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+                                                {filteredUsers.map((user) => (
+                                                    <button
                                                         key={user.id}
-                                                        className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-950"
+                                                        onClick={() => startNewConversation(user)}
+                                                        className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
                                                     >
-                                                        <Checkbox
-                                                            checked={selectedUsers.includes(user.id)}
-                                                            onCheckedChange={(checked) => {
-                                                                setSelectedUsers((current) =>
-                                                                    checked ? [...current, user.id] : current.filter((id) => id !== user.id),
-                                                                );
-                                                            }}
-                                                        />
-                                                        <UserAvatar user={user} className="size-8" />
-                                                        <span className="text-foreground">{user.name}</span>
-                                                    </label>
+                                                        <UserAvatar user={user} className="size-10" />
+                                                        <div>
+                                                            <p className="font-medium">{user.name}</p>
+                                                            <p className="text-sm text-gray-500">@{user.username}</p>
+                                                        </div>
+                                                    </button>
                                                 ))}
                                             </div>
                                         </div>
-
-                                        <div className="flex justify-end gap-2">
-                                            <Button type="submit" disabled={selectedUsers.length < 2 || !groupName.trim()}>
-                                                Create Group
-                                            </Button>
-                                        </div>
-                                    </form>
-                                </DialogContent>
-                            </Dialog>
+                                    </DialogContent>
+                                </Dialog>
+                                <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9">
+                                            <UsersIcon className="h-5 w-5" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-[425px]">
+                                        <DialogHeader>
+                                            <DialogTitle>Create New Group</DialogTitle>
+                                        </DialogHeader>
+                                        <form onSubmit={createGroup} className="mt-4 space-y-4">
+                                            <div>
+                                                <Label htmlFor="groupName">Group Name</Label>
+                                                <Input
+                                                    id="groupName"
+                                                    value={groupName}
+                                                    onChange={(e) => setGroupName(e.target.value)}
+                                                    placeholder="Enter group name"
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label>Select Members</Label>
+                                                <div className="mt-2 max-h-[40vh] space-y-2 overflow-y-auto rounded-md border p-2">
+                                                    {allUsers.map((user) => (
+                                                        <label
+                                                            key={user.id}
+                                                            className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-950"
+                                                        >
+                                                            <Checkbox
+                                                                checked={selectedUsers.includes(user.id)}
+                                                                onCheckedChange={(checked) => {
+                                                                    setSelectedUsers((current) =>
+                                                                        checked ? [...current, user.id] : current.filter((id) => id !== user.id),
+                                                                    );
+                                                                }}
+                                                            />
+                                                            <UserAvatar user={user} className="size-8" />
+                                                            <span className="text-foreground">{user.name}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-end gap-2">
+                                                <Button type="submit" disabled={selectedUsers.length < 2 || !groupName.trim()}>
+                                                    Create Group
+                                                </Button>
+                                            </div>
+                                        </form>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
                         </div>
                     </div>
 
@@ -463,7 +454,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                             <div className="relative">
                                                 <UserAvatar user={chat} className="size-12" />
                                                 {'isCurrentUser' in chat && chat.isCurrentUser && (
-                                                    <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-green-500 text-xs text-white">
+                                                    <span className="-top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-green-500 text-xs text-white">
                                                         <svg
                                                             xmlns="http://www.w3.org/2000/svg"
                                                             viewBox="0 0 24 24"
@@ -498,7 +489,9 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                 </p>
                                             )}
                                             <p className="truncate text-sm text-gray-500 dark:text-gray-400">
-                                                {chat.lastMessage || `Start chatting with ${chat.name}`}
+                                                {chat.lastMessage || (isGroup(chat) 
+                                                    ? `Start chatting in ${chat.name}` 
+                                                    : `Start chatting with ${chat.name}`)}
                                             </p>
                                         </div>
                                     </button>
@@ -507,40 +500,44 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                     </div>
                 </div>
 
-                <div className={`${isMobileView && !selectedChat ? 'hidden' : 'flex'} flex-1 flex-col overflow-hidden`}>
+                <div className="flex-1">
                     {selectedChat ? (
                         <>
-                            <div className="sticky top-0 z-10 border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-black">
-                                <div className="flex items-center gap-3 p-4">
-                                    {isMobileView && (
-                                        <Button variant="ghost" size="sm" onClick={() => setSelectedChat(null)} className="mr-2">
-                                            <ArrowLeftIcon className="h-5 w-5" />
-                                        </Button>
-                                    )}
-                                    {isGroup(selectedChat) ? (
-                                        <div className="flex items-center gap-3">
+                            <div className="z-10 flex justify-center p-4">
+                                <div className="flex w-full max-w-3xl items-center justify-between rounded-full border border-gray-200 bg-white px-6 py-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                                    <div className="flex items-center gap-4">
+                                        {isMobileView && (
+                                            <Button variant="ghost" size="icon" onClick={() => setSelectedChat(null)} className="h-9 w-9 rounded-full p-0">
+                                                <ArrowLeftIcon className="h-5 w-5" />
+                                            </Button>
+                                        )}
+                                        {isGroup(selectedChat) ? (
                                             <div className="relative">
                                                 <UserAvatar user={{ name: selectedChat.name, avatar: selectedChat.avatar }} className="size-10" />
                                                 <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
                                                     {selectedChat.members.length}
                                                 </span>
                                             </div>
-                                            <div>
-                                                <p className="font-medium">{selectedChat.name}</p>
-                                                <p className="line-clamp-1 text-sm text-gray-500">
-                                                    {selectedChat.members.map((m) => m.name).join(', ')}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <>
+                                        ) : (
                                             <UserAvatar user={selectedChat} className="size-10" />
-                                            <div>
-                                                <p className="font-medium">{selectedChat.name}</p>
-                                                <p className="text-sm text-gray-500">@{selectedChat.username}</p>
-                                            </div>
-                                        </>
-                                    )}
+                                        )}
+                                        <div>
+                                            <h2 className="text-base font-medium text-gray-900 dark:text-white">{selectedChat.name}</h2>
+                                            {isGroup(selectedChat) ? (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                    {selectedChat.members.length} members
+                                                </p>
+                                            ) : (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                    {selectedChat.lastMessageTime ? `Active ${selectedChat.lastMessageTime}` : 'New conversation'}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center">
+                                        {/* Optional: Add action buttons here */}
+                                    </div>
                                 </div>
                             </div>
 
@@ -693,68 +690,70 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                     )}
                 </div>
 
-                <div className="fixed right-0 bottom-0 left-0 border-t border-gray-200 bg-white md:left-[320px] dark:border-gray-800 dark:bg-black">
+                <div className="fixed right-0 bottom-0 left-0 z-30 border-t border-gray-200 bg-white md:left-[320px] dark:border-gray-800 dark:bg-black">
                     {selectedChat ? (
                         <>
-                            <form onSubmit={sendMessage} className="flex items-center justify-center gap-2 p-4">
-                                <div className="relative w-full max-w-2xl">
-                                    <Input
-                                        value={message}
-                                        onChange={(e) => setMessage(e.target.value)}
-                                        placeholder="Type a message..."
-                                        className="h-12 rounded-full border-0 bg-gray-100 pr-24 text-base text-gray-900 placeholder-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 md:h-14 dark:bg-gray-900 dark:text-white dark:placeholder-gray-400"
-                                    />
-                                    <div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-2">
-                                        <input
-                                            type="file"
-                                            multiple
-                                            accept="image/*,video/*,audio/*,.pdf"
-                                            onChange={(e) => {
-                                                const files = Array.from(e.target.files || []);
-                                                if (files.length > 5) {
-                                                    alert('You can only upload up to 5 files at once');
-                                                    return;
-                                                }
-                                                setSelectedFiles(files);
-                                            }}
-                                            className="hidden"
-                                            id="file-upload"
-                                        />
-                                        <label
-                                            htmlFor="file-upload"
-                                            className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-200 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
-                                        >
-                                            <Paperclip className="h-5 w-5" />
-                                        </label>
-                                        <Button
-                                            type="submit"
-                                            disabled={!message.trim() && !selectedFiles.length}
-                                            className="flex h-10 items-center gap-2 rounded-full bg-blue-500 px-4 text-white hover:bg-blue-600"
-                                        >
-                                            <span className="text-sm">Send</span>
-                                            <PaperAirplaneIcon className="h-4 w-4" />
-                                        </Button>
+                            <form onSubmit={sendMessage} className="flex flex-col">
+                                {selectedFiles.length > 0 && (
+                                    <div className="border-t border-gray-200 bg-white px-4 py-2 dark:border-gray-800 dark:bg-black">
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedFiles.map((file, index) => (
+                                                <div key={index} className="flex items-center gap-2 rounded-lg bg-gray-100 p-2 dark:bg-gray-900">
+                                                    <span className="max-w-[150px] truncate text-sm text-gray-900 dark:text-white">{file.name}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSelectedFiles((files) => files.filter((_, i) => i !== index))}
+                                                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
+                                )}
+                                
+                                <div className="flex items-center gap-2 p-4">
+                                    <div className="relative flex-1">
+                                        <input
+                                            type="text"
+                                            value={message}
+                                            onChange={(e) => setMessage(e.target.value)}
+                                            placeholder={`Message ${isGroup(selectedChat) ? selectedChat.name : selectedChat?.name}`}
+                                            className="w-full rounded-full border border-gray-200 bg-gray-100 px-4 py-2 pr-10 focus:border-blue-500 focus:outline-none dark:border-gray-800 dark:bg-gray-900"
+                                        />
+                                    </div>
+                                    <input
+                                        type="file"
+                                        multiple
+                                        accept="image/*,video/*,audio/*,.pdf"
+                                        onChange={(e) => {
+                                            const files = Array.from(e.target.files || []);
+                                            if (files.length > 5) {
+                                                alert('You can only upload up to 5 files at once');
+                                                return;
+                                            }
+                                            setSelectedFiles(files);
+                                        }}
+                                        className="hidden"
+                                        id="file-upload"
+                                    />
+                                    <label
+                                        htmlFor="file-upload"
+                                        className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-200 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
+                                    >
+                                        <Paperclip className="h-5 w-5" />
+                                    </label>
+                                    <Button
+                                        type="submit"
+                                        disabled={!message.trim() && !selectedFiles.length}
+                                        className="flex h-10 items-center gap-2 rounded-full bg-blue-500 px-4 text-white hover:bg-blue-600"
+                                    >
+                                        <span className="text-sm">Send</span>
+                                        <PaperAirplaneIcon className="h-4 w-4" />
+                                    </Button>
                                 </div>
                             </form>
-
-                            {selectedFiles.length > 0 && (
-                                <div className="border-t border-gray-200 bg-white px-4 py-2 dark:border-gray-800 dark:bg-black">
-                                    <div className="flex flex-wrap gap-2">
-                                        {selectedFiles.map((file, index) => (
-                                            <div key={index} className="flex items-center gap-2 rounded-lg bg-gray-100 p-2 dark:bg-gray-900">
-                                                <span className="max-w-[150px] truncate text-sm text-gray-900 dark:text-white">{file.name}</span>
-                                                <button
-                                                    onClick={() => setSelectedFiles((files) => files.filter((_, i) => i !== index))}
-                                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                                                >
-                                                    <X className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
                         </>
                     ) : (
                         <div className="flex gap-2 p-4 md:hidden">

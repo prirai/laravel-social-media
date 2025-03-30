@@ -129,4 +129,15 @@ class User extends Authenticatable
     //         $this->attributes['password'] = bcrypt($value);
     //     }
     // }
+
+    public function lastDirectMessage()
+    {
+        // This approach uses a subquery to find the latest message where the user is either sender or receiver
+        return Message::where(function($query) {
+                $query->where('sender_id', $this->id)
+                      ->orWhere('receiver_id', $this->id);
+            })
+            ->latest()
+            ->limit(1);
+    }
 }

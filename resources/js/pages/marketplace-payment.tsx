@@ -7,7 +7,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { CreditCardIcon, BanknotesIcon, QrCodeIcon, CurrencyDollarIcon, ArrowLeftIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { CreditCardIcon, BanknotesIcon, QrCodeIcon, CurrencyDollarIcon, ArrowLeftIcon, CheckIcon, ExclamationCircleIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import UserAvatar from '@/components/user-avatar';
 
 interface Listing {
@@ -103,7 +103,18 @@ export default function MarketplacePayment({ listing }: { listing: Listing }) {
                         {/* Product Details */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>{listing.title}</CardTitle>
+                                <div className="flex items-center gap-2">
+                                    <CardTitle>{listing.title}</CardTitle>
+                                    {listing.status === 'unverified' ? (
+                                        <span className="text-amber-500" title="This listing is pending verification">
+                                            <ExclamationCircleIcon className="h-5 w-5" />
+                                        </span>
+                                    ) : (
+                                        <span className="text-green-500" title="This listing has been verified">
+                                            <CheckCircleIcon className="h-5 w-5" />
+                                        </span>
+                                    )}
+                                </div>
                                 <CardDescription>
                                     Listed by {listing.seller?.name || 'Unknown Seller'}
                                 </CardDescription>
@@ -209,7 +220,7 @@ export default function MarketplacePayment({ listing }: { listing: Listing }) {
                             </CardHeader>
                             <CardContent>
                                 <Tabs value={paymentMethod} onValueChange={setPaymentMethod}>
-                                    <TabsList className="grid w-full grid-cols-4">
+                                    <TabsList className="grid w-full grid-cols-4 mb-10">
                                         <TabsTrigger value="card" className="flex flex-col items-center gap-1 py-3">
                                             <CreditCardIcon className="h-5 w-5" />
                                             <span className="text-xs">Card</span>
@@ -228,7 +239,7 @@ export default function MarketplacePayment({ listing }: { listing: Listing }) {
                                         </TabsTrigger>
                                     </TabsList>
 
-                                    <TabsContent value="card" className="mt-4 space-y-4">
+                                    <TabsContent value="card" className="mt-8 space-y-6 rounded-md border bg-card p-6 shadow-sm mar">
                                         <div className="space-y-2">
                                             <Label htmlFor="card-number">Card Number</Label>
                                             <Input id="card-number" placeholder="1234 5678 9012 3456" />
@@ -249,7 +260,7 @@ export default function MarketplacePayment({ listing }: { listing: Listing }) {
                                         </div>
                                     </TabsContent>
 
-                                    <TabsContent value="upi" className="mt-4 space-y-4">
+                                    <TabsContent value="upi" className="mt-8 space-y-4 rounded-md border bg-card p-6 shadow-sm">
                                         <div className="space-y-2">
                                             <Label htmlFor="upi-id">UPI ID</Label>
                                             <Input id="upi-id" placeholder="yourname@upi" />
@@ -261,7 +272,7 @@ export default function MarketplacePayment({ listing }: { listing: Listing }) {
                                         </div>
                                     </TabsContent>
 
-                                    <TabsContent value="netbanking" className="mt-4 space-y-4">
+                                    <TabsContent value="netbanking" className="mt-8 space-y-4 rounded-md border bg-card p-6 shadow-sm">
                                         <div className="space-y-2">
                                             <Label htmlFor="bank">Select Bank</Label>
                                             <select 
@@ -274,6 +285,8 @@ export default function MarketplacePayment({ listing }: { listing: Listing }) {
                                                 <option value="icici">ICICI Bank</option>
                                                 <option value="axis">Axis Bank</option>
                                                 <option value="kotak">Kotak Mahindra Bank</option>
+                                                <option value="union">Union Bank of India</option>
+                                                <option value="indian">Indian Bank</option>
                                             </select>
                                         </div>
                                         <p className="text-sm text-muted-foreground">
@@ -281,20 +294,51 @@ export default function MarketplacePayment({ listing }: { listing: Listing }) {
                                         </p>
                                     </TabsContent>
 
-                                    <TabsContent value="bitcoin" className="mt-4 space-y-4">
-                                        <div className="rounded-md bg-muted p-4 text-center">
-                                            <p className="mb-2 font-medium">Bitcoin Address</p>
-                                            <p className="mb-4 break-all text-xs text-muted-foreground">
-                                                3FZbgi29cpjq2GjdwV8eyHuJJnkLtktZc5
-                                            </p>
-                                            <div className="mx-auto h-40 w-40 bg-white p-2">
-                                                {/* This would be a QR code in a real implementation */}
-                                                <div className="h-full w-full bg-gray-200 flex items-center justify-center">
-                                                    <span className="text-xs text-gray-500">QR Code</span>
+                                    <TabsContent value="bitcoin" className="mt-8 space-y-4 rounded-md border bg-card p-6 shadow-sm">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="bitcoin-address">Bitcoin Address</Label>
+                                                <div className="flex items-center">
+                                                    <Input 
+                                                        id="bitcoin-address" 
+                                                        value="3FZbgi29cpjq2GjdwV8eyHuJJnkLtktZc5" 
+                                                        readOnly 
+                                                        className="font-mono text-xs"
+                                                    />
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="ml-2"
+                                                        onClick={() => navigator.clipboard.writeText("3FZbgi29cpjq2GjdwV8eyHuJJnkLtktZc5")}
+                                                    >
+                                                        Copy
+                                                    </Button>
                                                 </div>
                                             </div>
-                                            <p className="mt-4 text-sm text-muted-foreground">
-                                                Send exactly {(listing.price / 3500000).toFixed(8)} BTC to this address
+                                            
+                                            <div className="flex justify-center">
+                                                <div className="h-40 w-40 border p-2">
+                                                    {/* This would be a QR code in a real implementation */}
+                                                    <div className="h-full w-full bg-white flex items-center justify-center">
+                                                        <span className="text-xs text-gray-500">QR Code</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="space-y-2">
+                                                <Label>Amount to Send</Label>
+                                                <div className="flex items-center justify-between rounded-md border p-3">
+                                                    <span className="font-mono text-sm">
+                                                        {(listing.price / 3500000).toFixed(8)} BTC
+                                                    </span>
+                                                    <span className="text-sm text-muted-foreground">
+                                                        ≈ ₹{listing.price}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            <p className="text-sm text-muted-foreground">
+                                                After sending the exact amount to the address above, click the Pay button to confirm your payment.
                                             </p>
                                         </div>
                                     </TabsContent>

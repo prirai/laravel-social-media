@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Link } from '@inertiajs/react';
-import { ExclamationCircleIcon, CheckCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { ExclamationCircleIcon, CheckCircleIcon, ClockIcon } from '@heroicons/react/24/solid';
 
 interface UserAvatarProps {
     user: {
@@ -40,18 +40,18 @@ export default function UserAvatar({ user, className = "size-8", linkable = true
             </Avatar>
             
             {user.verification_status === 'unverified' && (
-                <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 p-1 text-white">
-                    <ExclamationCircleIcon className="h-3 w-3" />
+                <span className="absolute bottom-0 right-0 text-amber-500 drop-shadow-sm">
+                    <ExclamationCircleIcon className="h-2.5 w-2.5" />
                 </span>
             )}
             {user.verification_status === 'pending' && (
-                <span className="absolute -right-1 -top-1 rounded-full bg-blue-500 p-1 text-white">
-                    <ClockIcon className="h-3 w-3" />
+                <span className="absolute bottom-0 right-0 text-blue-500 drop-shadow-sm">
+                    <ClockIcon className="h-2.5 w-2.5" />
                 </span>
             )}
             {user.verification_status === 'verified' && (
-                <span className="absolute -right-1 -top-1 rounded-full bg-green-500 p-1 text-white">
-                    <CheckCircleIcon className="h-3 w-3" />
+                <span className="absolute bottom-0 right-0 text-green-500 drop-shadow-sm">
+                    <CheckCircleIcon className="h-2.5 w-2.5" />
                 </span>
             )}
         </div>
