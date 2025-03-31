@@ -17,29 +17,31 @@ A modern social media platform built with Laravel 12 and React, featuring user a
 
 #### Social Features
 - **Controllers**: 
-  - `PostController.php`: Manages social posts
+  - `PostController.php`: Manages social posts and attachments
   - `CommentController.php`: Handles post comments
   - `LikeController.php`: Manages post likes
 - **Models**:
-  - `Post.php`: Post model with relationships
+  - `Post.php`: Post model with attachments and relationships
   - `Comment.php`: Comment model
   - `Like.php`: Like model
+  - `Attachment.php`: Handles post attachments
 
 #### Messaging System
 - **Controllers**: 
-  - `MessagingController.php`: Handles direct messaging
+  - `MessagingController.php`: Handles direct messaging and attachments
   - `GroupController.php`: Manages group chats
 - **Models**:
   - `Message.php`: Direct message model
   - `Group.php`: Group chat model
   - `GroupMessage.php`: Group message model
+  - `MessageAttachment.php`: Message attachments
+  - `GroupMessageAttachment.php`: Group message attachments
 
 #### Marketplace
 - **Controllers**: 
   - `MarketplaceController.php`: Handles listings and transactions
 - **Models**:
   - `Listing.php`: Marketplace listing model
-  - `Attachment.php`: Handles listing attachments
 
 #### User Verification
 - **Controllers**: 
@@ -50,20 +52,26 @@ A modern social media platform built with Laravel 12 and React, featuring user a
 
 ### Frontend Structure
 - **React Components**: `resources/js/pages/`
-  - `auth/`: Authentication pages (login, register)
-  - `dashboard/`: Main dashboard
-  - `profile/`: User profile pages
+  - `auth/`: Authentication pages
+  - `dashboard/`: Main dashboard with posts
+  - `profile/`: User profile pages with posts and friends tabs
   - `settings/`: User settings
-  - `marketplace/`: Marketplace pages
-  - `messaging/`: Messaging interface
+  - `marketplace/`: Marketplace listings
+  - `messaging/`: Direct and group messaging
+- **UI Components**: `resources/js/components/ui/`
+  - `tabs.tsx`: Reusable tabs component
+  - `dialog.tsx`: Modal dialogs
+  - `button.tsx`: Button components
 
 ### Admin Panel
 - **Theme**: Backpack CRUD with Tabler theme
 - **Controllers**: `app/Http/Controllers/Admin/`
   - `UserCrudController.php`: User management
-  - `PostCrudController.php`: Post management
+  - `PostCrudController.php`: Post and attachment management
   - `ListingCrudController.php`: Marketplace management
+  - `VerificationCrudController.php`: User verification management
 - **Views**: `resources/views/vendor/backpack/`
+  - `ui/inc/menu_items.blade.php`: Admin menu configuration
 
 ## Database Structure
 
