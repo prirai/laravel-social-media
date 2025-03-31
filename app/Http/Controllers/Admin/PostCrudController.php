@@ -23,6 +23,11 @@ class PostCrudController extends CrudController
     {
         CRUD::addColumns([
             [
+                'name' => 'id',
+                'label' => 'Post ID',
+                'type' => 'text',
+            ],
+            [
                 'name' => 'user.name',
                 'label' => 'Posted By',
                 'type' => 'text',
@@ -43,17 +48,14 @@ class PostCrudController extends CrudController
                 'label' => 'Attachments',
                 'type' => 'closure',
                 'function' => function($entry) {
-                    $attachments = $entry->attachments()->get();
-                    
-                    if ($attachments->isEmpty()) {
+                    if (!$entry->attachments || !is_array($entry->attachments)) {
                         return '<span class="text-muted">No attachments</span>';
                     }
 
                     $html = '<div class="d-flex flex-wrap gap-2">';
-                    foreach ($attachments as $attachment) {
-                        $url = $attachment->file_path;
-                        
-                        $html .= '<a href="'.$url.'" target="_blank" class="btn btn-sm btn-primary">
+                    foreach ($entry->attachments as $attachment) {
+                        // Use the attachment path as is, without modifying the '/1/'
+                        $html .= '<a href="'.$attachment.'" target="_blank" class="btn btn-sm btn-primary">
                             <i class="la la-eye"></i> Preview Document
                         </a>';
                     }
