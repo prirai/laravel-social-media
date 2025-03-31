@@ -148,4 +148,12 @@ class User extends Authenticatable
             ->latest()
             ->limit(1);
     }
+
+    /**
+     * Get notifications for the user.
+     */
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
 }

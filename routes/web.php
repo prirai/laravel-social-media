@@ -45,6 +45,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/friend-requests/{friendRequest}/accept', [FriendRequestController::class, 'accept'])->name('friend-requests.accept');
     Route::post('/friend-requests/{friendRequest}/reject', [FriendRequestController::class, 'reject'])->name('friend-requests.reject');
     Route::delete('/friend-requests/{friendRequest}', [FriendRequestController::class, 'cancel'])->name('friend-requests.cancel');
+    
+    // Notification routes
+    Route::get('/notifications', [App\Http\Controllers\NotificationsController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/unread-count', [App\Http\Controllers\NotificationsController::class, 'getUnreadCount'])->name('notifications.unread-count');
+    Route::post('/notifications/{notification}/read', [App\Http\Controllers\NotificationsController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/mark-all-read', [App\Http\Controllers\NotificationsController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
 });
 
 Route::post('user/submit-verification', [VerificationController::class, 'submit'])->name('user.submit-verification');

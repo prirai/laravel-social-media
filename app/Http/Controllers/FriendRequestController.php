@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Friendship;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\Notification;
 
 class FriendRequestController extends Controller
 {
@@ -36,6 +37,13 @@ class FriendRequestController extends Controller
             'receiver_id' => $user->id,
             'status' => 'pending',
         ]);
+
+        // Create notification for the receiver
+        Notification::createFriendRequest(
+            $user->id, 
+            auth()->id(), 
+            $friendRequest->id
+        );
 
         // Return the updated user data for the frontend
         $updatedUser = $this->getUserWithFriendRequestData($user);

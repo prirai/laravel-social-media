@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from "react";
 import UserAvatar from '@/components/user-avatar';
 import axios from 'axios';
@@ -33,6 +33,10 @@ import { Input } from "@/components/ui/input";
 import AppLogo from "@/components/app-logo";
 import { Breadcrumbs } from "./breadcrumbs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+
+dayjs.extend(relativeTime);
 
 // Define needed types
 interface NavItem {
@@ -60,6 +64,22 @@ interface SharedData {
     };
     url: string;
     [key: string]: any; // Add index signature for PageProps compatibility
+}
+
+interface Notification {
+    id: number;
+    type: string;
+    data: any;
+    read_at: string | null;
+    created_at: string;
+    route: string;
+    from_user?: {
+        id: number;
+        name: string;
+        username: string;
+        avatar: string | null;
+        verification_status?: 'unverified' | 'pending' | 'verified';
+    };
 }
 
 const mainNavItems: NavItem[] = [
@@ -111,6 +131,11 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const [showNotifications, setShowNotifications] = useState(false);
     const notificationsRef = useRef<HTMLDivElement>(null);
     const mobileNotificationsRef = useRef<HTMLDivElement>(null);
+    
+    // Notifications state
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
 
     useEffect(() => {
         const localTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -188,6 +213,25 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            try {
+                const response = await axios.get(route('notifications.unread-count'));
+                setUnreadCount(response.data.unread_count);
+            } catch (error) {
+                console.error('Error fetching notification count:', error);
+            }
+        };
+        
+        if (auth.user) {
+            fetchUnreadCount();
+            
+            // Poll for new notifications every 30 seconds
+            const interval = setInterval(fetchUnreadCount, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [auth.user]);
+
     const toggleTheme = () => {
         if (theme === 'dark') {
             setTheme('light');
@@ -195,6 +239,58 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             setTheme('system');
         } else {
             setTheme('dark');
+        }
+    };
+
+    const fetchNotifications = async () => {
+        if (isLoadingNotifications) return;
+        
+        setIsLoadingNotifications(true);
+        try {
+            const response = await axios.get(route('notifications.index'));
+            setNotifications(response.data.notifications);
+            setUnreadCount(response.data.unread_count);
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+        } finally {
+            setIsLoadingNotifications(false);
+        }
+    };
+    
+    const handleNotificationClick = async (notification: Notification) => {
+        // Mark as read if not already read
+        if (!notification.read_at) {
+            try {
+                await axios.post(route('notifications.read', notification.id));
+                // Update the local state to mark as read
+                setNotifications(prevNotifications => 
+                    prevNotifications.map(n => 
+                        n.id === notification.id ? { ...n, read_at: new Date().toISOString() } : n
+                    )
+                );
+                setUnreadCount(prev => Math.max(0, prev - 1));
+            } catch (error) {
+                console.error('Error marking notification as read:', error);
+            }
+        }
+        
+        // Navigate to the notification route
+        if (notification.route) {
+            setShowNotifications(false);
+            window.location.href = notification.route;
+        }
+    };
+    
+    const markAllAsRead = async () => {
+        try {
+            await axios.post(route('notifications.mark-all-read'));
+            // Update local state
+            setNotifications(prevNotifications => 
+                prevNotifications.map(n => ({ ...n, read_at: new Date().toISOString() }))
+            );
+            setUnreadCount(0);
+        } catch (error) {
+            console.error('Error marking all notifications as read:', error);
         }
     };
 
@@ -208,7 +304,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                         <Link href="/dashboard" prefetch className="flex items-center gap-2">
                             <AppLogo />
                             <span className="text-lg font-semibold tracking-tight hidden sm:inline-block">SimpleSocial</span>
-                        </Link>
+                                                    </Link>
                     </div>
 
                     {/* Desktop Navigation */}
@@ -216,9 +312,9 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                         {mainNavItems.map((item) => {
                             const isActive = page.url === item.url;
                             return (
-                                <Link
+                                        <Link
                                     key={item.title}
-                                    href={item.url}
+                                            href={item.url}
                                     className={cn(
                                         "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium",
                                         isActive 
@@ -235,61 +331,61 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                             )} 
                                         />
                                     )}
-                                    {item.title}
-                                </Link>
+                                            {item.title}
+                                        </Link>
                             );
                         })}
                     </div>
 
                     {/* Search */}
                     <div className="hidden flex-1 md:flex md:max-w-xs lg:max-w-md xl:max-w-lg">
-                        <div className="relative" ref={searchRef}>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
+                            <div className="relative" ref={searchRef}>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
                                 className="group h-10 w-10 rounded-xl"
-                                onClick={() => setShowSearchResults(!showSearchResults)}
-                            >
+                                    onClick={() => setShowSearchResults(!showSearchResults)}
+                                >
                                 <Search className="size-5 opacity-80 group-hover:opacity-100" />
-                            </Button>
-                            {showSearchResults && (
+                                </Button>
+                                {showSearchResults && (
                                 <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                                    <Input
-                                        type="text"
-                                        placeholder="Search users..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        <Input
+                                            type="text"
+                                            placeholder="Search users..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
                                         className="mb-2 rounded-lg"
-                                        autoFocus
-                                    />
-                                    <div className="max-h-96 space-y-1 overflow-y-auto">
-                                        {searchResults.map((user) => (
-                                            <Link
-                                                key={user.id}
-                                                href={`/profile/${user.username}`}
+                                            autoFocus
+                                        />
+                                        <div className="max-h-96 space-y-1 overflow-y-auto">
+                                            {searchResults.map((user) => (
+                                                <Link
+                                                    key={user.id}
+                                                    href={`/profile/${user.username}`}
                                                 className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                onClick={() => {
-                                                    setShowSearchResults(false);
-                                                    setSearchQuery('');
-                                                    setSearchResults([]);
-                                                }}
-                                            >
+                                                    onClick={() => {
+                                                        setShowSearchResults(false);
+                                                        setSearchQuery('');
+                                                        setSearchResults([]);
+                                                    }}
+                                                >
                                                 <UserAvatar user={user} className="size-8" />
-                                                <div>
-                                                    <p className="font-medium">{user.name}</p>
-                                                    <p className="text-sm text-gray-500">@{user.username}</p>
+                                                    <div>
+                                                        <p className="font-medium">{user.name}</p>
+                                                        <p className="text-sm text-gray-500">@{user.username}</p>
+                                                    </div>
+                                                </Link>
+                                            ))}
+                                            {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+                                                <div className="p-2 text-center text-sm text-gray-500">
+                                                    No users found
                                                 </div>
-                                            </Link>
-                                        ))}
-                                        {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
-                                            <div className="p-2 text-center text-sm text-gray-500">
-                                                No users found
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </div>
                     </div>
 
                     {/* Actions and User */}
@@ -300,37 +396,96 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                 variant="ghost" 
                                 size="icon" 
                                 className="rounded-lg"
-                                onClick={() => setShowNotifications(!showNotifications)}
+                                onClick={() => {
+                                    setShowNotifications(!showNotifications);
+                                    if (!showNotifications) {
+                                        fetchNotifications();
+                                    }
+                                }}
                             >
                                 <Bell className={cn(
                                     "h-5 w-5",
                                     page.url === "/notifications" ? activeIconStyles : inactiveIconStyles
                                 )} />
-                                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">3</span>
+                                {unreadCount > 0 && (
+                                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
+                                )}
                                 <span className="sr-only">Notifications</span>
                             </Button>
                             {showNotifications && (
                                 <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
                                     <div className="flex items-center justify-between">
                                         <h3 className="font-semibold">Notifications</h3>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="rounded-lg"
-                                            onClick={() => setShowNotifications(false)}
-                                        >
-                                            <X className="h-5 w-5" />
-                                        </Button>
+                                        <div className="flex gap-2">
+                                            {unreadCount > 0 && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="rounded-lg text-xs"
+                                                    onClick={markAllAsRead}
+                                                >
+                                                    Mark all as read
+                                                </Button>
+                                            )}
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="rounded-lg"
+                                                onClick={() => setShowNotifications(false)}
+                                            >
+                                                <X className="h-5 w-5" />
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div className="mt-4 text-center text-sm text-gray-500">
-                                        No notifications yet
-                                    </div>
+                                    
+                                    {isLoadingNotifications ? (
+                                        <div className="mt-4 flex items-center justify-center py-4">
+                                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary"></div>
+                                        </div>
+                                    ) : notifications.length > 0 ? (
+                                        <div className="mt-2 max-h-80 overflow-y-auto">
+                                            {notifications.map((notification) => (
+                                                <div 
+                                                    key={notification.id}
+                                                    onClick={() => handleNotificationClick(notification)}
+                                                    className={cn(
+                                                        "cursor-pointer rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700",
+                                                        !notification.read_at && "bg-blue-50 dark:bg-blue-900/20"
+                                                    )}
+                                                >
+                                                    <div className="flex items-start gap-3">
+                                                        {notification.from_user && (
+                                                            <UserAvatar user={notification.from_user} className="size-10" />
+                                                        )}
+                                                        <div className="flex-1">
+                                                            <div className="text-sm">
+                                                                {notification.type === 'friend_request' && (
+                                                                    <span>
+                                                                        <span className="font-medium">{notification.from_user?.name}</span> sent you a friend request
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="mt-1 text-xs text-gray-500">
+                                                                {dayjs(notification.created_at).fromNow()}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="mt-4 text-center text-sm text-gray-500 py-8">
+                                            No notifications yet
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
 
                         {/* Messages Button */}
-                        <Link
+                                                    <Link
                             href="/messages"
                             className={cn(
                                 "hidden items-center justify-center rounded-lg p-2 md:flex",
@@ -359,8 +514,8 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                 <Sun className="h-5 w-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
                                 <Moon className="absolute inset-0 h-5 w-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
                             </div>
-                            <span className="sr-only">Toggle theme</span>
-                        </Button>
+                                                <span className="sr-only">Toggle theme</span>
+                                            </Button>
 
                         {/* Mobile Search Toggle */}
                         <Button
@@ -433,10 +588,19 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                 variant="ghost" 
                                 size="icon" 
                                 className="rounded-lg"
-                                onClick={() => setShowNotifications(!showNotifications)}
+                                onClick={() => {
+                                    setShowNotifications(!showNotifications);
+                                    if (!showNotifications) {
+                                        fetchNotifications();
+                                    }
+                                }}
                             >
                                 <Bell className="h-5 w-5" />
-                                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">3</span>
+                                {unreadCount > 0 && (
+                                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
+                                )}
                                 <span className="sr-only">Notifications</span>
                             </Button>
                             {showNotifications && (
@@ -444,18 +608,68 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                     <div className="w-full max-w-md rounded-xl border bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
                                         <div className="mb-4 flex items-center justify-between">
                                             <h3 className="font-semibold">Notifications</h3>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="rounded-lg"
-                                                onClick={() => setShowNotifications(false)}
-                                            >
-                                                <X className="h-5 w-5" />
-                                            </Button>
+                                            <div className="flex gap-2">
+                                                {unreadCount > 0 && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="rounded-lg text-xs"
+                                                        onClick={markAllAsRead}
+                                                    >
+                                                        Mark all as read
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="rounded-lg"
+                                                    onClick={() => setShowNotifications(false)}
+                                                >
+                                                    <X className="h-5 w-5" />
+                                                </Button>
+                                            </div>
                                         </div>
-                                        <div className="text-center text-sm text-gray-500">
-                                            No notifications yet
-                                        </div>
+                                        
+                                        {isLoadingNotifications ? (
+                                            <div className="flex items-center justify-center py-8">
+                                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary"></div>
+                                            </div>
+                                        ) : notifications.length > 0 ? (
+                                            <div className="max-h-[60vh] overflow-y-auto">
+                                                {notifications.map((notification) => (
+                                                    <div 
+                                                        key={notification.id}
+                                                        onClick={() => handleNotificationClick(notification)}
+                                                        className={cn(
+                                                            "cursor-pointer rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700",
+                                                            !notification.read_at && "bg-blue-50 dark:bg-blue-900/20"
+                                                        )}
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            {notification.from_user && (
+                                                                <UserAvatar user={notification.from_user} className="size-10" />
+                                                            )}
+                                                            <div className="flex-1">
+                                                                <div className="text-sm">
+                                                                    {notification.type === 'friend_request' && (
+                                                                        <span>
+                                                                            <span className="font-medium">{notification.from_user?.name}</span> sent you a friend request
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="mt-1 text-xs text-gray-500">
+                                                                    {dayjs(notification.created_at).fromNow()}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center text-sm text-gray-500 py-8">
+                                                No notifications yet
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
