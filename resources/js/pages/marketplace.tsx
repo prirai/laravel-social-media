@@ -1,12 +1,12 @@
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { CurrencyRupeeIcon, PhotoIcon, PlusIcon, TagIcon, ExclamationCircleIcon, CheckCircleIcon, ComputerDesktopIcon, TruckIcon, HomeIcon, TrophyIcon, ShoppingBagIcon, BookOpenIcon, Squares2X2Icon, EllipsisHorizontalCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { CurrencyRupeeIcon, PhotoIcon, PlusIcon, TagIcon, ExclamationCircleIcon, CheckCircleIcon, ComputerDesktopIcon, TruckIcon, HomeIcon, TrophyIcon, ShoppingBagIcon, BookOpenIcon, Squares2X2Icon, EllipsisHorizontalCircleIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Head, useForm, router, usePage } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import UserAvatar from '@/components/user-avatar';
@@ -76,6 +76,9 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
     const [loadedImages, setLoadedImages] = useState<{ [key: string]: boolean }>({});
     const [listings, setListings] = useState<Listing[]>(initialListings);
     const { auth } = usePage<SharedData>().props;
+    const [error, setError] = useState<string | null>(null);
+    const [showErrorPopup, setShowErrorPopup] = useState(false);
+    const [isVerificationOpen, setIsVerificationOpen] = useState(false);
     
     // Add this function to filter listings
     const filteredListings = useMemo(() => {
@@ -105,15 +108,42 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
         category: '',
         description: '',
         images: [] as File[],
+        document: null as File | null,
+        notes: '',
     });
+
+    const handleError = (message: string) => {
+        setError(message);
+        setShowErrorPopup(true);
+        setTimeout(() => setShowErrorPopup(false), 5000);
+    };
+
+    const handleVerificationSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        const formData = new FormData();
+        if ((data as any).document) {
+            formData.append('document', (data as any).document);
+        }
+        formData.append('notes', (data as any).notes || '');
+        
+        post(route('user.submit-verification'), {
+            data: formData,
+            forceFormData: true,
+            onSuccess: () => {
+                setIsVerificationOpen(false);
+            },
+        });
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
         if (auth.user.verification_status !== 'verified') {
-            alert('Only users with verified documents can create listings.');
+            handleError('You must verify your document before creating listings in the marketplace.');
             return;
         }
+        
         // Create FormData object to properly handle file uploads
         const formData = new FormData();
         formData.append('title', data.title);
@@ -132,7 +162,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                 reset();
                 setIsOpen(false);
             },
-        }, formData);
+        });
     };
 
     // Inside the Marketplace component, add a new function to handle clicking on a listing
@@ -325,6 +355,59 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                             </form>
                         </DialogContent>
                     </Dialog>
+
+                    <Dialog open={isVerificationOpen} onOpenChange={setIsVerificationOpen}>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Submit Verification Document</DialogTitle>
+                                <DialogDescription>
+                                    Verify your identity to start selling in the marketplace.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleVerificationSubmit} className="space-y-4">
+                                <div>
+                                    <Label htmlFor="verification-document">Document</Label>
+                                    <Input
+                                        id="verification-document"
+                                        type="file"
+                                        accept=".pdf,.jpg,.jpeg,.png"
+                                        onChange={(e) => {
+                                            if (e.target.files && e.target.files[0]) {
+                                                const file = e.target.files[0];
+                                                // Use a separate handler to avoid TypeScript errors
+                                                const formData = new FormData();
+                                                formData.append('document', file);
+                                                // Store the file reference for form submission
+                                                (data as any).document = file;
+                                            }
+                                        }}
+                                        required
+                                    />
+                                    <p className="mt-1 text-sm text-gray-500">Accepted formats: PDF, JPG, PNG</p>
+                                </div>
+                                <div>
+                                    <Label htmlFor="verification-notes">Additional Notes (Optional)</Label>
+                                    <Textarea
+                                        id="verification-notes"
+                                        value={(data as any).notes}
+                                        onChange={(e) => {
+                                            // Use a separate handler to avoid TypeScript errors
+                                            (data as any).notes = e.target.value;
+                                        }}
+                                        placeholder="Any additional information..."
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                    <Button type="button" variant="outline" onClick={() => setIsVerificationOpen(false)}>
+                                        Cancel
+                                    </Button>
+                                    <Button type="submit" disabled={processing}>
+                                        Submit
+                                    </Button>
+                                </div>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
                 </div>
 
                 {/* Listings Grid */}
@@ -448,6 +531,44 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                     </div>
                 )}
             </div>
+
+            {/* Error Popup */}
+            {showErrorPopup && error && (
+                <div className="fixed bottom-4 right-4 z-50 max-w-md animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="rounded-lg bg-amber-50 p-4 shadow-lg border border-amber-200 dark:bg-amber-900/30 dark:border-amber-800">
+                        <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                                <ExclamationCircleIcon className="h-5 w-5 text-amber-500" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="font-medium text-amber-800 dark:text-amber-200">{error}</p>
+                                <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                                    Please submit your verification documents to unlock marketplace selling features.
+                                </p>
+                            </div>
+                            <button 
+                                className="flex-shrink-0 rounded-md p-1.5 text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-800"
+                                onClick={() => setShowErrorPopup(false)}
+                            >
+                                <XMarkIcon className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="mt-3 flex justify-end">
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="border-amber-200 bg-white text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-900/50 dark:text-amber-300 dark:hover:bg-amber-900"
+                                onClick={() => {
+                                    setIsVerificationOpen(true);
+                                    setShowErrorPopup(false);
+                                }}
+                            >
+                                Submit Verification
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 } 
