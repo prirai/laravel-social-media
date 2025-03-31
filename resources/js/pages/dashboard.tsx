@@ -561,7 +561,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                     )}
                 </div>
 
-                <div className="sticky bottom-6 z-10 mb-6 flex justify-end lg:hidden">
+                {/* <div className="sticky bottom-6 z-10 mb-6 flex justify-end lg:hidden">
                     <Button 
                         onClick={() => setIsOpen(true)} 
                         size="lg"
@@ -569,7 +569,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                     >
                         <PlusIcon className="h-6 w-6" />
                     </Button>
-                </div>
+                </div> */}
 
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
@@ -1083,16 +1083,13 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
 
             {showErrorPopup && error && (
                 <div className="fixed bottom-4 right-4 z-50 max-w-md animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div className="rounded-lg bg-amber-50 p-4 shadow-lg border border-amber-200 dark:bg-amber-900/30 dark:border-amber-800">
+                    <div className="rounded-lg bg-amber-50 p-4 shadow-lg border border-amber-200 dark:bg-amber-900 dark:border-amber-800">
                         <div className="flex items-start gap-3">
                             <div className="flex-shrink-0">
                                 <ExclamationCircleIcon className="h-5 w-5 text-amber-500" />
                             </div>
                             <div className="flex-1">
                                 <p className="font-medium text-amber-800 dark:text-amber-200">{error}</p>
-                                <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
-                                    Please check your email for a verification link or request a new one.
-                                </p>
                             </div>
                             <button 
                                 className="flex-shrink-0 rounded-md p-1.5 text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-800"
@@ -1100,19 +1097,6 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                             >
                                 <XMarkIcon className="h-5 w-5" />
                             </button>
-                        </div>
-                        <div className="mt-3 flex justify-end">
-                            <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="border-amber-200 bg-white text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-900/50 dark:text-amber-300 dark:hover:bg-amber-900"
-                                onClick={() => {
-                                    setIsEmailVerificationOpen(true);
-                                    setShowErrorPopup(false);
-                                }}
-                            >
-                                Verify Email
-                            </Button>
                         </div>
                     </div>
                 </div>

@@ -714,7 +714,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <Link href={`/profile/${auth.user?.id}`}>
+                                <Link href={`/profile/${auth.user?.username}`}>
                                     <DropdownMenuItem>
                                         <User className="mr-2 h-4 w-4" />
                                         <span>Profile</span>
@@ -779,7 +779,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             )}
 
             {/* Add padding to the main content to account for fixed elements */}
-            <div className="pb-20 lg:pb-0">
+            <div className="lg:pb-0">
                 <div className={`${breadcrumbs.length > 1 ? 'pt-28 md:pt-32' : 'pt-16 md:pt-20'}`} />
             </div>
         </>

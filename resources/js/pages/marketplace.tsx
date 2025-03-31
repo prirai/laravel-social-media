@@ -616,7 +616,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
             {/* Error Popup */}
             {showErrorPopup && error && (
                 <div className="fixed bottom-4 right-4 z-50 max-w-md animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div className="rounded-lg bg-amber-50 p-4 shadow-lg border border-amber-200 dark:bg-amber-900/30 dark:border-amber-800">
+                    <div className="rounded-lg bg-amber-50 p-4 shadow-lg border border-amber-200 dark:bg-amber-900 dark:border-amber-800">
                         <div className="flex items-start gap-3">
                             <div className="flex-shrink-0">
                                 <ExclamationCircleIcon className="h-5 w-5 text-amber-500" />
@@ -638,7 +638,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                             <Button 
                                 size="sm" 
                                 variant="outline" 
-                                className="border-amber-200 bg-white text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-900/50 dark:text-amber-300 dark:hover:bg-amber-900"
+                                className="border-amber-200 bg-white text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-900 dark:text-amber-300 dark:hover:bg-amber-800"
                                 onClick={() => {
                                     setIsVerificationOpen(true);
                                     setShowErrorPopup(false);
@@ -654,7 +654,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
             {/* Success Popup */}
             {showSuccessPopup && successMessage && (
                 <div className="fixed bottom-4 right-4 z-50 max-w-md animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div className="rounded-lg bg-green-50 p-4 shadow-lg border border-green-200 dark:bg-green-900/30 dark:border-green-800">
+                    <div className="rounded-lg bg-green-50 p-4 shadow-lg border border-green-200 dark:bg-green-900 dark:border-green-800">
                         <div className="flex items-start gap-3">
                             <div className="flex-shrink-0">
                                 <CheckCircleIcon className="h-5 w-5 text-green-500" />
