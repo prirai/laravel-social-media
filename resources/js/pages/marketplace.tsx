@@ -572,19 +572,19 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                                     </div>
                                     
                                     {/* Separate the delete button to prevent navigation */}
-                                    {auth.user && listing.seller?.username === auth.user.username && (
+                                            {auth.user && listing.seller?.username === auth.user.username && (
                                         <div className="mt-2 flex justify-end">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-gray-500 hover:text-red-500"
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-gray-500 hover:text-red-500"
                                                 onClick={(e) => {
                                                     e.stopPropagation(); // Prevent navigation when clicking delete
                                                     handleDeleteListing(listing.id);
                                                 }}
-                                            >
-                                                <TrashIcon className="h-5 w-5" />
-                                            </Button>
+                                                >
+                                                    <TrashIcon className="h-5 w-5" />
+                                                </Button>
                                         </div>
                                     )}
                                 </div>

@@ -12,6 +12,12 @@
 />
 
 <x-backpack::menu-item
+    title="Posts"
+    icon="la la-newspaper"
+    :link="backpack_url('post')"
+/>
+
+<x-backpack::menu-item
     title="Listings"
     icon="la la-tag"
     :link="backpack_url('listing')"

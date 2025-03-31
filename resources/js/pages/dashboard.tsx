@@ -358,7 +358,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
 
     return (
         <>
-            <Head title="Dashboard" />
+                <Head title="Dashboard" />
             <AppHeader breadcrumbs={breadcrumbs} />
 
             <div className="container mx-auto max-w-5xl px-4 py-8 md:px-6">
@@ -454,69 +454,69 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                 </div>
 
                 <div className="mb-8 space-y-4">
-                    {auth.user.verification_status === 'unverified' && (
+                {auth.user.verification_status === 'unverified' && (
                         <div className="overflow-hidden rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100 shadow-sm dark:border-amber-900 dark:from-amber-900/20 dark:to-amber-800/20">
                             <div className="flex items-center gap-4 p-4">
                                 <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
                                     <ExclamationCircleIcon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                                 </div>
-                                <div className="flex-1">
+                            <div className="flex-1">
                                     <h3 className="font-semibold text-amber-800 dark:text-amber-200">Your account is not yet verified</h3>
                                     <p className="text-sm text-amber-700 dark:text-amber-300">
                                         Submit a verification document to unlock all features and build trust with other users.
                                     </p>
-                                </div>
+                            </div>
 
-                                <Dialog open={isVerificationOpen} onOpenChange={setIsVerificationOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="border-amber-200 bg-white text-amber-700 hover:bg-amber-50 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900"
-                                        >
-                                            Submit Verification
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>Submit Verification Document</DialogTitle>
-                                        </DialogHeader>
-                                        <form onSubmit={handleVerificationSubmit} className="space-y-4">
-                                            <div>
-                                                <Label htmlFor="document">Document</Label>
-                                                <Input
-                                                    id="document"
-                                                    type="file"
-                                                    accept=".pdf,.jpg,.jpeg,.png"
-                                                    onChange={(e) => setData('document', e.target.files?.[0] || null)}
-                                                    required
-                                                />
-                                                <p className="mt-1 text-sm text-gray-500">Accepted formats: PDF, JPG, PNG</p>
-                                            </div>
-                                            <div>
-                                                <Label htmlFor="notes">Additional Notes (Optional)</Label>
-                                                <Textarea
-                                                    id="notes"
-                                                    value={data.notes}
-                                                    onChange={(e) => setData('notes', e.target.value)}
-                                                    placeholder="Any additional information..."
-                                                />
-                                            </div>
-                                            <div className="flex justify-end gap-2">
-                                                <Button type="button" variant="outline" onClick={() => setIsVerificationOpen(false)}>
-                                                    Cancel
-                                                </Button>
-                                                <Button type="submit" disabled={processing}>
-                                                    Submit
-                                                </Button>
-                                            </div>
-                                        </form>
-                                    </DialogContent>
-                                </Dialog>
+                            <Dialog open={isVerificationOpen} onOpenChange={setIsVerificationOpen}>
+                                <DialogTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className="border-amber-200 bg-white text-amber-700 hover:bg-amber-50 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900"
+                                    >
+                                        Submit Verification
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Submit Verification Document</DialogTitle>
+                                    </DialogHeader>
+                                    <form onSubmit={handleVerificationSubmit} className="space-y-4">
+                                        <div>
+                                            <Label htmlFor="document">Document</Label>
+                                            <Input
+                                                id="document"
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                onChange={(e) => setData('document', e.target.files?.[0] || null)}
+                                                required
+                                            />
+                                            <p className="mt-1 text-sm text-gray-500">Accepted formats: PDF, JPG, PNG</p>
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="notes">Additional Notes (Optional)</Label>
+                                            <Textarea
+                                                id="notes"
+                                                value={data.notes}
+                                                onChange={(e) => setData('notes', e.target.value)}
+                                                placeholder="Any additional information..."
+                                            />
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <Button type="button" variant="outline" onClick={() => setIsVerificationOpen(false)}>
+                                                Cancel
+                                            </Button>
+                                            <Button type="submit" disabled={processing}>
+                                                Submit
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </DialogContent>
+                            </Dialog>
                             </div>
                         </div>
                     )}
 
-                    {!auth.user.email_verified_at && (
+                            {!auth.user.email_verified_at && (
                         <div className="overflow-hidden rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm dark:border-blue-900 dark:from-blue-900/20 dark:to-blue-800/20">
                             <div className="flex items-center gap-4 p-4">
                                 <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
@@ -529,36 +529,36 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     </p>
                                 </div>
 
-                                <Dialog open={isEmailVerificationOpen} onOpenChange={setIsEmailVerificationOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="border-blue-200 bg-white text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
-                                        >
-                                            Verify Email
+                            <Dialog open={isEmailVerificationOpen} onOpenChange={setIsEmailVerificationOpen}>
+                            <DialogTrigger asChild>
+                            <Button
+                                variant="outline"
+                                className="border-blue-200 bg-white text-blue-700 hover:bg-blue-50 dark:border-blue-500 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
+                            >
+                                Verify Email
+                            </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Verify Your Email</DialogTitle>
+                                    <DialogDescription>We will send a verification link to your registered email.</DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleEmailVerificationSubmit} className="space-y-4">
+                                    <p className="text-sm text-gray-500 dark:text-gray-300">
+                                        Click the button below to receive a verification email.
+                                    </p>
+                                    <div className="flex justify-end gap-2">
+                                        <Button type="button" variant="outline" onClick={() => setIsEmailVerificationOpen(false)}>
+                                            Cancel
                                         </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>Verify Your Email</DialogTitle>
-                                            <DialogDescription>We will send a verification link to your registered email.</DialogDescription>
-                                        </DialogHeader>
-                                        <form onSubmit={handleEmailVerificationSubmit} className="space-y-4">
-                                            <p className="text-sm text-gray-500 dark:text-gray-300">
-                                                Click the button below to receive a verification email.
-                                            </p>
-                                            <div className="flex justify-end gap-2">
-                                                <Button type="button" variant="outline" onClick={() => setIsEmailVerificationOpen(false)}>
-                                                    Cancel
-                                                </Button>
                                                 <Button type="submit" disabled={processing}>Send Verification Email</Button>
-                                            </div>
-                                        </form>
-                                    </DialogContent>
-                                </Dialog>
-                            </div>
+                                    </div>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
                         </div>
-                    )}
+                    </div>
+                )}
                 </div>
 
                 {/* <div className="sticky bottom-6 z-10 mb-6 flex justify-end lg:hidden">
@@ -568,7 +568,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                         className="rounded-full shadow-lg"
                     >
                         <PlusIcon className="h-6 w-6" />
-                    </Button>
+                            </Button>
                 </div> */}
 
                 <div className="space-y-6">
@@ -577,12 +577,12 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                         <Dialog open={isOpen} onOpenChange={setIsOpen}>
                             <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden">
                                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 dark:from-blue-950 dark:to-indigo-950">
-                                    <DialogHeader>
+                            <DialogHeader>
                                         <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">Create a Post</DialogTitle>
                                         <DialogDescription className="text-gray-600 dark:text-gray-300">
                                             Share your thoughts, photos, or documents with your community.
                                         </DialogDescription>
-                                    </DialogHeader>
+                            </DialogHeader>
                                 </div>
                                 
                                 <div className="p-6">
@@ -593,17 +593,17 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                 <p className="font-medium text-gray-900 dark:text-white">{auth.user.name}</p>
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">@{auth.user.username}</p>
                                             </div>
-                                        </div>
-                                        
+                                            </div>
+                                
                                         <div>
-                                            <Textarea
-                                                value={data.content}
-                                                onChange={(e) => setData('content', e.target.value)}
-                                                placeholder="What's on your mind?"
+                                    <Textarea
+                                        value={data.content}
+                                        onChange={(e) => setData('content', e.target.value)}
+                                        placeholder="What's on your mind?"
                                                 className="min-h-[150px] resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:focus:border-blue-400 dark:focus:ring-blue-400"
-                                            />
+                                    />
                                             {formErrors.content && <p className="mt-1 text-sm text-red-500">{formErrors.content}</p>}
-                                        </div>
+                                </div>
 
                                         <div className="space-y-4">
                                             <div className="flex items-center justify-between">
@@ -626,14 +626,14 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                         <PlusIcon className="h-6 w-6 text-gray-400" />
                                                         <span className="mt-1 text-xs text-gray-500">Add</span>
                                                     </div>
-                                                    <Input
+                                        <Input
                                                         id="attachments"
-                                                        type="file"
-                                                        multiple
-                                                        className="hidden"
+                                            type="file"
+                                            multiple
+                                            className="hidden"
                                                         onChange={handleAttachmentChange}
                                                         accept="image/*,.pdf,.doc,.docx"
-                                                    />
+                                        />
                                                 </label>
 
                                                 {data.attachments.map((file, index) => (
@@ -659,11 +659,11 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                     </div>
                                                 ))}
                                             </div>
-                                            
-                                            {formErrors.attachments && <p className="text-sm text-red-500">{formErrors.attachments}</p>}
-                                        </div>
 
-                                        {progress && (
+                                    {formErrors.attachments && <p className="text-sm text-red-500">{formErrors.attachments}</p>}
+                                </div>
+
+                                {progress && (
                                             <div className="space-y-2">
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Uploading...</span>
@@ -675,34 +675,34 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                         style={{ width: `${progress.percentage}%` }}
                                                     ></div>
                                                 </div>
-                                            </div>
-                                        )}
+                                    </div>
+                                )}
 
                                         <div className="flex justify-end gap-3 pt-2">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => {
-                                                    reset();
-                                                    setIsOpen(false);
-                                                }}
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                            reset();
+                                            setIsOpen(false);
+                                        }}
                                                 className="border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-                                            >
-                                                Cancel
-                                            </Button>
+                                    >
+                                        Cancel
+                                    </Button>
                                             <Button
                                                 type="submit"
                                                 disabled={processing}
                                                 className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600"
                                             >
-                                                {processing ? 'Posting...' : 'Post'}
-                                            </Button>
-                                        </div>
-                                    </form>
+                                        {processing ? 'Posting...' : 'Post'}
+                                    </Button>
                                 </div>
-                            </DialogContent>
-                        </Dialog>
-                    </div>
+                            </form>
+                                </div>
+                        </DialogContent>
+                    </Dialog>
+                </div>
 
                     {posts.length > 0 ? (
                         <div className="space-y-6">
@@ -717,7 +717,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     <div className="p-4">
                                         <div className="flex items-start justify-between">
                                             <div className="flex items-start gap-3">
-                                                <UserAvatar user={post.user} className="size-10" />
+                                        <UserAvatar user={post.user} className="size-10" />
                                                 <div>
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-medium">{post.user.name}</span>
@@ -727,7 +727,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                                 Verified
                                                             </span>
                                                         )}
-                                                    </div>
+                                            </div>
                                                     <div className="flex items-center gap-1 text-xs text-gray-500">
                                                         <CalendarIcon className="h-3 w-3" />
                                                         <time dateTime={post.created_at}>
@@ -737,80 +737,80 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                                 day: 'numeric',
                                                             })}
                                                         </time>
-                                                    </div>
+                                        </div>
                                                 </div>
                                             </div>
 
-                                            {post.user.id === authUserId && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
+                                        {post.user.id === authUserId && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
                                                     className="text-gray-400 hover:text-red-500"
-                                                    onClick={() => handleDeletePost(post.id)}
-                                                >
-                                                    <TrashIcon className="h-5 w-5" />
-                                                </Button>
-                                            )}
-                                        </div>
+                                                onClick={() => handleDeletePost(post.id)}
+                                            >
+                                                <TrashIcon className="h-5 w-5" />
+                                            </Button>
+                                        )}
+                                </div>
 
                                         <div className="mt-3 whitespace-pre-wrap text-gray-700 dark:text-gray-300">{post.content}</div>
 
-                                        {post.attachments.length > 0 && (
+                                    {post.attachments.length > 0 && (
                                             <div className={`mt-3 grid gap-2 ${post.attachments.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                                                {post.attachments.map((attachment) => (
-                                                    <div key={attachment.id} className="overflow-hidden rounded-lg">
-                                                        {attachment.file_type.includes('image') ? (
+                                            {post.attachments.map((attachment) => (
+                                                <div key={attachment.id} className="overflow-hidden rounded-lg">
+                                                    {attachment.file_type.includes('image') ? (
                                                             <img
                                                                 src={attachment.file_path}
                                                                 alt="Attachment"
                                                                 className="w-full rounded-lg cursor-pointer hover:opacity-95 transition-opacity"
                                                                 onClick={(e) => handleImageClick(attachment.file_path, e)}
                                                             />
-                                                        ) : (
-                                                            <a
-                                                                href={attachment.file_path}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
+                                                    ) : (
+                                                        <a
+                                                            href={attachment.file_path}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
                                                                 className="flex items-center justify-center rounded-lg bg-gray-100 p-6 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-                                                            >
+                                                        >
                                                                 <DocumentIcon className="h-10 w-10 text-gray-500" />
                                                                 <span className="ml-2 font-medium">View Document</span>
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
 
                                         <div className="mt-4 flex flex-col gap-3">
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-6">
-                                                    <button
-                                                        onClick={() => handleLike(post.id)}
+                                    <div className="flex items-center gap-6">
+                                        <button
+                                            onClick={() => handleLike(post.id)}
                                                         className="group flex items-center gap-2 rounded-lg px-4 py-2 transition-all hover:bg-red-50 dark:hover:bg-red-900/20"
-                                                    >
-                                                        {post.likes.some((like) => like.user_id === authUserId) ? (
+                                        >
+                                            {post.likes.some((like) => like.user_id === authUserId) ? (
                                                             <HeartIconSolid className="h-7 w-7 text-red-500" />
-                                                        ) : (
+                                            ) : (
                                                             <HeartIcon className="h-7 w-7 text-gray-500 group-hover:text-red-500 transition-colors group-hover:scale-110 duration-200" />
-                                                        )}
+                                            )}
                                                         <span className={`font-medium ${post.likes.some((like) => like.user_id === authUserId) ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400'}`}>
                                                             {post.likes.length === 0 ? 'Like' : post.likes.length === 1 ? '1 Like' : `${post.likes.length} Likes`}
                                                         </span>
-                                                    </button>
+                                        </button>
 
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedPost(post);
-                                                            setCommentOpen(true);
-                                                        }}
+                                        <button
+                                            onClick={() => {
+                                                setSelectedPost(post);
+                                                setCommentOpen(true);
+                                            }}
                                                         className="group flex items-center gap-2 rounded-lg px-4 py-2 transition-all hover:bg-blue-50 dark:hover:bg-blue-900/20"
                                                     >
                                                         <ChatBubbleLeftIcon className="h-7 w-7 text-gray-500 group-hover:text-blue-500 transition-colors group-hover:scale-110 duration-200" />
                                                         <span className="font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
                                                             {post.comments.length === 0 ? 'Comment' : post.comments.length === 1 ? '1 Comment' : `${post.comments.length} Comments`}
                                                         </span>
-                                                    </button>
+                                        </button>
                                                 </div>
                                                 
                                                 {/* {post.comments.length > 0 && (
@@ -827,39 +827,39 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                     </Button>
                                                 )} */}
                                             </div>
-                                        </div>
                                     </div>
+                                </div>
 
-                                    {post.comments.length > 0 && (
-                                        <div className="border-t bg-gray-50 px-4 py-3 dark:bg-gray-900/50">
-                                            <div className="space-y-3">
+                                {post.comments.length > 0 && (
+                                    <div className="border-t bg-gray-50 px-4 py-3 dark:bg-gray-900/50">
+                                        <div className="space-y-3">
                                                 {post.comments.slice(0, 3).map((comment) => (
-                                                    <div key={comment.id} className="flex items-start gap-3">
-                                                        <UserAvatar user={comment.user} className="size-8" />
+                                                <div key={comment.id} className="flex items-start gap-3">
+                                                    <UserAvatar user={comment.user} className="size-8" />
                                                         <div className="flex-1 rounded-lg bg-white p-2 shadow-sm dark:bg-black">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-medium">{comment.user.name}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium">{comment.user.name}</span>
                                                                 <span className="text-xs text-gray-500">@{comment.user.username}</span>
                                                                 {comment.user.verification_status === 'verified' && (
                                                                     <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                                                                         Verified
                                                                     </span>
-                                                                )}
-                                                                {comment.user.id === authUserId && (
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
+                                                            )}
+                                                            {comment.user.id === authUserId && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
                                                                         className="ml-auto h-6 w-6 text-gray-400 hover:text-red-500"
-                                                                        onClick={() => handleDeleteComment(comment.id)}
-                                                                    >
-                                                                        <TrashIcon className="h-4 w-4" />
-                                                                    </Button>
-                                                                )}
-                                                            </div>
-                                                            <p className="text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
+                                                                    onClick={() => handleDeleteComment(comment.id)}
+                                                                >
+                                                                    <TrashIcon className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
+                                                        <p className="text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
                                                     </div>
-                                                ))}
+                                                </div>
+                                            ))}
                                                 
                                                 {post.comments.length > 3 && (
                                                     <Button
@@ -874,10 +874,10 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                         View all {post.comments.length} comments
                                                     </Button>
                                                 )}
-                                            </div>
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
+                            </div>
                             ))}
                             
                             {/* "All caught up" message */}
@@ -930,14 +930,14 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                 <Dialog open={commentOpen} onOpenChange={setCommentOpen}>
                     <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden">
                         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 dark:from-blue-950 dark:to-indigo-950">
-                            <DialogHeader>
+                        <DialogHeader>
                                 <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">Add a Comment</DialogTitle>
                                 {selectedPost && (
                                     <DialogDescription className="text-gray-600 dark:text-gray-300">
                                         Replying to <span className="font-medium">{selectedPost.user.name}</span>'s post
                                     </DialogDescription>
                                 )}
-                            </DialogHeader>
+                        </DialogHeader>
                         </div>
                         
                         <div className="p-6">
@@ -988,10 +988,10 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                 <div className="flex items-start gap-3">
                                     <UserAvatar user={auth.user} className="size-8 ring-2 ring-blue-100 dark:ring-blue-900" />
                                     <div className="flex-1">
-                                        <Textarea
-                                            value={commentData.content}
-                                            onChange={(e) => setCommentData('content', e.target.value)}
-                                            placeholder="Write your comment..."
+                            <Textarea
+                                value={commentData.content}
+                                onChange={(e) => setCommentData('content', e.target.value)}
+                                placeholder="Write your comment..."
                                             className="min-h-[100px] resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                                         />
                                         {commentErrors.content && <p className="mt-1 text-sm text-red-500">{commentErrors.content}</p>}
@@ -1015,10 +1015,10 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         disabled={commentProcessing}
                                         className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600"
                                     >
-                                        {commentProcessing ? 'Posting...' : 'Comment'}
-                                    </Button>
-                                </div>
-                            </form>
+                                    {commentProcessing ? 'Posting...' : 'Comment'}
+                                </Button>
+                            </div>
+                        </form>
                         </div>
                     </DialogContent>
                 </Dialog>

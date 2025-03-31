@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\UserReportCrudController;
 use App\Http\Controllers\Admin\ListingCrudController;
 use App\Http\Controllers\Admin\VerificationCrudController;
 use App\Http\Controllers\Admin\VerificationDocumentCrudController;
+use App\Http\Controllers\Admin\PostCrudController;
 
 // --------------------------
 // Custom Backpack Routes
@@ -19,7 +20,7 @@ Route::group([
         (array) config('backpack.base.middleware_key', 'admin')
     ),
     'namespace' => 'App\Http\Controllers\Admin',
-], function () { // custom admin routes
+], function () {
     Route::crud('user', 'UserCrudController');
     Route::crud('user-report', 'UserReportCrudController');
     Route::get('delete-reported-user/{user}', [UserReportCrudController::class, 'deleteReportedUser'])
@@ -32,8 +33,5 @@ Route::group([
     Route::crud('verification-document', 'VerificationCrudController');
     Route::post('verification-document/{id}/verify', 'VerificationCrudController@verify')
         ->name('verification-document.verify');
+    Route::crud('post', 'PostCrudController');
 });
-
-/**
- * DO NOT ADD ANYTHING HERE.
- */

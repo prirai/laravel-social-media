@@ -341,99 +341,99 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                         <div className="border-b border-gray-200 p-4 dark:border-gray-800">
                             <div className="flex items-center gap-2">
                                 <div className="flex w-full gap-2">
-                                    <Dialog open={isNewMessageOpen} onOpenChange={setIsNewMessageOpen}>
-                                        <DialogTrigger asChild>
-                                            <Button className="flex-1" variant="outline">
-                                                <PlusIcon className="mr-2 h-5 w-5" />
-                                                New Message
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="sm:max-w-[425px]">
-                                            <DialogHeader>
-                                                <DialogTitle>New Message</DialogTitle>
-                                            </DialogHeader>
-                                            <div className="mt-4 space-y-4">
-                                                <div className="relative">
-                                                    <MagnifyingGlassIcon className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                                                    <Input
-                                                        type="text"
-                                                        placeholder="Search users..."
-                                                        value={searchQuery}
-                                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                                        className="pl-10"
-                                                    />
-                                                </div>
-                                                <div className="max-h-[60vh] space-y-2 overflow-y-auto">
-                                                    {filteredUsers.map((user) => (
-                                                        <button
-                                                            key={user.id}
-                                                            onClick={() => startNewConversation(user)}
-                                                            className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
-                                                        >
-                                                            <UserAvatar user={user} className="size-10" />
-                                                            <div>
-                                                                <p className="font-medium">{user.name}</p>
-                                                                <p className="text-sm text-gray-500">@{user.username}</p>
-                                                            </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </DialogContent>
-                                    </Dialog>
-
-                                    <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
-                                        <DialogTrigger asChild>
-                                            <Button className="flex-1" variant="outline">
-                                                <UsersIcon className="mr-2 h-5 w-5" />
-                                                New Group
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="sm:max-w-[425px]">
-                                            <DialogHeader>
-                                                <DialogTitle>Create New Group</DialogTitle>
-                                            </DialogHeader>
-                                            <form onSubmit={createGroup} className="mt-4 space-y-4">
-                                                <div>
-                                                    <Label htmlFor="groupName">Group Name</Label>
-                                                    <Input
-                                                        id="groupName"
-                                                        value={groupName}
-                                                        onChange={(e) => setGroupName(e.target.value)}
-                                                        placeholder="Enter group name"
-                                                        required
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <Label>Select Members</Label>
-                                                    <div className="mt-2 max-h-[40vh] space-y-2 overflow-y-auto rounded-md border p-2">
-                                                        {allUsers.map((user) => (
-                                                            <label
-                                                                key={user.id}
-                                                                className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-950"
-                                                            >
-                                                                <Checkbox
-                                                                    checked={selectedUsers.includes(user.id)}
-                                                                    onCheckedChange={(checked) => {
-                                                                        setSelectedUsers((current) =>
-                                                                            checked ? [...current, user.id] : current.filter((id) => id !== user.id),
-                                                                        );
-                                                                    }}
-                                                                />
-                                                                <UserAvatar user={user} className="size-8" />
-                                                                <span className="text-foreground">{user.name}</span>
-                                                            </label>
-                                                        ))}
+                            <Dialog open={isNewMessageOpen} onOpenChange={setIsNewMessageOpen}>
+                                <DialogTrigger asChild>
+                                    <Button className="flex-1" variant="outline">
+                                        <PlusIcon className="mr-2 h-5 w-5" />
+                                        New Message
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[425px]">
+                                    <DialogHeader>
+                                        <DialogTitle>New Message</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="mt-4 space-y-4">
+                                        <div className="relative">
+                                            <MagnifyingGlassIcon className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                                            <Input
+                                                type="text"
+                                                placeholder="Search users..."
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                className="pl-10"
+                                            />
+                                        </div>
+                                        <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+                                            {filteredUsers.map((user) => (
+                                                <button
+                                                    key={user.id}
+                                                    onClick={() => startNewConversation(user)}
+                                                    className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+                                                >
+                                                    <UserAvatar user={user} className="size-10" />
+                                                    <div>
+                                                        <p className="font-medium">{user.name}</p>
+                                                        <p className="text-sm text-gray-500">@{user.username}</p>
                                                     </div>
-                                                </div>
-                                                <div className="flex justify-end gap-2">
-                                                    <Button type="submit" disabled={selectedUsers.length < 2 || !groupName.trim()}>
-                                                        Create Group
-                                                    </Button>
-                                                </div>
-                                            </form>
-                                        </DialogContent>
-                                    </Dialog>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
+                            <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
+                                <DialogTrigger asChild>
+                                    <Button className="flex-1" variant="outline">
+                                        <UsersIcon className="mr-2 h-5 w-5" />
+                                        New Group
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[425px]">
+                                    <DialogHeader>
+                                        <DialogTitle>Create New Group</DialogTitle>
+                                    </DialogHeader>
+                                    <form onSubmit={createGroup} className="mt-4 space-y-4">
+                                        <div>
+                                            <Label htmlFor="groupName">Group Name</Label>
+                                            <Input
+                                                id="groupName"
+                                                value={groupName}
+                                                onChange={(e) => setGroupName(e.target.value)}
+                                                placeholder="Enter group name"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label>Select Members</Label>
+                                            <div className="mt-2 max-h-[40vh] space-y-2 overflow-y-auto rounded-md border p-2">
+                                                {allUsers.map((user) => (
+                                                    <label
+                                                        key={user.id}
+                                                        className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-950"
+                                                    >
+                                                        <Checkbox
+                                                            checked={selectedUsers.includes(user.id)}
+                                                            onCheckedChange={(checked) => {
+                                                                setSelectedUsers((current) =>
+                                                                    checked ? [...current, user.id] : current.filter((id) => id !== user.id),
+                                                                );
+                                                            }}
+                                                        />
+                                                        <UserAvatar user={user} className="size-8" />
+                                                        <span className="text-foreground">{user.name}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <Button type="submit" disabled={selectedUsers.length < 2 || !groupName.trim()}>
+                                                Create Group
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </DialogContent>
+                            </Dialog>
                                 </div>
                             </div>
                         </div>
@@ -521,12 +521,12 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                             <div className="z-10 flex justify-center p-4">
                                 <div className="flex w-full max-w-3xl items-center justify-between rounded-full border border-gray-200 bg-white px-6 py-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                                     <div className="flex items-center gap-4">
-                                        {isMobileView && (
+                                    {isMobileView && (
                                             <Button variant="ghost" size="icon" onClick={() => setSelectedChat(null)} className="h-9 w-9 rounded-full p-0">
-                                                <ArrowLeftIcon className="h-5 w-5" />
-                                            </Button>
-                                        )}
-                                        {isGroup(selectedChat) ? (
+                                            <ArrowLeftIcon className="h-5 w-5" />
+                                        </Button>
+                                    )}
+                                    {isGroup(selectedChat) ? (
                                             <div className="relative">
                                                 <UserAvatar user={{ name: selectedChat.name, avatar: selectedChat.avatar }} className="size-10" />
                                                 <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
@@ -536,7 +536,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                         ) : (
                                             <UserAvatar user={selectedChat} className="size-10" />
                                         )}
-                                        <div>
+                                            <div>
                                             <h2 className="text-base font-medium text-gray-900 dark:text-white">{selectedChat.name}</h2>
                                             {isGroup(selectedChat) ? (
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -552,7 +552,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                     
                                     <div className="flex items-center">
                                         {/* Optional: Add action buttons here */}
-                                    </div>
+                                            </div>
                                 </div>
                             </div>
 
@@ -712,19 +712,19 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                         </button>
                                                     </div>
                                                 ))}
-                                            </div>
-                                        </div>
-                                    )}
+                            </div>
+                        </div>
+                    )}
                                     
                                     <div className="flex items-center gap-2 p-4">
                                         <div className="relative flex-1">
                                             <input
                                                 type="text"
-                                                value={message}
-                                                onChange={(e) => setMessage(e.target.value)}
+                                        value={message}
+                                        onChange={(e) => setMessage(e.target.value)}
                                                 placeholder={`Message ${isGroup(selectedChat) ? selectedChat.name : selectedChat?.name}`}
                                                 className="w-full rounded-full border border-gray-200 bg-gray-100 px-4 py-2 pr-10 focus:border-blue-500 focus:outline-none dark:border-gray-800 dark:bg-gray-900"
-                                            />
+                                    />
                                         </div>
                                         <input
                                             type="file"
@@ -755,10 +755,10 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                             <span className="text-sm">Send</span>
                                             <PaperAirplaneIcon className="h-4 w-4" />
                                         </Button>
+                                </div>
+                            </form>
                                     </div>
-                                </form>
-                            </div>
-                        </div>
+                                </div>
                     ) : (
                         <div className="hidden h-full flex-1 flex-col items-center justify-center md:flex">
                             <div className="flex flex-col items-center text-center">
@@ -766,10 +766,10 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                                     </svg>
-                                </div>
+                                        </div>
                                 <h3 className="mb-2 text-xl font-medium text-gray-900 dark:text-white">Your messages</h3>
                                 <p className="text-gray-500 dark:text-gray-400">Select a conversation to start messaging</p>
-                            </div>
+                                                    </div>
                             <PlaceholderPattern className="absolute inset-0 -z-10 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
                         </div>
                     )}
