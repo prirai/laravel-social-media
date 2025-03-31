@@ -50,9 +50,9 @@ export default function Welcome() {
                     {/* Image (Moved before text on larger screens) */}
                     <div className="w-full max-w-lg lg:w-1/2">
                         <img
-                            src="/img/ss-v1.png"
+                            src="/img/ssopt_v1.svg"
                             alt="SimpleSocial Welcome Image"
-                            className="w-full rounded-lg object-cover" // Added shadow
+                            className="w-full rounded-lg object-cover"
                         />
                     </div>
 
