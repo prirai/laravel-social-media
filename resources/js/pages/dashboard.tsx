@@ -1083,19 +1083,19 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
 
             {showErrorPopup && error && (
                 <div className="fixed bottom-4 right-4 z-50 max-w-md animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div className="rounded-lg bg-red-50 p-4 shadow-lg border border-red-200 dark:bg-red-900/30 dark:border-red-800">
+                    <div className="rounded-lg bg-amber-50 p-4 shadow-lg border border-amber-200 dark:bg-amber-900/30 dark:border-amber-800">
                         <div className="flex items-start gap-3">
                             <div className="flex-shrink-0">
-                                <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
+                                <ExclamationCircleIcon className="h-5 w-5 text-amber-500" />
                             </div>
                             <div className="flex-1">
-                                <p className="font-medium text-red-800 dark:text-red-200">{error}</p>
-                                <p className="mt-1 text-sm text-red-700 dark:text-red-300">
+                                <p className="font-medium text-amber-800 dark:text-amber-200">{error}</p>
+                                <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
                                     Please check your email for a verification link or request a new one.
                                 </p>
                             </div>
                             <button 
-                                className="flex-shrink-0 rounded-md p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-800"
+                                className="flex-shrink-0 rounded-md p-1.5 text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-800"
                                 onClick={() => setShowErrorPopup(false)}
                             >
                                 <XMarkIcon className="h-5 w-5" />
@@ -1105,7 +1105,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                             <Button 
                                 size="sm" 
                                 variant="outline" 
-                                className="border-red-200 bg-white text-red-700 hover:bg-red-50 dark:border-red-800 dark:bg-red-900/50 dark:text-red-300 dark:hover:bg-red-900"
+                                className="border-amber-200 bg-white text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-900/50 dark:text-amber-300 dark:hover:bg-amber-900"
                                 onClick={() => {
                                     setIsEmailVerificationOpen(true);
                                     setShowErrorPopup(false);

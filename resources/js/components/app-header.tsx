@@ -392,9 +392,9 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                     <div className="flex items-center gap-2">
                         {/* Notifications Button - Desktop */}
                         <div className="relative hidden md:block" ref={notificationsRef}>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
                                 className="rounded-lg"
                                 onClick={() => {
                                     setShowNotifications(!showNotifications);
@@ -413,11 +413,11 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                     </span>
                                 )}
                                 <span className="sr-only">Notifications</span>
-                            </Button>
-                            {showNotifications && (
+                                                        </Button>
+                                            {showNotifications && (
                                 <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="font-semibold">Notifications</h3>
+                                                    <div className="flex items-center justify-between">
+                                                        <h3 className="font-semibold">Notifications</h3>
                                         <div className="flex gap-2">
                                             {unreadCount > 0 && (
                                                 <Button
@@ -429,15 +429,15 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                                     Mark all as read
                                                 </Button>
                                             )}
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
                                                 className="rounded-lg"
-                                                onClick={() => setShowNotifications(false)}
-                                            >
+                                                            onClick={() => setShowNotifications(false)}
+                                                        >
                                                 <X className="h-5 w-5" />
-                                            </Button>
-                                        </div>
+                                                        </Button>
+                                                    </div>
                                     </div>
                                     
                                     {isLoadingNotifications ? (
