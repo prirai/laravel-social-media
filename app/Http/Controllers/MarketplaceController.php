@@ -16,14 +16,14 @@ class MarketplaceController extends Controller
             ->get();
 
         // Debug the listings data
-        \Log::info('Listings with sellers:', $listings->toArray());
+        // \Log::info('Listings with sellers:', $listings->toArray());
 
         $formattedListings = $listings->map(function ($listing) {
             // Debug each listing's seller
-            \Log::info('Processing listing ' . $listing->id . ' with seller:', [
-                'seller_id' => $listing->seller_id,
-                'seller' => $listing->seller
-            ]);
+            // \Log::info('Processing listing ' . $listing->id . ' with seller:', [
+            //     'seller_id' => $listing->seller_id,
+            //     'seller' => $listing->seller
+            // ]);
 
             if (!$listing->seller) {
                 \Log::warning('Missing seller for listing:', [

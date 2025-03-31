@@ -108,7 +108,7 @@ class User extends Authenticatable
 
     public function getVerificationStatusAttribute($value)
     {
-        \Log::info('Getting verification status for user ' . $this->id . ': ' . $value);
+        // \Log::info('Getting verification status for user ' . $this->id . ': ' . $value);
         return $value ?? 'unverified';
     }
 
