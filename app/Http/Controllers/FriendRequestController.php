@@ -14,36 +14,46 @@ class FriendRequestController extends Controller
     {
         // Find user by username
         $user = User::where('username', $username)->firstOrFail();
+        
+        // Prevent sending request to self
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'You cannot send a friend request to yourself.');
+        }
+        
+        // Check if they are already friends
+        if (auth()->user()->isFriendsWith($user)) {
+            return back()->with('error', 'You are already friends with this user.');
+        }
 
         // Check if request already exists
-        $existingRequest = FriendRequest::where(function ($query) use ($user) {
-            $query->where('sender_id', auth()->id())
-                ->where('receiver_id', $user->id);
-        })->orWhere(function ($query) use ($user) {
-            $query->where('sender_id', $user->id)
-                ->where('receiver_id', auth()->id());
-        })->first();
-
-        if ($existingRequest) {
-            return back()->with('error', 'Friend request already exists.');
+        if (FriendRequest::existsBetween(auth()->id(), $user->id)) {
+            return back()->with('error', 'A friend request already exists between you and this user.');
         }
 
         // Create new friend request
-        FriendRequest::create([
+        $friendRequest = FriendRequest::create([
             'sender_id' => auth()->id(),
             'receiver_id' => $user->id,
             'status' => 'pending',
         ]);
 
-        return back()->with('success', 'Friend request sent successfully.');
+        // Return the updated user data for the frontend
+        $updatedUser = $this->getUserWithFriendRequestData($user);
+        
+        return back()->with([
+            'success' => 'Friend request sent successfully.',
+            'user' => $updatedUser
+        ]);
     }
 
     public function accept(FriendRequest $friendRequest)
     {
+        // Verify the authenticated user is the receiver
         if ($friendRequest->receiver_id !== auth()->id()) {
             return back()->with('error', 'Unauthorized action.');
         }
 
+        // Update request status
         $friendRequest->update(['status' => 'accepted']);
 
         // Create friendship records for both users
@@ -57,29 +67,91 @@ class FriendRequestController extends Controller
             'friend_id' => $friendRequest->sender_id,
         ]);
 
-        return back()->with('success', 'Friend request accepted.');
+        // Get the updated user data
+        $user = User::findOrFail($friendRequest->sender_id);
+        $updatedUser = $this->getUserWithFriendRequestData($user);
+
+        return back()->with([
+            'success' => 'Friend request accepted.',
+            'user' => $updatedUser
+        ]);
     }
 
     public function reject(FriendRequest $friendRequest)
     {
+        // Verify the authenticated user is the receiver
         if ($friendRequest->receiver_id !== auth()->id()) {
             return back()->with('error', 'Unauthorized action.');
         }
 
+        // Update request status
         $friendRequest->update(['status' => 'rejected']);
 
-        return back()->with('success', 'Friend request rejected.');
+        // Get the updated user data
+        $user = User::findOrFail($friendRequest->sender_id);
+        $updatedUser = $this->getUserWithFriendRequestData($user);
+
+        return back()->with([
+            'success' => 'Friend request rejected.',
+            'user' => $updatedUser
+        ]);
     }
 
     public function cancel(FriendRequest $friendRequest)
     {
-        // Allow both sender and receiver to cancel the request
-        if ($friendRequest->sender_id !== auth()->id() && $friendRequest->receiver_id !== auth()->id()) {
-            return back()->with('error', 'Unauthorized action.');
+        // Verify the authenticated user is the sender
+        if ($friendRequest->sender_id !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        // Delete the request
         $friendRequest->delete();
 
-        return back()->with('success', 'Friend request cancelled.');
+        // Get the updated user data
+        $user = User::findOrFail($friendRequest->receiver_id);
+        $updatedUser = $this->getUserWithFriendRequestData($user);
+
+        return back()->with([
+            'success' => 'Friend request cancelled.',
+            'user' => $updatedUser
+        ]);
+    }
+    
+    // Helper method to get user data with friend request information
+    private function getUserWithFriendRequestData(User $user)
+    {
+        $currentUser = auth()->user();
+        
+        // Check if they are friends
+        $isFriend = $currentUser->isFriendsWith($user);
+        
+        // Check for any friend request
+        $friendRequest = FriendRequest::where(function ($query) use ($user, $currentUser) {
+            $query->where('sender_id', $currentUser->id)
+                  ->where('receiver_id', $user->id);
+        })->orWhere(function ($query) use ($user, $currentUser) {
+            $query->where('sender_id', $user->id)
+                  ->where('receiver_id', $currentUser->id);
+        })->first();
+        
+        $userData = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'username' => $user->username,
+            'avatar' => $user->avatar,
+            'verification_status' => $user->verification_status,
+            'is_friend' => $isFriend,
+        ];
+        
+        if ($friendRequest) {
+            $userData['friend_request'] = [
+                'id' => $friendRequest->id,
+                'status' => $friendRequest->status,
+                'sender_id' => $friendRequest->sender_id,
+                'receiver_id' => $friendRequest->receiver_id,
+            ];
+        }
+        
+        return $userData;
     }
 } 

@@ -11,6 +11,7 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class User extends Authenticatable 
 {
@@ -119,8 +120,15 @@ class User extends Authenticatable
 
     public function isFriendsWith(User $user): bool
     {
-        return $this->friends()->where('friend_id', $user->id)->exists() ||
-               $user->friends()->where('friend_id', $this->id)->exists();
+        return Friendship::where(function ($query) use ($user) {
+                $query->where('user_id', $this->id)
+                      ->where('friend_id', $user->id);
+            })
+            ->orWhere(function ($query) use ($user) {
+                $query->where('user_id', $user->id)
+                      ->where('friend_id', $this->id);
+            })
+            ->exists();
     }
 
     // public function setPasswordAttribute($value)

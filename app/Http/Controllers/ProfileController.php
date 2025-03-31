@@ -12,40 +12,75 @@ class ProfileController extends Controller
 {
     public function show(string $username)
     {
-        $user = User::with(['posts' => function ($query) {
-            $query->with(['user', 'attachments', 'likes', 'comments.user'])
-                ->latest();
-        }])->where('username', $username)->firstOrFail();
-
+        $user = User::where('username', $username)
+            ->with(['posts.user', 'posts.likes', 'posts.comments.user', 'posts.attachments'])
+            ->firstOrFail();
+        
+        $isOwnProfile = auth()->check() && auth()->id() === $user->id;
+        
+        // Check if there's a friend request between the users
         $friendRequest = null;
-        if (auth()->check() && auth()->id() !== $user->id) {
-            $friendRequest = FriendRequest::where(function ($query) use ($user) {
-                $query->where('sender_id', auth()->id())
-                    ->where('receiver_id', $user->id);
-            })->orWhere(function ($query) use ($user) {
-                $query->where('sender_id', $user->id)
-                    ->where('receiver_id', auth()->id());
-            })->first();
-
-            $user->friend_request = $friendRequest;
-            $user->is_friend = auth()->user()->isFriendsWith($user);
+        $isFriend = false;
+        $friends = [];
+        
+        if (auth()->check()) {
+            if (!$isOwnProfile) {
+                // Check if they are friends
+                $isFriend = auth()->user()->isFriendsWith($user);
+                
+                // Check for any friend request (sent OR received)
+                $friendRequest = FriendRequest::where(function ($query) use ($user) {
+                    $query->where('sender_id', auth()->id())
+                          ->where('receiver_id', $user->id);
+                })->orWhere(function ($query) use ($user) {
+                    $query->where('sender_id', $user->id)
+                          ->where('receiver_id', auth()->id());
+                })->first();
+            }
+            
+            // Get user's friends
+            $friends = $user->friends()
+                ->select('users.id', 'users.name', 'users.username', 'users.avatar', 'users.verification_status')
+                ->get();
         }
-
-        // Ensure posts is always an array
-        $user->posts = $user->posts ?? [];
-
+        
+        // Format the user data
+        $userData = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'username' => $user->username,
+            'avatar' => $user->avatar,
+            'verification_status' => $user->verification_status,
+            'posts' => $user->posts->map(function ($post) {
+                return [
+                    'id' => $post->id,
+                    'content' => $post->content,
+                    'user_id' => $post->user_id,
+                    'created_at' => $post->created_at,
+                    'updated_at' => $post->updated_at,
+                    'user' => $post->user,
+                    'likes' => $post->likes,
+                    'comments' => $post->comments,
+                    'attachments' => $post->attachments,
+                ];
+            }),
+            'is_friend' => $isFriend,
+            'friends' => $friends,
+        ];
+        
+        // Add friend request data if it exists
+        if ($friendRequest) {
+            $userData['friend_request'] = [
+                'id' => $friendRequest->id,
+                'status' => $friendRequest->status,
+                'sender_id' => $friendRequest->sender_id,
+                'receiver_id' => $friendRequest->receiver_id,
+            ];
+        }
+        
         return Inertia::render('profile/show', [
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'username' => $user->username,
-                'avatar' => $user->avatar,
-                'verification_status' => $user->verification_status,
-                'posts' => $user->posts,
-                'friend_request' => $user->friend_request,
-                'is_friend' => $user->is_friend ?? false,
-            ],
-            'isOwnProfile' => auth()->check() && auth()->id() === $user->id,
+            'user' => $userData,
+            'isOwnProfile' => $isOwnProfile,
         ]);
     }
 
