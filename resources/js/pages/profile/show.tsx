@@ -52,6 +52,7 @@ interface UserProfile {
     username: string;
     avatar: string | null;
     verification_status?: 'unverified' | 'pending' | 'verified';
+    created_at?: string;
     posts: Post[];
     friend_request?: {
         id: number;
@@ -338,7 +339,15 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                             </div>
                             <div className="flex items-center gap-2">
                                 <CalendarIcon className="h-5 w-5 text-gray-500" />
-                                <span className="text-sm font-medium">Joined 2023</span>
+                                <span className="text-sm font-medium">
+                                    {user.created_at 
+                                        ? `Joined ${new Date(user.created_at).toLocaleDateString('en-US', { 
+                                            month: 'long', 
+                                            day: 'numeric', 
+                                            year: 'numeric'
+                                          })}` 
+                                        : 'Joined recently'}
+                                </span>
                             </div>
                         </div>
                     </div>

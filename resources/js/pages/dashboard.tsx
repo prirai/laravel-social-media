@@ -441,7 +441,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     className="border-gray-300 bg-white/80 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/80 dark:text-gray-200 dark:hover:bg-gray-700"
                                     onClick={() => router.visit(route('messages.index'))}
                                 >
-                                    <BellIcon className="mr-2 h-5 w-5" />
+                                    <EnvelopeIcon className="mr-2 h-5 w-5" />
                                     Messages
                                 </Button>
                             </div>
@@ -879,6 +879,20 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     )}
                                 </div>
                             ))}
+                            
+                            {/* "All caught up" message */}
+                            <div className="mt-10 mb-14 text-center">
+                                <div className="relative">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
+                                    </div>
+                                    <div className="relative flex justify-center">
+                                        <span className="bg-white px-4 text-sm font-medium text-gray-500 dark:bg-gray-950 dark:text-gray-400">
+                                            You're all caught up ✨
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     ) : (
                         <div className="flex min-h-[50vh] flex-col items-center justify-center rounded-xl border bg-white p-12 dark:bg-black">

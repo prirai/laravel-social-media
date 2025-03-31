@@ -51,6 +51,7 @@ class ProfileController extends Controller
             'username' => $user->username,
             'avatar' => $user->avatar,
             'verification_status' => $user->verification_status,
+            'created_at' => $user->created_at,
             'posts' => $user->posts->map(function ($post) {
                 return [
                     'id' => $post->id,
