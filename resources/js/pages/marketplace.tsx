@@ -77,7 +77,9 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
     const [listings, setListings] = useState<Listing[]>(initialListings);
     const { auth } = usePage<SharedData>().props;
     const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [showErrorPopup, setShowErrorPopup] = useState(false);
+    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
     const [isVerificationOpen, setIsVerificationOpen] = useState(false);
     
     // Add this function to filter listings
@@ -118,22 +120,89 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
         setTimeout(() => setShowErrorPopup(false), 5000);
     };
 
+    const handleSuccess = (message: string) => {
+        setSuccessMessage(message);
+        setShowSuccessPopup(true);
+        setTimeout(() => setShowSuccessPopup(false), 5000);
+    };
+
+    const resetVerificationForm = () => {
+        (data as any).document = null;
+        (data as any).notes = '';
+    };
+
     const handleVerificationSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        const formData = new FormData();
-        if ((data as any).document) {
-            formData.append('document', (data as any).document);
+        // We need to send the document through FormData
+        if (!(data as any).document) {
+            alert('Please select a document to upload');
+            return;
         }
+        
+        // Set loading state
+        const submitButton = e.currentTarget.querySelector('button[type="submit"]');
+        if (submitButton instanceof HTMLButtonElement) {
+            submitButton.innerHTML = 'Submitting...';
+            submitButton.disabled = true;
+        }
+        
+        // Create FormData manually and append the document
+        const formData = new FormData();
+        formData.append('document', (data as any).document);
         formData.append('notes', (data as any).notes || '');
         
-        post(route('user.submit-verification'), {
-            data: formData,
-            forceFormData: true,
-            onSuccess: () => {
-                setIsVerificationOpen(false);
+        // Using a different approach to avoid linter errors with FormData
+        const url = route('user.submit-verification');
+        
+        // Perform fetch manually
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
             },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Success handling
+            setIsVerificationOpen(false);
+            // Reset form
+            resetVerificationForm();
+            // Show success message
+            handleSuccess('Verification document submitted successfully. It will be reviewed by our team.');
+            
+            // Optionally refresh the page to update user status
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error submitting verification document. Please try again.');
+            
+            // Reset button state on error
+            if (submitButton instanceof HTMLButtonElement) {
+                submitButton.innerHTML = 'Submit';
+                submitButton.disabled = false;
+            }
         });
+    };
+
+    // Add a handler to check verification before opening the create listing dialog
+    const handleCreateListingClick = () => {
+        if (auth.user.verification_status !== 'verified') {
+            handleError('You must verify your document before creating listings in the marketplace.');
+            return;
+        }
+        setIsOpen(true);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -246,7 +315,13 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                     
                     <Dialog open={isOpen} onOpenChange={setIsOpen}>
                         <DialogTrigger asChild>
-                            <Button className="flex items-center gap-2">
+                            <Button 
+                                className="flex items-center gap-2"
+                                onClick={(e) => {
+                                    e.preventDefault(); // Prevent default to handle manually
+                                    handleCreateListingClick();
+                                }}
+                            >
                                 <PlusIcon className="h-5 w-5" />
                                 Create Listing
                             </Button>
@@ -523,7 +598,13 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                                 ? 'No listings yet' 
                                 : `No listings in ${selectedCategory}`}
                         </p>
-                        <Button onClick={() => setIsOpen(true)} className="flex items-center gap-2">
+                        <Button 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleCreateListingClick();
+                            }} 
+                            className="flex items-center gap-2"
+                        >
                             <PlusIcon className="h-5 w-5" />
                             Create First Listing
                         </Button>
@@ -565,6 +646,28 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                             >
                                 Submit Verification
                             </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Success Popup */}
+            {showSuccessPopup && successMessage && (
+                <div className="fixed bottom-4 right-4 z-50 max-w-md animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="rounded-lg bg-green-50 p-4 shadow-lg border border-green-200 dark:bg-green-900/30 dark:border-green-800">
+                        <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                                <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="font-medium text-green-800 dark:text-green-200">{successMessage}</p>
+                            </div>
+                            <button 
+                                className="flex-shrink-0 rounded-md p-1.5 text-green-500 hover:bg-green-100 dark:hover:bg-green-800"
+                                onClick={() => setShowSuccessPopup(false)}
+                            >
+                                <XMarkIcon className="h-5 w-5" />
+                            </button>
                         </div>
                     </div>
                 </div>
