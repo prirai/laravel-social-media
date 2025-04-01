@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Class UserCrudController
@@ -43,6 +44,30 @@ class UserCrudController extends CrudController
             'id',
             'name',
             'email',
+        ]);
+
+        // Add email verification status column
+        CRUD::addColumn([
+            'name' => 'email_verified',
+            'label' => 'Email Verified',
+            'type' => 'closure',
+            'function' => function($entry) {
+                $verified = $entry->email_verified_at !== null;
+                $color = $verified ? 'success' : 'danger';
+                $text = $verified ? 'Verified' : 'Not Verified';
+                
+                // Add a verify button if not verified
+                $button = '';
+                if (!$verified) {
+                    $url = backpack_url('user/verify-email/'.$entry->id);
+                    $button = ' <a href="'.$url.'" class="btn btn-sm btn-success ml-2">
+                        <i class="la la-check"></i> Verify
+                    </a>';
+                }
+                
+                return '<span class="badge bg-'.$color.'">' . $text . '</span>' . $button;
+            },
+            'escaped' => false
         ]);
 
         // Add verification document column
@@ -98,6 +123,14 @@ class UserCrudController extends CrudController
 
         // Remove the automatic verification_status field
         CRUD::removeField('verification_status');
+        
+        // Add email verification field
+        CRUD::addField([
+            'name' => 'email_verified',
+            'label' => 'Email Verified',
+            'type' => 'checkbox',
+            'hint' => 'If checked, the user\'s email will be marked as verified',
+        ]);
 
         // Add the custom dropdown
         CRUD::addField([
@@ -130,6 +163,14 @@ class UserCrudController extends CrudController
         
         // Remove the automatic verification_status field
         CRUD::removeField('verification_status');
+        
+        // Add email verification field
+        CRUD::addField([
+            'name' => 'email_verified',
+            'label' => 'Email Verified',
+            'type' => 'checkbox',
+            'hint' => 'If checked, the user\'s email will be marked as verified',
+        ]);
         
         // Add the custom dropdown
         CRUD::addField([
@@ -185,10 +226,34 @@ class UserCrudController extends CrudController
         // Remove password confirmation as it's not needed in the database
         unset($data['password_confirmation']);
         
+        // Handle email verification
+        if (isset($data['email_verified']) && $data['email_verified'] == '1') {
+            $data['email_verified_at'] = now();
+        } elseif (isset($data['email_verified']) && $data['email_verified'] == '0') {
+            $data['email_verified_at'] = null;
+        }
+        unset($data['email_verified']);
+        
         // Update the user
         $user = CRUD::getCurrentEntry();
         $user->update($data);
         
+        return redirect()->back();
+    }
+    
+    /**
+     * Verify a user's email address
+     *
+     * @param int $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function verifyEmail($id)
+    {
+        $user = \App\Models\User::findOrFail($id);
+        $user->email_verified_at = now();
+        $user->save();
+        
+        \Alert::success('Email verified successfully.')->flash();
         return redirect()->back();
     }
 }

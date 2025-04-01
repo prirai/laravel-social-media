@@ -156,4 +156,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Notification::class);
     }
+
+    public function getEmailVerifiedAttribute()
+    {
+        return $this->email_verified_at !== null;
+    }
 }
