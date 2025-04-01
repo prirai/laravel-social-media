@@ -333,20 +333,12 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
         });
     };
     
-    const handleImageClick = (imagePath: string, event: React.MouseEvent) => {
-        // Prevent event propagation
-        event.stopPropagation();
-        event.preventDefault();
+    const handleImageClick = (imagePath: string, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
         
-        // Make sure we have the full URL to the image
-        const fullImagePath = imagePath.startsWith('http') 
-            ? imagePath 
-            : imagePath.startsWith('/') 
-                ? window.location.origin + imagePath
-                : window.location.origin + '/' + imagePath;
-        
-        console.log("Opening image:", fullImagePath);
-        setEnlargedImage(fullImagePath);
+        console.log("Opening image:", imagePath);
+        setEnlargedImage(imagePath);
         setIsImageModalOpen(true);
     };
 
@@ -756,25 +748,25 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         <div className="mt-3 whitespace-pre-wrap text-gray-700 dark:text-gray-300">{post.content}</div>
 
                                     {post.attachments.length > 0 && (
-                                            <div className={`mt-3 grid gap-2 ${post.attachments.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                        <div className={`mt-3 grid gap-2 ${post.attachments.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                                             {post.attachments.map((attachment) => (
                                                 <div key={attachment.id} className="overflow-hidden rounded-lg">
                                                     {attachment.file_type.includes('image') ? (
-                                                            <img
-                                                                src={attachment.file_path}
-                                                                alt="Attachment"
-                                                                className="w-full rounded-lg cursor-pointer hover:opacity-95 transition-opacity"
-                                                                onClick={(e) => handleImageClick(attachment.file_path, e)}
-                                                            />
+                                                        <img
+                                                            src={attachment.file_path}
+                                                            alt="Attachment"
+                                                            className="w-full rounded-lg cursor-pointer hover:opacity-95 transition-opacity"
+                                                            onClick={(e) => handleImageClick(attachment.file_path, e)}
+                                                        />
                                                     ) : (
                                                         <a
                                                             href={attachment.file_path}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                                className="flex items-center justify-center rounded-lg bg-gray-100 p-6 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                                                            className="flex items-center justify-center rounded-lg bg-gray-100 p-6 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
                                                         >
-                                                                <DocumentIcon className="h-10 w-10 text-gray-500" />
-                                                                <span className="ml-2 font-medium">View Document</span>
+                                                            <DocumentIcon className="h-10 w-10 text-gray-500" />
+                                                            <span className="ml-2 font-medium">View Document</span>
                                                         </a>
                                                     )}
                                                 </div>
@@ -1024,62 +1016,27 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                 </Dialog>
             </div>
 
-            <Transition show={isImageModalOpen} as={Fragment}>
-                <HeadlessDialog 
-                    as="div" 
-                    className="fixed inset-0 z-50 overflow-y-auto" 
-                    onClose={() => setIsImageModalOpen(false)}
-                >
-                    <div className="flex min-h-screen items-center justify-center px-4 text-center">
-                        <Transition.Child
-                            as={Fragment}
-                            enter="ease-out duration-300"
-                            enterFrom="opacity-0"
-                            enterTo="opacity-100"
-                            leave="ease-in duration-200"
-                            leaveFrom="opacity-100"
-                            leaveTo="opacity-0"
+            {isImageModalOpen && enlargedImage && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setIsImageModalOpen(false)}>
+                    <div className="relative max-h-[90vh] max-w-[90vw]">
+                        <button 
+                            className="absolute -right-4 -top-4 rounded-full bg-white p-2 text-gray-800 shadow-lg hover:bg-gray-200"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsImageModalOpen(false);
+                            }}
                         >
-                            <HeadlessDialog.Overlay className="fixed inset-0 bg-black/75 transition-opacity" />
-                        </Transition.Child>
-
-                        <Transition.Child
-                            as={Fragment}
-                            enter="ease-out duration-300"
-                            enterFrom="opacity-0 scale-95"
-                            enterTo="opacity-100 scale-100"
-                            leave="ease-in duration-200"
-                            leaveFrom="opacity-100 scale-100"
-                            leaveTo="opacity-0 scale-95"
-                        >
-                            <div className="relative mx-auto max-w-6xl transform overflow-hidden rounded-lg bg-white p-2 text-left align-middle shadow-xl transition-all dark:bg-black">
-                                <button
-                                    type="button"
-                                    className="absolute right-2 top-2 rounded-full bg-white/10 p-2 text-gray-400 backdrop-blur-sm hover:text-gray-500 dark:text-gray-300 dark:hover:text-white"
-                                    onClick={() => setIsImageModalOpen(false)}
-                                >
-                                    <span className="sr-only">Close</span>
-                                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-                                </button>
-                                
-                                {enlargedImage && (
-                                    <div className="flex items-center justify-center p-2">
-                                        <img
-                                            src={enlargedImage}
-                                            alt="Enlarged view"
-                                            className="mx-auto max-h-[85vh] w-auto object-contain"
-                                            onError={(e) => {
-                                                console.error('Failed to load image:', enlargedImage);
-                                                e.currentTarget.src = 'https://via.placeholder.com/800x600?text=Image+Not+Available';
-                                            }}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        </Transition.Child>
+                            <XMarkIcon className="h-6 w-6" />
+                        </button>
+                        <img 
+                            src={enlargedImage} 
+                            alt="Enlarged view" 
+                            className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain"
+                            onClick={(e) => e.stopPropagation()}
+                        />
                     </div>
-                </HeadlessDialog>
-            </Transition>
+                </div>
+            )}
 
             {showErrorPopup && error && (
                 <div className="fixed bottom-4 right-4 z-50 max-w-md animate-in fade-in slide-in-from-bottom-4 duration-300">
