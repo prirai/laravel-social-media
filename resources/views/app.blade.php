@@ -39,6 +39,9 @@
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         @inertiaHead
+
+        <link rel="icon" href="/img/ssopt_v1.svg" type="image/svg+xml">
+
     </head>
     <body class="font-sans antialiased">
         @inertia
