@@ -13,6 +13,7 @@ import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { useState, useEffect, Fragment } from 'react';
 import { Dialog as HeadlessDialog, Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import PostItem from '@/components/post-item';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -699,177 +700,16 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                     {posts.length > 0 ? (
                         <div className="space-y-6">
                             {posts.map((post) => (
-                                <div 
-                                    key={post.id} 
-                                    className={`overflow-hidden rounded-xl border bg-white shadow-sm transition-all dark:bg-black ${
-                                        animatedPosts.includes(post.id) ? 'animate-in fade-in slide-in-from-bottom-4 duration-500' : 'opacity-0'
-                                    }`}
-                                    style={{ animationDelay: `${animatedPosts.indexOf(post.id) * 100}ms` }}
-                                >
-                                    <div className="p-4">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex items-start gap-3">
-                                        <UserAvatar user={post.user} className="size-10" />
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-medium">{post.user.name}</span>
-                                                        <span className="text-sm text-gray-500">@{post.user.username}</span>
-                                                        {post.user.verification_status === 'verified' && (
-                                                            <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                                                Verified
-                                                            </span>
-                                                        )}
-                                            </div>
-                                                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                                                        <CalendarIcon className="h-3 w-3" />
-                                                        <time dateTime={post.created_at}>
-                                                            {new Date(post.created_at).toLocaleDateString('en-US', {
-                                                                year: 'numeric',
-                                                                month: 'short',
-                                                                day: 'numeric',
-                                                            })}
-                                                        </time>
-                                        </div>
-                                                </div>
-                                            </div>
-
-                                        {post.user.id === authUserId && (
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                    className="text-gray-400 hover:text-red-500"
-                                                onClick={() => handleDeletePost(post.id)}
-                                            >
-                                                <TrashIcon className="h-5 w-5" />
-                                            </Button>
-                                        )}
-                                </div>
-
-                                        <div className="mt-3 whitespace-pre-wrap text-gray-700 dark:text-gray-300">{post.content}</div>
-
-                                    {post.attachments.length > 0 && (
-                                        <div className={`mt-3 grid gap-2 ${post.attachments.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                                            {post.attachments.map((attachment) => (
-                                                <div key={attachment.id} className="overflow-hidden rounded-lg">
-                                                    {attachment.file_type.includes('image') ? (
-                                                        <img
-                                                            src={attachment.file_path}
-                                                            alt="Attachment"
-                                                            className="w-full rounded-lg cursor-pointer hover:opacity-95 transition-opacity"
-                                                            onClick={(e) => handleImageClick(attachment.file_path, e)}
-                                                        />
-                                                    ) : (
-                                                        <a
-                                                            href={attachment.file_path}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center justify-center rounded-lg bg-gray-100 p-6 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-                                                        >
-                                                            <DocumentIcon className="h-10 w-10 text-gray-500" />
-                                                            <span className="ml-2 font-medium">View Document</span>
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                        <div className="mt-4 flex flex-col gap-3">
-                                            <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-6">
-                                        <button
-                                            onClick={() => handleLike(post.id)}
-                                                        className="group flex items-center gap-2 rounded-lg px-4 py-2 transition-all hover:bg-red-50 dark:hover:bg-red-900/20"
-                                        >
-                                            {post.likes.some((like) => like.user_id === authUserId) ? (
-                                                            <HeartIconSolid className="h-7 w-7 text-red-500" />
-                                            ) : (
-                                                            <HeartIcon className="h-7 w-7 text-gray-500 group-hover:text-red-500 transition-colors group-hover:scale-110 duration-200" />
-                                            )}
-                                                        <span className={`font-medium ${post.likes.some((like) => like.user_id === authUserId) ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400'}`}>
-                                                            {post.likes.length === 0 ? 'Like' : post.likes.length === 1 ? '1 Like' : `${post.likes.length} Likes`}
-                                                        </span>
-                                        </button>
-
-                                        <button
-                                            onClick={() => {
-                                                setSelectedPost(post);
-                                                setCommentOpen(true);
-                                            }}
-                                                        className="group flex items-center gap-2 rounded-lg px-4 py-2 transition-all hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                                    >
-                                                        <ChatBubbleLeftIcon className="h-7 w-7 text-gray-500 group-hover:text-blue-500 transition-colors group-hover:scale-110 duration-200" />
-                                                        <span className="font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                                                            {post.comments.length === 0 ? 'Comment' : post.comments.length === 1 ? '1 Comment' : `${post.comments.length} Comments`}
-                                                        </span>
-                                        </button>
-                                                </div>
-                                                
-                                                {/* {post.comments.length > 0 && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-gray-500 hover:text-blue-500"
-                                                        onClick={() => {
-                                                            setSelectedPost(post);
-                                                            setCommentOpen(true);
-                                                        }}
-                                                    >
-                                                        View all
-                                                    </Button>
-                                                )} */}
-                                            </div>
-                                    </div>
-                                </div>
-
-                                {post.comments.length > 0 && (
-                                    <div className="border-t bg-gray-50 px-4 py-3 dark:bg-gray-900/50">
-                                        <div className="space-y-3">
-                                                {post.comments.slice(0, 3).map((comment) => (
-                                                <div key={comment.id} className="flex items-start gap-3">
-                                                    <UserAvatar user={comment.user} className="size-8" />
-                                                        <div className="flex-1 rounded-lg bg-white p-2 shadow-sm dark:bg-black">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium">{comment.user.name}</span>
-                                                                <span className="text-xs text-gray-500">@{comment.user.username}</span>
-                                                                {comment.user.verification_status === 'verified' && (
-                                                                    <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                                                        Verified
-                                                                    </span>
-                                                            )}
-                                                            {comment.user.id === authUserId && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                        className="ml-auto h-6 w-6 text-gray-400 hover:text-red-500"
-                                                                    onClick={() => handleDeleteComment(comment.id)}
-                                                                >
-                                                                    <TrashIcon className="h-4 w-4" />
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                                
-                                                {post.comments.length > 3 && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="ml-11 text-sm text-gray-500"
-                                                        onClick={() => {
-                                                            setSelectedPost(post);
-                                                            setCommentOpen(true);
-                                                        }}
-                                                    >
-                                                        View all {post.comments.length} comments
-                                                    </Button>
-                                                )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                                <PostItem 
+                                    key={post.id}
+                                    post={post}
+                                    onLike={handleLike}
+                                    onComment={(post) => {
+                                        setSelectedPost(post);
+                                        setCommentOpen(true);
+                                    }}
+                                    onDelete={post.user.id === authUserId ? handleDeletePost : undefined}
+                                />
                             ))}
                             
                             {/* "All caught up" message */}

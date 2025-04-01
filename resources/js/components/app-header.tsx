@@ -306,43 +306,43 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                             <span className="ml-2 text-xl font-semibold text-gray-900 dark:text-white">
                                 SimpleSocial
                             </span>
-                        </Link>
+                                                    </Link>
 
                         {/* Add proper spacing between logo and navigation */}
                         <div className="hidden items-center gap-2 lg:flex">
-                            {mainNavItems.map((item) => {
-                                const isActive = page.url === item.url;
-                                return (
-                                    <Link
-                                        key={item.title}
-                                        href={item.url}
-                                        className={cn(
-                                            "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium",
-                                            isActive 
-                                                ? activeItemStyles
-                                                : inactiveItemStyles
-                                        )}
-                                    >
-                                        {item.icon && (
-                                            <Icon 
-                                                iconNode={item.icon} 
-                                                className={cn(
-                                                    "h-5 w-5", 
-                                                    isActive ? activeIconStyles : inactiveIconStyles
-                                                )} 
-                                            />
-                                        )}
-                                        {item.title}
-                                    </Link>
-                                );
-                            })}
+                        {mainNavItems.map((item) => {
+                            const isActive = page.url === item.url;
+                            return (
+                                        <Link
+                                    key={item.title}
+                                            href={item.url}
+                                    className={cn(
+                                        "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium",
+                                        isActive 
+                                            ? activeItemStyles
+                                            : inactiveItemStyles
+                                    )}
+                                >
+                                    {item.icon && (
+                                        <Icon 
+                                            iconNode={item.icon} 
+                                            className={cn(
+                                                "h-5 w-5", 
+                                                isActive ? activeIconStyles : inactiveIconStyles
+                                            )} 
+                                        />
+                                    )}
+                                            {item.title}
+                                        </Link>
+                            );
+                        })}
                         </div>
                     </div>
 
                     {/* Right side actions - add consistent spacing */}
                     <div className="flex items-center gap-3 md:gap-4">
-                        {/* Search */}
-                        <div className="hidden flex-1 md:flex md:max-w-xs lg:max-w-md xl:max-w-lg">
+                    {/* Search */}
+                    <div className="hidden flex-1 md:flex md:max-w-xs lg:max-w-md xl:max-w-lg">
                             <div className="relative" ref={searchRef}>
                                 <Button 
                                     variant="ghost" 
@@ -390,186 +390,186 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                     </div>
                                 )}
                             </div>
-                        </div>
+                    </div>
 
                         {/* Action buttons with consistent spacing */}
                         <div className="flex items-center gap-2 md:gap-3">
                             {/* Notifications Button */}
-                            <div className="relative hidden md:block" ref={notificationsRef}>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="rounded-lg"
-                                    onClick={() => {
-                                        setShowNotifications(!showNotifications);
-                                        if (!showNotifications) {
-                                            fetchNotifications();
-                                        }
-                                    }}
-                                >
-                                    <Bell className={cn(
-                                        "h-5 w-5",
-                                        page.url === "/notifications" ? activeIconStyles : inactiveIconStyles
-                                    )} />
-                                    {unreadCount > 0 && (
-                                        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
-                                            {unreadCount > 99 ? '99+' : unreadCount}
-                                        </span>
-                                    )}
-                                    <span className="sr-only">Notifications</span>
-                                </Button>
-                                {showNotifications && (
-                                    <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="font-semibold">Notifications</h3>
-                                            <div className="flex gap-2">
-                                                {unreadCount > 0 && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="rounded-lg text-xs"
-                                                        onClick={markAllAsRead}
-                                                    >
-                                                        Mark all as read
-                                                    </Button>
-                                                )}
+                        <div className="relative hidden md:block" ref={notificationsRef}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                className="rounded-lg"
+                                onClick={() => {
+                                    setShowNotifications(!showNotifications);
+                                    if (!showNotifications) {
+                                        fetchNotifications();
+                                    }
+                                }}
+                            >
+                                <Bell className={cn(
+                                    "h-5 w-5",
+                                    page.url === "/notifications" ? activeIconStyles : inactiveIconStyles
+                                )} />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
+                                )}
+                                <span className="sr-only">Notifications</span>
+                                                        </Button>
+                                            {showNotifications && (
+                                <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                                                    <div className="flex items-center justify-between">
+                                                        <h3 className="font-semibold">Notifications</h3>
+                                        <div className="flex gap-2">
+                                            {unreadCount > 0 && (
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="rounded-lg"
-                                                    onClick={() => setShowNotifications(false)}
+                                                    className="rounded-lg text-xs"
+                                                    onClick={markAllAsRead}
                                                 >
-                                                    <X className="h-5 w-5" />
+                                                    Mark all as read
                                                 </Button>
-                                            </div>
+                                            )}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                className="rounded-lg"
+                                                            onClick={() => setShowNotifications(false)}
+                                                        >
+                                                <X className="h-5 w-5" />
+                                                        </Button>
+                                                    </div>
+                                    </div>
+                                    
+                                    {isLoadingNotifications ? (
+                                        <div className="mt-4 flex items-center justify-center py-4">
+                                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary"></div>
                                         </div>
-                                        
-                                        {isLoadingNotifications ? (
-                                            <div className="mt-4 flex items-center justify-center py-4">
-                                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary"></div>
-                                            </div>
-                                        ) : notifications.length > 0 ? (
-                                            <div className="mt-2 max-h-80 overflow-y-auto">
-                                                {notifications.map((notification) => (
-                                                    <div 
-                                                        key={notification.id}
-                                                        onClick={() => handleNotificationClick(notification)}
-                                                        className={cn(
-                                                            "cursor-pointer rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700",
-                                                            !notification.read_at && "bg-blue-50 dark:bg-blue-900/20"
+                                    ) : notifications.length > 0 ? (
+                                        <div className="mt-2 max-h-80 overflow-y-auto">
+                                            {notifications.map((notification) => (
+                                                <div 
+                                                    key={notification.id}
+                                                    onClick={() => handleNotificationClick(notification)}
+                                                    className={cn(
+                                                        "cursor-pointer rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700",
+                                                        !notification.read_at && "bg-blue-50 dark:bg-blue-900/20"
+                                                    )}
+                                                >
+                                                    <div className="flex items-start gap-3">
+                                                        {notification.from_user && (
+                                                            <UserAvatar user={notification.from_user} className="size-10" />
                                                         )}
-                                                    >
-                                                        <div className="flex items-start gap-3">
-                                                            {notification.from_user && (
-                                                                <UserAvatar user={notification.from_user} className="size-10" />
-                                                            )}
-                                                            <div className="flex-1">
-                                                                <div className="text-sm">
-                                                                    {notification.type === 'friend_request' && (
-                                                                        <span>
-                                                                            <span className="font-medium">{notification.from_user?.name}</span> sent you a friend request
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="mt-1 text-xs text-gray-500">
-                                                                    {dayjs(notification.created_at).fromNow()}
-                                                                </div>
+                                                        <div className="flex-1">
+                                                            <div className="text-sm">
+                                                                {notification.type === 'friend_request' && (
+                                                                    <span>
+                                                                        <span className="font-medium">{notification.from_user?.name}</span> sent you a friend request
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="mt-1 text-xs text-gray-500">
+                                                                {dayjs(notification.created_at).fromNow()}
                                                             </div>
                                                         </div>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="mt-4 text-center text-sm text-gray-500 py-8">
-                                                No notifications yet
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="mt-4 text-center text-sm text-gray-500 py-8">
+                                            No notifications yet
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
                             {/* Messages Link */}
                             {/* <Link
-                                href="/messages"
+                            href="/messages"
+                            className={cn(
+                                "hidden items-center justify-center rounded-lg p-2 md:flex",
+                                page.url === "/messages"
+                                    ? activeItemStyles
+                                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                            )}
+                        >
+                            <MessageSquare
                                 className={cn(
-                                    "hidden items-center justify-center rounded-lg p-2 md:flex",
-                                    page.url === "/messages"
-                                        ? activeItemStyles
-                                        : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                                    "h-5 w-5",
+                                    page.url === "/messages" ? activeIconStyles : inactiveIconStyles
                                 )}
-                            >
-                                <MessageSquare
-                                    className={cn(
-                                        "h-5 w-5",
-                                        page.url === "/messages" ? activeIconStyles : inactiveIconStyles
-                                    )}
-                                />
-                                <span className="sr-only">Messages</span>
+                            />
+                            <span className="sr-only">Messages</span>
                             </Link> */}
 
-                            {/* Theme Toggle */}
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="hidden rounded-lg md:flex"
-                                onClick={toggleTheme}
-                            >
-                                <div className="relative h-5 w-5">
-                                    <Sun className="h-5 w-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-                                    <Moon className="absolute inset-0 h-5 w-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
-                                </div>
-                                <span className="sr-only">Toggle theme</span>
-                            </Button>
+                        {/* Theme Toggle */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hidden rounded-lg md:flex"
+                            onClick={toggleTheme}
+                        >
+                            <div className="relative h-5 w-5">
+                                <Sun className="h-5 w-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+                                <Moon className="absolute inset-0 h-5 w-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+                            </div>
+                                                <span className="sr-only">Toggle theme</span>
+                                            </Button>
 
                             {/* User Menu */}
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="rounded-lg">
-                                        <div className="flex items-center gap-2">
-                                            <UserAvatar
-                                                user={auth.user}
-                                                className="h-8 w-8 ring-2 ring-blue-500/20 dark:ring-blue-500/30"
-                                            />
-                                            <span className="hidden text-sm font-medium lg:inline-block">
-                                                {auth.user?.name}
-                                            </span>
-                                        </div>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg">
-                                    <DropdownMenuLabel className="font-normal">
-                                        <div className="flex flex-col space-y-1">
-                                            <p className="text-sm font-medium leading-none">{auth.user?.name}</p>
-                                            <p className="text-xs leading-none text-gray-500 dark:text-gray-400">
-                                                {auth.user?.email}
-                                            </p>
-                                        </div>
-                                    </DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <Link href={`/profile/${auth.user?.username}`}>
-                                        <DropdownMenuItem>
-                                            <User className="mr-2 h-4 w-4" />
-                                            <span>Profile</span>
-                                        </DropdownMenuItem>
-                                    </Link>
-                                    <Link href="/settings">
-                                        <DropdownMenuItem>
-                                            <Settings className="mr-2 h-4 w-4" />
-                                            <span>Settings</span>
-                                        </DropdownMenuItem>
-                                    </Link>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem asChild>
-                                        <Link href={route('logout')} method="post" className="flex w-full items-center">
-                                            <LogOut className="mr-2 h-4 w-4" />
-                                            <span>Log out</span>
-                                        </Link>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <UserAvatar
+                                            user={auth.user}
+                                            className="h-8 w-8 ring-2 ring-blue-500/20 dark:ring-blue-500/30"
+                                        />
+                                        <span className="hidden text-sm font-medium lg:inline-block">
+                                            {auth.user?.name}
+                                        </span>
+                                    </div>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg">
+                                <DropdownMenuLabel className="font-normal">
+                                    <div className="flex flex-col space-y-1">
+                                        <p className="text-sm font-medium leading-none">{auth.user?.name}</p>
+                                        <p className="text-xs leading-none text-gray-500 dark:text-gray-400">
+                                            {auth.user?.email}
+                                        </p>
+                                    </div>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <Link href={`/profile/${auth.user?.username}`}>
+                                    <DropdownMenuItem>
+                                        <User className="mr-2 h-4 w-4" />
+                                        <span>Profile</span>
                                     </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
+                                </Link>
+                                <Link href="/settings">
+                                    <DropdownMenuItem>
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        <span>Settings</span>
+                                    </DropdownMenuItem>
+                                </Link>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link href={route('logout')} method="post" className="flex w-full items-center">
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        <span>Log out</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
+            </div>
             </header>
 
             {/* Mobile bottom navigation */}

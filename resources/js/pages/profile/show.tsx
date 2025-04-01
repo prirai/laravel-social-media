@@ -9,6 +9,7 @@ import { FlagIcon, EnvelopeIcon, ChatBubbleLeftIcon, DocumentIcon, HeartIcon, Us
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
+import PostItem from '@/components/post-item';
 
 interface Post {
     id: number;
@@ -163,6 +164,19 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
 
     const handleLike = (postId: number) => {
         post(route('posts.like', { post: postId }));
+    };
+
+    const handleDeletePost = (postId: number) => {
+        if (confirm('Are you sure you want to delete this post?')) {
+            router.delete(route('posts.destroy', postId), {
+                onSuccess: () => {
+                    // Success notification could be added here
+                },
+                onError: (errors) => {
+                    console.error('Error deleting post:', errors);
+                },
+            });
+        }
     };
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -368,108 +382,21 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                     
                     <TabsContent value="posts" className="mt-0">
                         <h2 className="sr-only">Posts</h2>
-                    <div className="space-y-6">
-                        {user.posts?.length > 0 ? (
-                            user.posts.map((post) => (
-                                    <div key={post.id} className="rounded-xl border shadow-sm overflow-hidden transition-all hover:shadow-md">
-                                        <div className="border-b p-4 bg-gray-50 dark:bg-gray-900/50">
-                                        <div className="flex items-center gap-3">
-                                            <UserAvatar user={post.user} className="size-10" />
-                                            <div className="flex-1">
-                                                <p className="font-medium">{post.user.name}</p>
-                                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                                    <span>@{post.user.username}</span>
-                                                    {post.user.verification_status && (
-                                                        <span className="text-xs text-gray-500">({post.user.verification_status})</span>
-                                                    )}
-                                                    <span>•</span>
-                                                    <span>{new Date(post.created_at).toLocaleString()}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4 p-4">
-                                        <div className="whitespace-pre-wrap text-base">{post.content}</div>
-
-                                        {post.attachments?.length > 0 && (
-                                            <div className="grid grid-cols-1 gap-4">
-                                                {post.attachments.map((attachment) => (
-                                                    <div key={attachment.id} className="overflow-hidden rounded-lg">
-                                                        {attachment.file_type.includes('image') ? (
-                                                            <div className="flex justify-center">
-                                                                <img
-                                                                    src={attachment.file_path}
-                                                                    alt="Attachment"
-                                                                    className="w-full rounded-lg md:max-w-[600px] md:object-contain"
-                                                                    style={{
-                                                                        maxHeight: '80vh',
-                                                                        width: '100%',
-                                                                        height: 'auto'
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        ) : (
-                                                            <a
-                                                                href={attachment.file_path}
-                                                                target="_blank"
-                                                                className="mx-auto flex w-full max-w-[600px] items-center justify-center rounded-lg bg-gray-100 p-6 dark:bg-gray-800"
-                                                            >
-                                                                <DocumentIcon className="h-10 w-10" />
-                                                                <span className="ml-2">View PDF</span>
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                        <div className="border-t px-4 py-3 bg-white dark:bg-black">
-                                        <div className="flex items-center gap-6">
-                                            <button
-                                                onClick={() => handleLike(post.id)}
-                                                className="flex items-center gap-2 text-gray-500 hover:text-blue-500"
-                                            >
-                                                {post.likes?.some((like) => like.user_id === authUserId) ? (
-                                                    <HeartIconSolid className="h-6 w-6 text-red-500" />
-                                                ) : (
-                                                    <HeartIcon className="h-6 w-6" />
-                                                )}
-                                                <span className="text-sm font-medium">{post.likes?.length || 0}</span>
-                                            </button>
-
-                                            <div className="flex items-center gap-2 text-gray-500">
-                                                <ChatBubbleLeftIcon className="h-6 w-6" />
-                                                <span className="text-sm font-medium">{post.comments?.length || 0}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {post.comments?.length > 0 && (
-                                        <div className="border-t bg-gray-50 px-4 py-3 dark:bg-gray-900/50">
-                                            <div className="space-y-3">
-                                                {post.comments.map((comment) => (
-                                                    <div key={comment.id} className="flex items-start gap-3">
-                                                        <UserAvatar user={comment.user} className="size-8" />
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-medium">{comment.user.name}</span>
-                                                                <span className="text-sm text-gray-500">@{comment.user.username}</span>
-                                                                {comment.user.verification_status && (
-                                                                    <span className="text-sm text-gray-500">({comment.user.verification_status})</span>
-                                                                )}
-                                                            </div>
-                                                            <p className="text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ))
-                        ) : (
+                        <div className="space-y-6">
+                            {user.posts && user.posts.length > 0 ? (
+                                user.posts.map((post) => (
+                                    <PostItem 
+                                        key={post.id}
+                                        post={post}
+                                        onLike={handleLike}
+                                        onComment={(post) => {
+                                            setSelectedPost(post);
+                                            setCommentOpen(true);
+                                        }}
+                                        onDelete={isOwnProfile ? handleDeletePost : undefined}
+                                    />
+                                ))
+                            ) : (
                                 <div className="flex flex-col items-center justify-center rounded-xl border bg-white p-12 text-center dark:bg-black">
                                     <PhotoIcon className="h-16 w-16 text-gray-300 dark:text-gray-700" />
                                     <p className="mt-4 text-lg font-medium">No posts yet</p>
