@@ -48,14 +48,13 @@ class PostCrudController extends CrudController
                 'label' => 'Attachments',
                 'type' => 'closure',
                 'function' => function($entry) {
-                    if (!$entry->attachments || !is_array($entry->attachments)) {
+                    if (!$entry->attachments || $entry->attachments->isEmpty()) {
                         return '<span class="text-muted">No attachments</span>';
                     }
 
                     $html = '<div class="d-flex flex-wrap gap-2">';
                     foreach ($entry->attachments as $attachment) {
-                        // Use the attachment path as is, without modifying the '/1/'
-                        $html .= '<a href="'.$attachment.'" target="_blank" class="btn btn-sm btn-primary">
+                        $html .= '<a href="'.$attachment->file_path.'" target="_blank" class="btn btn-sm btn-primary">
                             <i class="la la-eye"></i> Preview Document
                         </a>';
                     }
