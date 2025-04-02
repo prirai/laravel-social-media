@@ -25,6 +25,7 @@ import {
     ShoppingBag,
     Mail,
     Heart as HeartIcon,
+    Home,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -167,37 +168,36 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     }, [theme]);
 
     useEffect(() => {
-        const searchUsers = async () => {
-            if (searchQuery.trim().length < 2) {
-                setSearchResults([]);
-                return;
-            }
-
-            try {
-                const response = await axios.get(route('users.search'), {
-                    params: { query: searchQuery }
-                });
-                setSearchResults(response.data.users);
-                setShowSearchResults(true);
-            } catch (error) {
-                console.error('Error searching users:', error);
-            }
-        };
-
-        const timeoutId = setTimeout(searchUsers, 300);
-        return () => clearTimeout(timeoutId);
+        if (searchQuery.trim().length >= 2) {
+            const fetchUsers = async () => {
+                try {
+                    const response = await axios.get(route('users.search'), {
+                        params: { query: searchQuery }
+                    });
+                    setSearchResults(response.data.users);
+                    setShowSearchResults(true);
+                } catch (error) {
+                    console.error('Error searching users:', error);
+                }
+            };
+            fetchUsers();
+        } else {
+            setSearchResults([]);
+        }
     }, [searchQuery]);
 
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
+        function handleClickOutside(event: MouseEvent) {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
                 setShowSearchResults(false);
             }
-        };
-
+        }
+        
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [searchRef]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -341,61 +341,78 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
 
                     {/* Right side actions - add consistent spacing */}
                     <div className="flex items-center gap-3 md:gap-4">
-                    {/* Search */}
-                    <div className="hidden flex-1 md:flex md:max-w-xs lg:max-w-md xl:max-w-lg">
-                            <div className="relative" ref={searchRef}>
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                className="group h-10 w-10 rounded-xl"
-                                    onClick={() => setShowSearchResults(!showSearchResults)}
-                                >
-                                <Search className="size-5 opacity-80 group-hover:opacity-100" />
-                                </Button>
-                                {showSearchResults && (
-                                <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                                        <Input
-                                            type="text"
-                                            placeholder="Search users..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
+                    {/* Search button - Make visible on all screen sizes */}
+                    <div className="relative" ref={searchRef}>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-lg"
+                            onClick={() => {
+                                setShowSearchResults(!showSearchResults);
+                                if (showSearchResults) {
+                                    setSearchQuery('');
+                                    setSearchResults([]);
+                                }
+                            }}
+                        >
+                            <Search className={cn(
+                                "h-5 w-5",
+                                inactiveIconStyles
+                            )} />
+                            <span className="sr-only">Search</span>
+                        </Button>
+
+                        {/* Unified search dropdown - centered on mobile, right-aligned on desktop */}
+                        {showSearchResults && (
+                            <div className={`absolute z-50 mt-2 w-80 max-w-[90vw] rounded-xl border bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800 ${
+                                window.innerWidth < 640 
+                                    ? 'left-1/2 -translate-x-1/2 right-auto' 
+                                    : 'right-0 top-full'
+                            }`}>
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold">Search Users</h3>
+                                    <Input
+                                        type="text"
+                                        placeholder="Search users..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
                                         className="mb-2 rounded-lg"
-                                            autoFocus
-                                        />
-                                        <div className="max-h-96 space-y-1 overflow-y-auto">
-                                            {searchResults.map((user) => (
-                                                <Link
-                                                    key={user.id}
-                                                    href={`/profile/${user.username}`}
+                                        autoFocus
+                                    />
+                                    <div className="max-h-96 space-y-1 overflow-y-auto">
+                                        {searchResults.map((user) => (
+                                            <Link
+                                                key={user.id}
+                                                href={route('profile.show', user.username)}
                                                 className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                    onClick={() => {
-                                                        setShowSearchResults(false);
-                                                        setSearchQuery('');
-                                                        setSearchResults([]);
-                                                    }}
-                                                >
+                                                onClick={() => {
+                                                    setShowSearchResults(false);
+                                                    setSearchQuery('');
+                                                }}
+                                            >
                                                 <UserAvatar user={user} className="size-8" />
-                                                    <div>
-                                                        <p className="font-medium">{user.name}</p>
-                                                        <p className="text-sm text-gray-500">@{user.username}</p>
-                                                    </div>
-                                                </Link>
-                                            ))}
-                                            {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
-                                                <div className="p-2 text-center text-sm text-gray-500">
-                                                    No users found
+                                                <div>
+                                                    <p className="font-medium text-sm">{user.name}</p>
+                                                    <p className="text-xs text-gray-500">@{user.username}</p>
                                                 </div>
-                                            )}
-                                        </div>
+                                            </Link>
+                                        ))}
                                     </div>
-                                )}
+                                    
+                                    {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+                                        <div className="p-2 text-center text-sm text-gray-500">
+                                            No users found
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+                        )}
                     </div>
 
                         {/* Action buttons with consistent spacing */}
                         <div className="flex items-center gap-2 md:gap-3">
                             {/* Notifications Button */}
-                        <div className="relative hidden md:block" ref={notificationsRef}>
+                        <div className="relative md:block" ref={notificationsRef}>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -488,30 +505,10 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                             )}
                         </div>
 
-                            {/* Messages Link */}
-                            {/* <Link
-                            href="/messages"
-                            className={cn(
-                                "hidden items-center justify-center rounded-lg p-2 md:flex",
-                                page.url === "/messages"
-                                    ? activeItemStyles
-                                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-                            )}
-                        >
-                            <MessageSquare
-                                className={cn(
-                                    "h-5 w-5",
-                                    page.url === "/messages" ? activeIconStyles : inactiveIconStyles
-                                )}
-                            />
-                            <span className="sr-only">Messages</span>
-                            </Link> */}
-
-                        {/* Theme Toggle */}
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="hidden rounded-lg md:flex"
+                            className="rounded-lg md:flex"
                             onClick={toggleTheme}
                         >
                             <div className="relative h-5 w-5">
@@ -573,32 +570,70 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             </header>
 
             {/* Mobile bottom navigation */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 block border-t border-gray-200 bg-white bg-gradient-to-t from-white via-white to-gray-50 px-2 py-3 shadow-lg dark:border-gray-800 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 lg:hidden">
-                <div className="mx-auto flex items-center justify-around">
-                    {mainNavItems.map((item) => {
-                        const isActive = page.url === item.url;
-                        return (
-                            <Link
-                                key={item.title}
-                                href={item.url}
-                                className={cn(
-                                    "flex flex-col items-center justify-center rounded-xl px-3 py-2 text-center",
-                                    isActive ? activeItemStyles : inactiveItemStyles
+            <div className="md:hidden">
+                <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between border-t border-gray-200 bg-white/80 px-2 py-2 backdrop-blur-md dark:border-gray-800 dark:bg-gray-950/80">
+                    {/* Home */}
+                    <Link
+                        href="/dashboard"
+                        className={cn(
+                            "flex flex-col items-center gap-0.5 rounded-lg p-1.5",
+                            page.url === "/dashboard"
+                                ? "text-blue-600 dark:text-blue-400"
+                                : "text-gray-600 dark:text-gray-400"
+                        )}
+                    >
+                        <Home className="h-5 w-5 sm:h-6 sm:w-6" />
+                        <span className="text-[10px] sm:text-xs">Home</span>
+                    </Link>
+
+                    {/* Notifications */}
+                    <div ref={mobileNotificationsRef}>
+                        <button
+                            onClick={() => {
+                                setShowNotifications(!showNotifications);
+                                if (!showNotifications) {
+                                    fetchNotifications();
+                                }
+                            }}
+                            className="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-600 dark:text-gray-400"
+                        >
+                            <div className="relative">
+                                <Bell className="h-5 w-5 sm:h-6 sm:w-6" />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] font-medium text-white sm:h-5 sm:w-5 sm:text-[10px]">
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
                                 )}
-                            >
-                                {item.icon && (
-                                    <Icon 
-                                        iconNode={item.icon} 
-                                        className={cn(
-                                            "h-6 w-6 mb-1",
-                                            isActive ? activeIconStyles : inactiveIconStyles
-                                        )}
-                                    />
-                                )}
-                                <span className="text-xs font-medium">{item.title}</span>
-                            </Link>
-                        );
-                    })}
+                            </div>
+                            <span className="text-[10px] sm:text-xs">Alerts</span>
+                        </button>
+                    </div>
+
+                    {/* Theme Toggle */}
+                    <button
+                        onClick={toggleTheme}
+                        className="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-600 dark:text-gray-400"
+                    >
+                        <div className="relative h-5 w-5 sm:h-6 sm:w-6">
+                            <Sun className="h-5 w-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90 sm:h-6 sm:w-6" />
+                            <Moon className="absolute inset-0 h-5 w-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0 sm:h-6 sm:w-6" />
+                        </div>
+                        <span className="text-[10px] sm:text-xs">Theme</span>
+                    </button>
+
+                    {/* Profile */}
+                    <Link
+                        href={route('profile.show', auth.user.username)}
+                        className={cn(
+                            "flex flex-col items-center gap-0.5 rounded-lg p-1.5",
+                            page.url.includes("/profile") && page.url.includes(auth.user.username)
+                                ? "text-blue-600 dark:text-blue-400"
+                                : "text-gray-600 dark:text-gray-400"
+                        )}
+                    >
+                        <User className="h-5 w-5 sm:h-6 sm:w-6" />
+                        <span className="text-[10px] sm:text-xs">Profile</span>
+                    </Link>
                 </div>
             </div>
 

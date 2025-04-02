@@ -717,7 +717,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                 <div className="relative">
                                     <div className="absolute inset-0 flex items-center">
                                         <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
-                                    </div>
+                                            </div>
                                     <div className="relative flex justify-center">
                                         <span className="bg-white px-4 text-sm font-medium text-gray-500 dark:bg-gray-950 dark:text-gray-400">
                                             You're all caught up ✨
@@ -725,8 +725,8 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ) : (
+                                                        </div>
+                                                    ) : (
                         <div className="flex min-h-[50vh] flex-col items-center justify-center rounded-xl border bg-white p-12 dark:bg-black">
                             <div className="mb-6 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 p-5 shadow-inner dark:from-blue-900/30 dark:to-indigo-900/30">
                                 <PhotoIcon className="h-14 w-14 text-blue-500" />
@@ -755,9 +755,9 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                             </Button>
                             
                             <PlaceholderPattern className="absolute inset-0 -z-10 size-full stroke-neutral-900/10 dark:stroke-neutral-100/10" />
-                        </div>
-                    )}
-                </div>
+                                        </div>
+                                    )}
+                                </div>
 
                 <Dialog open={commentOpen} onOpenChange={setCommentOpen}>
                     <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden">
@@ -770,8 +770,8 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     </DialogDescription>
                                 )}
                         </DialogHeader>
-                        </div>
-                        
+                                </div>
+
                         <div className="p-6">
                             {selectedPost && selectedPost.comments.length > 0 && (
                                 <div className="mb-6">
@@ -781,10 +781,10 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     <div className="max-h-[250px] space-y-3 overflow-y-auto rounded-lg bg-gray-50 p-4 dark:bg-gray-900/50">
                                         {selectedPost.comments.map((comment) => (
                                             <div key={comment.id} className="flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${selectedPost.comments.indexOf(comment) * 50}ms` }}>
-                                                <UserAvatar user={comment.user} className="size-8" />
+                                                    <UserAvatar user={comment.user} className="size-8" />
                                                 <div className="flex-1 rounded-lg bg-white p-3 shadow-sm dark:bg-black">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-medium">{comment.user.name}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium">{comment.user.name}</span>
                                                         <span className="text-xs text-gray-500">@{comment.user.username}</span>
                                                         <span className="text-xs text-gray-400">
                                                             {new Date(comment.created_at).toLocaleDateString('en-US', {
@@ -796,25 +796,25 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                             <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                                                                 Verified
                                                             </span>
-                                                        )}
-                                                        {comment.user.id === authUserId && (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
+                                                            )}
+                                                            {comment.user.id === authUserId && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
                                                                 className="ml-auto h-6 w-6 text-gray-400 hover:text-red-500"
-                                                                onClick={() => handleDeleteComment(comment.id)}
-                                                            >
-                                                                <TrashIcon className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-                                                    </div>
+                                                                    onClick={() => handleDeleteComment(comment.id)}
+                                                                >
+                                                                    <TrashIcon className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
                                                     <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
                                                 </div>
-                                            </div>
-                                        ))}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
                             
                             <form onSubmit={handleCommentSubmit} className="space-y-5">
                                 <div className="flex items-start gap-3">

@@ -186,13 +186,6 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
         },
     ];
 
-    // Add these debug logs
-    console.log('Full user data:', user);
-    console.log('User posts:', user.posts);
-    if (user.posts.length > 0) {
-        console.log('First post details:', user.posts[0]);
-    }
-
     const [activeTab, setActiveTab] = useState('posts');
 
     return (
@@ -336,11 +329,11 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                                     </DialogContent>
                                 </Dialog>
                                         </>
-                                    )}
+                        )}
                                 </div>
-                            </div>
-                        </div>
-                        
+                    </div>
+                </div>
+
                         {/* Profile Stats */}
                         <div className="mt-6 flex flex-wrap gap-6 border-t border-gray-200 dark:border-gray-800 pt-4">
                             <div className="flex items-center gap-2">
@@ -362,10 +355,10 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                                           })}` 
                                         : 'Joined recently'}
                                 </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
 
                 {/* Tabs for Posts and Friends */}
                 <Tabs defaultValue="posts" value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -401,9 +394,9 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                                     <PhotoIcon className="h-16 w-16 text-gray-300 dark:text-gray-700" />
                                     <p className="mt-4 text-lg font-medium">No posts yet</p>
                                     <p className="mt-2 text-sm text-gray-500">This user hasn't shared any posts.</p>
-                                </div>
-                            )}
-                        </div>
+                                            </div>
+                                        )}
+                                    </div>
                     </TabsContent>
                     
                     <TabsContent value="friends" className="mt-0">
@@ -432,10 +425,10 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                                                     {friend.verification_status}
                                                 </span>
                                             )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                         ) : (
                             <div className="flex flex-col items-center justify-center rounded-xl border bg-white p-12 text-center dark:bg-black">
                                 <UserGroupIcon className="h-16 w-16 text-gray-300 dark:text-gray-700" />
