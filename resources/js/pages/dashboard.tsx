@@ -698,26 +698,29 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                 </div>
 
                     {posts.length > 0 ? (
-                        <div className="space-y-6">
-                            {posts.map((post) => (
-                                <PostItem 
-                                    key={post.id}
-                                    post={post}
-                                    onLike={handleLike}
-                                    onComment={(post) => {
-                                        setSelectedPost(post);
-                                        setCommentOpen(true);
-                                    }}
-                                    onDelete={post.user.id === authUserId ? handleDeletePost : undefined}
-                                />
-                            ))}
+                        <>
+                            <div className="columns-1 gap-6 space-y-6 lg:columns-2">
+                                {posts.map((post) => (
+                                    <div key={post.id} className="break-inside-avoid mb-6">
+                                        <PostItem 
+                                            post={post}
+                                            onLike={handleLike}
+                                            onComment={(post) => {
+                                                setSelectedPost(post);
+                                                setCommentOpen(true);
+                                            }}
+                                            onDelete={post.user.id === authUserId ? handleDeletePost : undefined}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
                             
                             {/* "All caught up" message */}
                             <div className="mt-10 mb-14 text-center">
                                 <div className="relative">
                                     <div className="absolute inset-0 flex items-center">
                                         <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
-                                            </div>
+                                    </div>
                                     <div className="relative flex justify-center">
                                         <span className="bg-white px-4 text-sm font-medium text-gray-500 dark:bg-gray-950 dark:text-gray-400">
                                             You're all caught up ✨
@@ -725,8 +728,8 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     </div>
                                 </div>
                             </div>
-                                                        </div>
-                                                    ) : (
+                        </>
+                    ) : (
                         <div className="flex min-h-[50vh] flex-col items-center justify-center rounded-xl border bg-white p-12 dark:bg-black">
                             <div className="mb-6 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 p-5 shadow-inner dark:from-blue-900/30 dark:to-indigo-900/30">
                                 <PhotoIcon className="h-14 w-14 text-blue-500" />
@@ -755,9 +758,9 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                             </Button>
                             
                             <PlaceholderPattern className="absolute inset-0 -z-10 size-full stroke-neutral-900/10 dark:stroke-neutral-100/10" />
-                                        </div>
-                                    )}
-                                </div>
+                        </div>
+                    )}
+                </div>
 
                 <Dialog open={commentOpen} onOpenChange={setCommentOpen}>
                     <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden">
