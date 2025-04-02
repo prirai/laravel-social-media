@@ -569,70 +569,49 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             </div>
             </header>
 
-            {/* Mobile bottom navigation */}
+            {/* Mobile bottom navigation - improved styling */}
             <div className="md:hidden">
-                <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between border-t border-gray-200 bg-white/80 px-2 py-2 backdrop-blur-md dark:border-gray-800 dark:bg-gray-950/80">
+                <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-gray-200 bg-white/90 px-2 py-3 backdrop-blur-md dark:border-gray-800 dark:bg-gray-950/90">
                     {/* Home */}
                     <Link
                         href="/dashboard"
                         className={cn(
-                            "flex flex-col items-center gap-0.5 rounded-lg p-1.5",
+                            "flex flex-col items-center gap-0.5 rounded-full p-2",
                             page.url === "/dashboard"
                                 ? "text-blue-600 dark:text-blue-400"
-                                : "text-gray-600 dark:text-gray-400"
+                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                         )}
                     >
-                        <Home className="h-5 w-5 sm:h-6 sm:w-6" />
-                        <span className="text-[10px] sm:text-xs">Home</span>
+                        <Home className="h-6 w-6" />
+                        <span className="text-[10px]">Home</span>
                     </Link>
 
-                    {/* Notifications */}
-                    <div ref={mobileNotificationsRef}>
-                        <button
-                            onClick={() => {
-                                setShowNotifications(!showNotifications);
-                                if (!showNotifications) {
-                                    fetchNotifications();
-                                }
-                            }}
-                            className="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-600 dark:text-gray-400"
-                        >
-                            <div className="relative">
-                                <Bell className="h-5 w-5 sm:h-6 sm:w-6" />
-                                {unreadCount > 0 && (
-                                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] font-medium text-white sm:h-5 sm:w-5 sm:text-[10px]">
-                                        {unreadCount > 99 ? '99+' : unreadCount}
-                                    </span>
-                                )}
-                            </div>
-                            <span className="text-[10px] sm:text-xs">Alerts</span>
-                        </button>
-                    </div>
-
-                    {/* Theme Toggle */}
-                    <button
-                        onClick={toggleTheme}
-                        className="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-600 dark:text-gray-400"
-                    >
-                        <div className="relative h-5 w-5 sm:h-6 sm:w-6">
-                            <Sun className="h-5 w-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90 sm:h-6 sm:w-6" />
-                            <Moon className="absolute inset-0 h-5 w-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0 sm:h-6 sm:w-6" />
-                        </div>
-                        <span className="text-[10px] sm:text-xs">Theme</span>
-                    </button>
-
-                    {/* Profile */}
+                    {/* Marketplace */}
                     <Link
-                        href={route('profile.show', auth.user.username)}
+                        href="/marketplace"
                         className={cn(
-                            "flex flex-col items-center gap-0.5 rounded-lg p-1.5",
-                            page.url.includes("/profile") && page.url.includes(auth.user.username)
+                            "flex flex-col items-center gap-0.5 rounded-full p-2",
+                            page.url === "/marketplace"
                                 ? "text-blue-600 dark:text-blue-400"
-                                : "text-gray-600 dark:text-gray-400"
+                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                         )}
                     >
-                        <User className="h-5 w-5 sm:h-6 sm:w-6" />
-                        <span className="text-[10px] sm:text-xs">Profile</span>
+                        <ShoppingBag className="h-6 w-6" />
+                        <span className="text-[10px]">Market</span>
+                    </Link>
+
+                    {/* Messages */}
+                    <Link
+                        href="/messages"
+                        className={cn(
+                            "flex flex-col items-center gap-0.5 rounded-full p-2",
+                            page.url === "/messages"
+                                ? "text-blue-600 dark:text-blue-400"
+                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        )}
+                    >
+                        <Mail className="h-6 w-6" />
+                        <span className="text-[10px]">Messages</span>
                     </Link>
                 </div>
             </div>
