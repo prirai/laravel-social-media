@@ -28,6 +28,7 @@ class User extends Authenticatable
         'password',
         'avatar',
         'verification_status',
+        'public_key',
     ];
 
     /**
@@ -56,7 +57,8 @@ class User extends Authenticatable
         'name',
         'username',
         'avatar',
-        'verification_status'
+        'verification_status',
+        'public_key'
     ];
     
     /**

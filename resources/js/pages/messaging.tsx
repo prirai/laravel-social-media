@@ -5,13 +5,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import UserAvatar from '@/components/user-avatar';
+import { EncryptionSetupDialog } from '@/components/encryption-setup-dialog';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { ArrowLeftIcon, MagnifyingGlassIcon, PaperAirplaneIcon, PlusIcon, TrashIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import { File, FileText, Paperclip, X } from 'lucide-react';
+import { File, FileText, LockIcon, Paperclip, Shield, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { encryptMessage, decryptMessage, getPrivateKeyFromCookie } from '@/utils/crypto';
+import { EncryptionNotice } from '@/components/encryption-notice';
+import { cn } from '@/lib/utils';
+import { Lock } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -31,6 +39,7 @@ interface User {
     unreadCount: number;
     isCurrentUser?: boolean;
     isFriend?: boolean;
+    public_key?: string;
 }
 
 interface MessageUser {
@@ -48,6 +57,9 @@ interface DirectMessage {
     created_at: string;
     expires_at: string;
     attachments?: MessageAttachment[];
+    is_encrypted?: boolean;
+    decrypted_content?: string;
+    original_content?: string;
 }
 
 interface GroupMessage {
@@ -57,6 +69,8 @@ interface GroupMessage {
     created_at: string;
     user: MessageUser;
     attachments?: MessageAttachment[];
+    is_encrypted?: boolean;
+    original_content?: string;
 }
 
 type Message = DirectMessage | GroupMessage;
@@ -95,8 +109,8 @@ interface Group {
 
 type Chat = User | Group;
 
-function isGroup(chat: Chat): chat is Group {
-    return 'isGroup' in chat && chat.isGroup === true;
+function isGroup(chat: Chat | null): chat is Group {
+    return chat !== null && 'isGroup' in chat && chat.isGroup === true;
 }
 
 interface MessagingProps {
@@ -137,32 +151,120 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
     const [showExpirationOptions, setShowExpirationOptions] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [message, setMessage] = useState('');
+    const [isEncrypted, setIsEncrypted] = useState(false);
+    const [isEncryptionSetupOpen, setIsEncryptionSetupOpen] = useState(false);
+    const [hasEncryptionKeys, setHasEncryptionKeys] = useState(false);
+    const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
+    const [isEncryptionToggled, setIsEncryptionToggled] = useState(false);
+    const [showEncryptionWarning, setShowEncryptionWarning] = useState(false);
+    const [isSending, setIsSending] = useState(false);
+    const [initialLoadDone, setInitialLoadDone] = useState(false);
+    const [showRefreshNotice, setShowRefreshNotice] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     const { data, setData, reset } = useForm({
         content: '',
         expires_in: 24,
     });
 
+    useEffect(() => {
+        const privateKey = getPrivateKeyFromCookie();
+        const hasKeys = !!privateKey;
+        setHasEncryptionKeys(hasKeys);
+        
+        if (!hasKeys) {
+            const timer = setTimeout(() => {
+                setShowEncryptionSetup(true);
+                setIsEncryptionSetupOpen(true);
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, []);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    useEffect(() => {
-        if (selectedChat) {
-            setLoading(true);
-            const endpoint = isGroup(selectedChat)
-                ? route('groups.messages', selectedChat.id.replace('group_', ''))
-                : route('messages.get', selectedChat.id);
+    // Memoize the selected chat ID to prevent unnecessary rerenders
+    const selectedChatId = selectedChat ? selectedChat.id : null;
 
-            axios
-                .get(endpoint)
-                .then((response) => {
-                    setMessages(response.data.messages);
-                    scrollToBottom();
-                })
-                .finally(() => setLoading(false));
-        }
-    }, [selectedChat]);
+    useEffect(() => {
+        if (!selectedChat) return;
+        
+        setLoading(true);
+        setMessages([]);
+        
+        const endpoint = isGroup(selectedChat)
+            ? route('groups.messages', selectedChat.id.replace('group_', ''))
+            : route('messages.get', selectedChat.id);
+
+        axios.get(endpoint)
+            .then((response) => {
+                const loadedMessages = response.data.messages || [];
+                
+                if (!isGroup(selectedChat)) {
+                    const privateKey = getPrivateKeyFromCookie();
+                    
+                    const processedMessages = loadedMessages.map((message: DirectMessage) => {
+                        // If this is an encrypted message sent by the current user
+                        if (message.is_encrypted && message.sender_id === auth.user?.id) {
+                            return {
+                                ...message,
+                                decrypted_content: "[Encrypted Message]"
+                            };
+                        }
+                        
+                        // If message is encrypted and we have a private key, try to decrypt
+                        if (message.is_encrypted && message.sender_id !== auth.user?.id) {
+                            if (privateKey) {
+                                try {
+                                    const decryptedContent = decryptMessage(message.content, privateKey);
+                                    return {
+                                        ...message,
+                                        decrypted_content: decryptedContent
+                                    };
+                                } catch (error) {
+                                    console.error('Failed to decrypt message:', error);
+                                    return {
+                                        ...message,
+                                        decrypted_content: "[Unable to decrypt message]"
+                                    };
+                                }
+                            }
+                        }
+                        
+                        return message;
+                    });
+                    
+                    setMessages(processedMessages);
+                    
+                    if (response.data.user && response.data.user.public_key) {
+                        setUsers(prevUsers => 
+                            prevUsers.map(user => 
+                                user.id === selectedChat.id 
+                                    ? { ...user, public_key: response.data.user.public_key } 
+                                    : user
+                            )
+                        );
+                        
+                        setSelectedChat((prevChat) => {
+                            if (!prevChat || isGroup(prevChat)) return prevChat;
+                            return { ...prevChat, public_key: response.data.user.public_key };
+                        });
+                    }
+                } else {
+                    setMessages(loadedMessages);
+                }
+                
+                scrollToBottom();
+            })
+            .catch(error => {
+                console.error('Error fetching messages:', error);
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    }, [selectedChat ? (isGroup(selectedChat) ? `group_${selectedChat.id}` : selectedChat.id) : null]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -196,12 +298,79 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
     const sendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedChat || (!message.trim() && !selectedFiles.length)) return;
+        
+        if (isSending) return;
+        
+        setIsSending(true);
+
+        if (isEncrypted && isGroup(selectedChat)) {
+            alert('Encryption is only supported for direct messages');
+            setIsSending(false);
+            return;
+        }
 
         const formData = new FormData();
-        formData.append('content', message);
+        let contentToSend = message;
+        const isContentEncrypted = isEncrypted && !isGroup(selectedChat);
+        const originalContent = message;
+
+        if (isContentEncrypted) {
+            let recipientPublicKey = selectedChat.public_key;
+            
+            if (!recipientPublicKey) {
+                try {
+                    recipientPublicKey = await ensurePublicKey(selectedChat.id);
+                    
+                    if (!recipientPublicKey) {
+                        alert('Cannot send encrypted message: recipient has no public key');
+                        setIsSending(false);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error fetching public key:', error);
+                    alert('Failed to fetch recipient\'s public key');
+                    setIsSending(false);
+                    return;
+                }
+            }
+            
+            try {
+                contentToSend = encryptMessage(message, recipientPublicKey);
+                formData.append('is_encrypted', '1');
+            } catch (error) {
+                console.error('Encryption error:', error);
+                alert('Failed to encrypt message');
+                setIsSending(false);
+                return;
+            }
+        }
+
+        formData.append('content', contentToSend);
         selectedFiles.forEach((file) => {
             formData.append('attachments[]', file);
         });
+
+        const tempMessage = message;
+        const tempTime = new Date().toISOString();
+        
+        setMessage('');
+        setSelectedFiles([]);
+        
+        if (!isGroup(selectedChat)) {
+            const optimisticMessage: DirectMessage = {
+                id: -Date.now(),
+                content: isContentEncrypted ? contentToSend : tempMessage,
+                sender_id: auth.user?.id || 0,
+                created_at: tempTime,
+                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                is_encrypted: isContentEncrypted,
+                decrypted_content: isContentEncrypted ? originalContent : undefined,
+                original_content: originalContent,
+            };
+            
+            setMessages(prev => [...prev, optimisticMessage]);
+            scrollToBottom();
+        }
 
         try {
             const endpoint = isGroup(selectedChat)
@@ -214,20 +383,35 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                 },
             });
 
-            setMessages((prev) => [...prev, response.data.message]);
-            setMessage('');
-            setSelectedFiles([]);
+            let messageData = response.data.message;
+            if (messageData.is_encrypted && messageData.sender_id === auth.user?.id) {
+                messageData = {
+                    ...messageData,
+                    decrypted_content: originalContent,
+                    original_content: originalContent
+                };
+            }
+
+            setMessages((prev) => {
+                const filteredMessages = prev.filter(msg => 
+                    !('sender_id' in msg) || msg.id > 0
+                );
+                
+                return [...filteredMessages, messageData];
+            });
+            
+            setIsEncrypted(false);
 
             if (isGroup(selectedChat)) {
                 setGroups((currentGroups) =>
                     currentGroups.map((group) =>
-                        group.id === selectedChat.id ? { ...group, lastMessage: message, lastMessageTime: 'Just now' } : group,
+                        group.id === selectedChat.id ? { ...group, lastMessage: tempMessage, lastMessageTime: 'Just now' } : group,
                     ),
                 );
             } else {
                 setUsers((currentUsers) =>
                     currentUsers.map((user) =>
-                        user.id === selectedChat.id ? { ...user, lastMessage: message, lastMessageTime: 'Just now' } : user,
+                        user.id === selectedChat.id ? { ...user, lastMessage: tempMessage, lastMessageTime: 'Just now' } : user,
                     ),
                 );
             }
@@ -236,6 +420,10 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
             scrollToBottom();
         } catch (error) {
             console.error('Error sending message:', error);
+            setMessage(tempMessage);
+            setMessages(prev => prev.filter(msg => msg.id > 0));
+        } finally {
+            setIsSending(false);
         }
     };
 
@@ -278,12 +466,13 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         (user) => user.name.toLowerCase().includes(searchQuery.toLowerCase()) || user.username.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
-    const startNewConversation = (user: {
+    const startNewConversation = async (user: {
         id: number;
         name: string;
         username: string;
         avatar: string | null;
         verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
+        public_key?: string;
     }) => {
         const newUser: User = {
             ...user,
@@ -291,6 +480,19 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
             lastMessageTime: null,
             unreadCount: 0,
         };
+        
+        if (!user.public_key) {
+            try {
+                const response = await axios.get(route('messages.get', user.id));
+                const existingUser = users.find(u => u.id === user.id);
+                if (existingUser && existingUser.public_key) {
+                    newUser.public_key = existingUser.public_key;
+                }
+            } catch (error) {
+                console.error('Error fetching user data:', error);
+            }
+        }
+        
         setSelectedChat(newUser);
         setIsNewMessageOpen(false);
     };
@@ -318,21 +520,192 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
     const handleDeleteMessage = (messageId: number) => {
         if (!selectedChat) return;
 
-        // Optimistically update the UI
         setMessages((prevMessages) => prevMessages.filter((message) => message.id !== messageId));
 
         router.delete(route('messages.destroy', messageId), {
             preserveScroll: true,
             onError: () => {
-                // Revert the optimistic update on error
                 setMessages((prevMessages) => [...prevMessages]);
             },
         });
     };
 
+    const ensurePublicKey = async (userId: number): Promise<string | undefined> => {
+        const existingUser = users.find(u => u.id === userId);
+        if (existingUser?.public_key) {
+            return existingUser.public_key;
+        }
+        
+        try {
+            const response = await axios.get(route('messages.get', userId));
+            if (response.data.user?.public_key) {
+                setUsers(prevUsers => 
+                    prevUsers.map(user => 
+                        user.id === userId 
+                            ? { ...user, public_key: response.data.user.public_key } 
+                            : user
+                    )
+                );
+                
+                if (selectedChat && !isGroup(selectedChat) && selectedChat.id === userId) {
+                    setSelectedChat((prevChat) => {
+                        if (!prevChat || isGroup(prevChat)) return prevChat;
+                        const updatedChat: User = {
+                            ...prevChat,
+                            public_key: response.data.user.public_key
+                        };
+                        return updatedChat;
+                    });
+                }
+                
+                return response.data.user.public_key;
+            } else {
+                setShowEncryptionWarning(true);
+                
+                setTimeout(() => {
+                    setShowEncryptionWarning(false);
+                }, 5000);
+            }
+        } catch (error) {
+            console.error('Error fetching public key for user:', error);
+        }
+        
+        return undefined;
+    };
+
+    const toggleEncryption = async () => {
+        if (!hasEncryptionKeys) {
+            setIsEncryptionSetupOpen(true);
+            return;
+        }
+        
+        if (!selectedChat || isGroup(selectedChat)) {
+            alert('Encryption is only supported for direct messages');
+            return;
+        }
+        
+        if (!selectedChat.public_key) {
+            try {
+                const publicKey = await ensurePublicKey(selectedChat.id);
+                if (!publicKey) {
+                    alert('Cannot enable encryption: recipient has no public key');
+                    return;
+                }
+            } catch (error) {
+                console.error('Error checking recipient public key:', error);
+                alert('Cannot enable encryption at this time. Please try again.');
+                return;
+            }
+        }
+        
+        setIsEncrypted(!isEncrypted);
+        setIsEncryptionToggled(!isEncrypted);
+    };
+
+    const refreshMessages = () => {
+        if (!selectedChat) return;
+        
+        setShowRefreshNotice(false);
+        setRefreshing(true);
+        
+        // Different endpoints for group vs direct messages
+        const endpoint = isGroup(selectedChat)
+            ? route('groups.messages', selectedChat.id.replace('group_', ''))
+            : route('messages.get', selectedChat.id);
+        
+        axios.get(endpoint)
+            .then(response => {
+                const loadedMessages = response.data.messages || [];
+                
+                if (!isGroup(selectedChat)) {
+                    // Process direct messages for encryption
+                    const processedMessages = loadedMessages.map((message: DirectMessage) => {
+                        // If this is an encrypted message sent by the current user
+                        if (message.is_encrypted && message.sender_id === auth.user?.id) {
+                            return {
+                                ...message,
+                                decrypted_content: "[Encrypted Message]"
+                            };
+                        }
+                        
+                        // If message is encrypted and we have a private key, try to decrypt
+                        if (message.is_encrypted && message.sender_id !== auth.user?.id) {
+                            const privateKey = getPrivateKeyFromCookie();
+                            if (privateKey) {
+                                try {
+                                    const decryptedContent = decryptMessage(message.content, privateKey);
+                                    return {
+                                        ...message,
+                                        decrypted_content: decryptedContent
+                                    };
+                                } catch (error) {
+                                    console.error('Failed to decrypt message:', error);
+                                    return {
+                                        ...message,
+                                        decrypted_content: "[Unable to decrypt message]"
+                                    };
+                                }
+                            }
+                        }
+                        
+                        return message;
+                    });
+                    
+                    setMessages(processedMessages);
+                    
+                    // Update user's public key if available
+                    if (response.data.user && response.data.user.public_key) {
+                        setUsers(prevUsers => 
+                            prevUsers.map(user => 
+                                user.id === selectedChat.id 
+                                    ? { ...user, public_key: response.data.user.public_key } 
+                                    : user
+                            )
+                        );
+                        
+                        setSelectedChat((prevChat) => {
+                            if (!prevChat || isGroup(prevChat)) return prevChat;
+                            return { ...prevChat, public_key: response.data.user.public_key };
+                        });
+                    }
+                } else {
+                    // For group messages, just set them directly
+                    setMessages(loadedMessages);
+                }
+                
+                // Show refresh notification
+                setRefreshing(false);
+                setShowRefreshNotice(true);
+                setTimeout(() => {
+                    setShowRefreshNotice(false);
+                }, 2000);
+                
+                // Scroll to bottom to show newest messages
+                scrollToBottom();
+            })
+            .catch(error => {
+                console.error('Error refreshing messages:', error);
+                setRefreshing(false);
+            });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs} fullWidth={true}>
             <Head title="Messages" />
+            
+            <EncryptionSetupDialog 
+                open={isEncryptionSetupOpen || showEncryptionSetup} 
+                onOpenChange={(isOpen) => {
+                    setIsEncryptionSetupOpen(isOpen);
+                    setShowEncryptionSetup(isOpen);
+                }} 
+                onSetupComplete={() => {
+                    setIsEncryptionSetupOpen(false);
+                    setShowEncryptionSetup(false);
+                    setHasEncryptionKeys(true);
+                }}
+            />
+            
             <div className="flex h-[calc(100vh-4rem)] flex-1 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
                 <div
                     className={`${isMobileView && selectedChat ? 'hidden' : 'flex'} ${isMobileView ? 'fixed left-0 right-0 top-[64px] bottom-0 z-40 pt-4 pb-16 px-2' : 'static'} flex-col border-r border-gray-200 bg-white md:static md:w-80 md:p-0 dark:border-gray-800 dark:bg-black`}
@@ -441,6 +814,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
 
                     <div className="flex-1 overflow-y-auto">
                         <div className="space-y-1 p-2">
+                            <EncryptionNotice className="mb-2" />
                             {[...users, ...groups]
                                 .sort((a, b) => {
                                     if ('isCurrentUser' in a && a.isCurrentUser) return -1;
@@ -518,6 +892,20 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                 <div className="flex-1">
                     {selectedChat ? (
                         <div className="flex h-full flex-col">
+                            {showEncryptionWarning && !isGroup(selectedChat) && (
+                                <div className="p-4">
+                                    <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900">
+                                        <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                        <AlertTitle className="text-amber-800 dark:text-amber-400">
+                                            End-to-End Encryption Not Available
+                                        </AlertTitle>
+                                        <AlertDescription className="text-amber-700 dark:text-amber-500">
+                                            {selectedChat.name} hasn't set up encryption yet. Messages will be sent unencrypted. When they set up their keys, you'll be able to send encrypted messages.
+                                        </AlertDescription>
+                                    </Alert>
+                                </div>
+                            )}
+                            
                             <div className="z-10 flex justify-center p-4">
                                 <div className="flex w-full max-w-3xl items-center justify-between rounded-full border border-gray-200 bg-white px-6 py-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                                     <div className="flex items-center gap-4">
@@ -551,20 +939,34 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                     </div>
                                     
                                     <div className="flex items-center">
-                                        {/* Optional: Add action buttons here */}
-                                            </div>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={refreshMessages} 
+                                            disabled={refreshing}
+                                            className="h-9 w-9 rounded-full p-0"
+                                            title="Refresh messages"
+                                        >
+                                            <ArrowPathIcon className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="relative flex-1 overflow-hidden">
                                 <div className="absolute inset-0 overflow-y-auto pb-[140px] md:pb-[100px]">
                                     <div className="flex min-h-full flex-col justify-end p-4">
-                                        {loading ? (
-                                            <div className="flex h-full items-center justify-center">
-                                                <div className="text-gray-500 dark:text-gray-400">Loading messages...</div>
-                                            </div>
-                                        ) : (
+                                        {/* Loading indicator removed as it's now shown in the refresh button */}
+                                        
                                             <div className="space-y-4">
+                                                {showRefreshNotice && (
+                                                    <div className="sticky top-0 z-10 mb-4 flex justify-center">
+                                                        <div className="flex items-center gap-2 rounded-full bg-green-100 px-4 py-2 text-green-800 shadow-md dark:bg-green-900 dark:text-green-200 transition-opacity">
+                                                            <span className="text-sm">Messages refreshed</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
                                                 {!isGroup(selectedChat) && (
                                                     <div className="flex justify-center">
                                                         <div className="rounded-full bg-gray-100 px-4 py-1 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
@@ -572,7 +974,16 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                         </div>
                                                     </div>
                                                 )}
-                                                {messages.map((message, index) => {
+                                            
+                                            {messages.length === 0 && !loading ? (
+                                                <div className="flex justify-center p-8">
+                                                    <div className="text-center text-gray-500 dark:text-gray-400">
+                                                        <p>No messages yet</p>
+                                                        <p className="text-sm mt-1">Start a conversation with {!isGroup(selectedChat) ? selectedChat?.name : 'the group'}</p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                messages.map((message, index) => {
                                                     const isCurrentUser = isGroup(selectedChat)
                                                         ? isGroupMessage(message) && isCurrentUserGroupMessage(message)
                                                         : isDirectMessage(message) && isCurrentUserMessage(message);
@@ -617,7 +1028,27 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                                     )}
                                                                 <div className="flex flex-col gap-1">
                                                                     <div className="flex items-start justify-between gap-2">
-                                                                        <p className="text-sm">{message.content}</p>
+                                                                        <p className="text-sm">
+                                                                            {message.is_encrypted && (
+                                                                                <span className="inline-flex items-center mr-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded-md text-xs font-medium">
+                                                                                    <Lock className="h-3 w-3 mr-1" />
+                                                                                    E2E
+                                                                                </span>
+                                                                            )}
+                                                                            {(() => {
+                                                                                // For direct messages with encryption
+                                                                                if (isDirectMessage(message) && message.is_encrypted) {
+                                                                                    // Current user's encrypted messages
+                                                                                    if (isCurrentUser) {
+                                                                                        return message.decrypted_content || "[Encrypted Message]";
+                                                                                    }
+                                                                                    // Other user's encrypted messages
+                                                                                    return message.decrypted_content || "[Encrypted message]";
+                                                                                }
+                                                                                // Regular messages
+                                                                                return message.content;
+                                                                            })()}
+                                                                        </p>
                                                                         {!isGroup(selectedChat) && isCurrentUser && (
                                                                             <Button
                                                                                 variant="ghost"
@@ -681,16 +1112,28 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                                <div className="mt-1 flex items-center justify-end text-xs opacity-70">
+                                                                <div className="mt-1 flex items-center justify-end gap-2 text-xs opacity-70">
+                                                                    {message.is_encrypted && (
+                                                                        <span className="flex items-center gap-1 text-blue-500 dark:text-blue-400">
+                                                                            <Lock className="h-3 w-3" />
+                                                                            {isDirectMessage(message) && isCurrentUser ? (
+                                                                                <span title="Only you can see the plaintext. The recipient receives the encrypted version.">
+                                                                                    Sent encrypted
+                                                                                </span>
+                                                                            ) : (
+                                                                                "Encrypted"
+                                                                            )}
+                                                                        </span>
+                                                                    )}
                                                                     <span>{new Date(message.created_at).toLocaleTimeString()}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     );
-                                                })}
+                                                })
+                                            )}
                                                 <div ref={messagesEndRef} />
                                             </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -747,12 +1190,35 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                         >
                                             <Paperclip className="h-5 w-5" />
                                         </label>
+                                        
+                                        {selectedChat && !isGroup(selectedChat) && (
+                                            <button
+                                                type="button"
+                                                onClick={toggleEncryption}
+                                                className={`flex h-10 w-10 items-center justify-center rounded-full border ${
+                                                    isEncrypted 
+                                                        ? 'border-green-500 bg-green-100 text-green-500 dark:border-green-700 dark:bg-green-950 dark:text-green-400' 
+                                                        : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-200 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800'
+                                                }`}
+                                                title={
+                                                    !selectedChat.public_key 
+                                                    ? `${selectedChat.name} hasn't set up encryption yet` 
+                                                    : isEncrypted 
+                                                    ? "Encryption enabled" 
+                                                    : "Enable encryption"
+                                                }
+                                                disabled={!selectedChat.public_key}
+                                            >
+                                                <LockIcon className={`h-5 w-5 ${!selectedChat.public_key ? 'opacity-50' : ''}`} />
+                                            </button>
+                                        )}
+                                        
                                         <Button
                                             type="submit"
-                                            disabled={!message.trim() && !selectedFiles.length}
+                                            disabled={(!message.trim() && !selectedFiles.length) || isSending}
                                             className="flex h-10 items-center gap-2 rounded-full bg-blue-500 px-4 text-white hover:bg-blue-600"
                                         >
-                                            <span className="text-sm">Send</span>
+                                            <span className="text-sm">{isSending ? 'Sending...' : 'Send'}</span>
                                             <PaperAirplaneIcon className="h-4 w-4" />
                                         </Button>
                                 </div>
@@ -763,12 +1229,26 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                         <div className="hidden h-full flex-1 flex-col items-center justify-center md:flex">
                             <div className="flex flex-col items-center text-center">
                                 <div className="mb-4 rounded-full bg-gray-100 p-6 dark:bg-gray-800">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                    </svg>
+                                    <MessageSquare className="h-10 w-10 text-gray-400" />
                                         </div>
-                                <h3 className="mb-2 text-xl font-medium text-gray-900 dark:text-white">Your messages</h3>
-                                <p className="text-gray-500 dark:text-gray-400">Select a conversation to start messaging</p>
+                                <h3 className="mb-2 text-xl font-medium text-gray-900 dark:text-white">Your Messages</h3>
+                                <p className="text-gray-500 dark:text-gray-400">Select a conversation or start a new one</p>
+                                <div className="mt-6 max-w-md space-y-4 px-4">
+                                    <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30">
+                                        <div className="flex items-start gap-3">
+                                            <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900">
+                                                <Lock className="h-5 w-5 text-blue-500" />
+                                            </div>
+                                            <div className="text-left">
+                                                <h4 className="font-medium text-blue-800 dark:text-blue-300">End-to-End Encryption Available</h4>
+                                                <p className="mt-1 text-sm text-blue-600 dark:text-blue-400">
+                                                    Your private messages can be protected with end-to-end encryption. 
+                                                    Look for the lock toggle when messaging one-on-one.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                                     </div>
                             <PlaceholderPattern className="absolute inset-0 -z-10 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
                         </div>

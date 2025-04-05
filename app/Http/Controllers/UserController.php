@@ -87,4 +87,23 @@ class UserController extends Controller
         
         return redirect()->back()->with('error', 'Failed to verify email');
     }
+
+    /**
+     * Update user's public key for encrypted messaging
+     */
+    public function updatePublicKey(Request $request)
+    {
+        $validated = $request->validate([
+            'public_key' => 'required|string',
+        ]);
+        
+        $user = $request->user();
+        $user->public_key = $validated['public_key'];
+        $user->save();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Public key updated successfully'
+        ]);
+    }
 } 

@@ -15,11 +15,13 @@ class Message extends Model
         'content',
         'read_at',
         'expires_at',
+        'is_encrypted',
     ];
 
     protected $casts = [
         'read_at' => 'datetime',
         'expires_at' => 'datetime',
+        'is_encrypted' => 'boolean',
     ];
 
     protected static function boot()

@@ -44,6 +44,7 @@ class MessagingController extends Controller
                     'username' => $user->username,
                     'avatar' => $user->avatar,
                     'verification_status' => $user->verification_status,
+                    'public_key' => $user->public_key,
                     'lastMessage' => $lastMessage ? $lastMessage->content : null,
                     'lastMessageTime' => $lastMessage ? $lastMessage->created_at->diffForHumans() : null,
                     'unreadCount' => 0,
@@ -75,7 +76,7 @@ class MessagingController extends Controller
         return Inertia::render('messaging', [
             'users' => $users,
             'groups' => $groups,
-            'allUsers' => User::where('id', '!=', $currentUser->id)->get()
+            'allUsers' => User::where('id', '!=', $currentUser->id)->select('id', 'name', 'username', 'avatar', 'verification_status', 'public_key')->get()
         ]);
     }
 
@@ -110,7 +111,15 @@ class MessagingController extends Controller
         });
 
         return response()->json([
-            'messages' => $messages
+            'messages' => $messages,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'username' => $user->username,
+                'avatar' => $user->avatar,
+                'verification_status' => $user->verification_status,
+                'public_key' => $user->public_key,
+            ]
         ]);
     }
 
@@ -119,37 +128,59 @@ class MessagingController extends Controller
      */
     public function sendMessage(Request $request, $userId)
     {
-        $validated = $request->validate([
-            'content' => 'required|string',
-            'attachments.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf,mp4,mp3,wav|max:5120', // 5MB max
-        ], [
-            'attachments.*.max' => 'Each file must be less than 5MB.',
-            'attachments.*.mimes' => 'Only JPEG, PNG, JPG, GIF, PDF, MP4, MP3, and WAV files are allowed.',
-        ]);
+        try {
+            $validated = $request->validate([
+                'content' => 'required|string',
+                'is_encrypted' => 'nullable',
+                'attachments.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf,mp4,mp3,wav|max:5120', // 5MB max
+            ], [
+                'attachments.*.max' => 'Each file must be less than 5MB.',
+                'attachments.*.mimes' => 'Only JPEG, PNG, JPG, GIF, PDF, MP4, MP3, and WAV files are allowed.',
+            ]);
 
-        $message = Message::create([
-            'sender_id' => auth()->id(),
-            'receiver_id' => $userId,
-            'content' => $validated['content'],
-        ]);
+            // Handle is_encrypted as a boolean value, regardless of the input format
+            $isEncrypted = filter_var($request->input('is_encrypted', false), FILTER_VALIDATE_BOOLEAN);
 
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('message-attachments/' . auth()->id(), 'public');
+            $message = Message::create([
+                'sender_id' => auth()->id(),
+                'receiver_id' => $userId,
+                'content' => $validated['content'],
+                'is_encrypted' => $isEncrypted,
+            ]);
 
-                MessageAttachment::create([
-                    'message_id' => $message->id,
-                    'file_path' => Storage::url($path),
-                    'file_type' => $file->getMimeType(),
-                    'file_name' => $file->getClientOriginalName(),
-                    'file_size' => $file->getSize(),
-                ]);
+            if ($request->hasFile('attachments')) {
+                foreach ($request->file('attachments') as $file) {
+                    $path = $file->store('message-attachments/' . auth()->id(), 'public');
+
+                    MessageAttachment::create([
+                        'message_id' => $message->id,
+                        'file_path' => Storage::url($path),
+                        'file_type' => $file->getMimeType(),
+                        'file_name' => $file->getClientOriginalName(),
+                        'file_size' => $file->getSize(),
+                    ]);
+                }
             }
-        }
 
-        return response()->json([
-            'message' => $message->load('attachments', 'sender:id,name,username,avatar')
-        ]);
+            // Load the message with sender information and attachments
+            $message->load(['attachments', 'sender:id,name,username,avatar,verification_status']);
+            
+            // Format dates for consistency with other API responses
+            $formattedMessage = array_merge($message->toArray(), [
+                'created_at' => $message->created_at->toISOString(),
+                'expires_at' => $message->expires_at->toISOString(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $formattedMessage
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send message: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

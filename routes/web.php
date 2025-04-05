@@ -63,6 +63,9 @@ Route::post('user/verify-email-otp', [UserController::class, 'verifyEmailWithOtp
 
 Route::get('/users/search', [UserController::class, 'search'])->name('users.search');
 
+// New route for public key management
+Route::post('user/update-public-key', [UserController::class, 'updatePublicKey'])->name('user.update-public-key');
+
 // Route::get('/debug-verification', function() {
 //     dd(\App\Models\VerificationDocument::with('user')->get()->toArray());
 // });
