@@ -55,6 +55,30 @@ test('email verification status is unchanged when the email address is unchanged
     expect($user->refresh()->email_verified_at)->not->toBeNull();
 });
 
+test('email verification status is reset when email address is changed', function () {
+    $user = User::factory()->create();
+    
+    // Make sure the user starts with a verified email
+    expect($user->email_verified_at)->not->toBeNull();
+    
+    $response = $this
+        ->actingAs($user)
+        ->post('/settings/profile', [
+            'name' => $user->name,
+            'username' => $user->username,
+            'email' => 'newemail@example.com',  // Changed email address
+        ]);
+    
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/settings/profile');
+    
+    $user->refresh();
+    
+    expect($user->email)->toBe('newemail@example.com');
+    expect($user->email_verified_at)->toBeNull();
+});
+
 test('user can delete their account', function () {
     $user = User::factory()->create();
 

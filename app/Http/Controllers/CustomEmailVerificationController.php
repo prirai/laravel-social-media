@@ -53,7 +53,6 @@ class CustomEmailVerificationController extends Controller
             return back()->with('status', 'Your email is already verified.');
         }
 
-        // This is Laravel's built-in magic ✨
         $user->sendEmailVerificationNotification();
 
         return back()->with('status', 'Verification link sent!');

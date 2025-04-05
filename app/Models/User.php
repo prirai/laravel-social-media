@@ -58,6 +58,22 @@ class User extends Authenticatable
         'avatar',
         'verification_status'
     ];
+    
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Add updating event listener to unverify email if email address changes
+        static::updating(function ($user) {
+            // If email is being changed, reset email_verified_at
+            if ($user->isDirty('email')) {
+                $user->email_verified_at = null;
+            }
+        });
+    }
 
     public function posts(): HasMany
     {
