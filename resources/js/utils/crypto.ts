@@ -28,6 +28,24 @@ interface KeyPair {
 }
 
 /**
+ * Check if user is authenticated by checking window.__page
+ */
+export const isAuthenticated = (): boolean => {
+  try {
+    return !!window.__page?.props?.auth?.user;
+  } catch (error) {
+    return false;
+  }
+};
+
+/**
+ * Check if current page is an auth page
+ */
+export const isAuthPage = (): boolean => {
+  return document.body.classList.contains('auth-page');
+};
+
+/**
  * Generate a new RSA key pair for encryption
  */
 export const generateKeyPair = async (): Promise<KeyPair> => {
@@ -70,7 +88,7 @@ export const savePrivateKeyToFile = (privateKey: string, username?: string) => {
       console.log(`Creating file with username: ${username}`);
     }
     // If no username provided, try to get from window.__page
-    else if (window.__page?.props?.auth?.user?.username) {
+    else if (isAuthenticated() && window.__page?.props?.auth?.user?.username) {
       const authUsername = window.__page.props.auth.user.username;
       filename = `${authUsername}_secure_msg_privkey_${timestamp}.txt`;
       console.log(`Creating file with auth username: ${authUsername}`);
@@ -90,24 +108,34 @@ export const savePrivateKeyToFile = (privateKey: string, username?: string) => {
  * Save the private key to a cookie temporarily
  */
 export const savePrivateKeyToCookie = (privateKey: string) => {
-  // Set cookie to expire after 2 hours (in seconds)
-  const expiryTime = 7200;
-  document.cookie = `${COOKIE_NAME}=${encodeURIComponent(privateKey)};max-age=${expiryTime};path=/;secure;samesite=strict`;
+  try {
+    // Set cookie to expire after 2 hours (in seconds)
+    const expiryTime = 7200;
+    document.cookie = `${COOKIE_NAME}=${encodeURIComponent(privateKey)};max-age=${expiryTime};path=/;secure;samesite=strict`;
+    return true;
+  } catch (error) {
+    console.error('Error saving private key to cookie:', error);
+    return false;
+  }
 };
 
 /**
  * Get the private key from the cookie
  */
 export const getPrivateKeyFromCookie = (): string | null => {
-  const name = `${COOKIE_NAME}=`;
-  const decodedCookie = decodeURIComponent(document.cookie);
-  const cookieArray = decodedCookie.split(';');
+  try {
+    const name = `${COOKIE_NAME}=`;
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const cookieArray = decodedCookie.split(';');
 
-  for (let i = 0; i < cookieArray.length; i++) {
-    const cookie = cookieArray[i].trim();
-    if (cookie.indexOf(name) === 0) {
-      return cookie.substring(name.length, cookie.length);
+    for (let i = 0; i < cookieArray.length; i++) {
+      const cookie = cookieArray[i].trim();
+      if (cookie.indexOf(name) === 0) {
+        return cookie.substring(name.length, cookie.length);
+      }
     }
+  } catch (error) {
+    console.error('Error reading private key from cookie:', error);
   }
   return null;
 };
@@ -115,8 +143,14 @@ export const getPrivateKeyFromCookie = (): string | null => {
 /**
  * Remove the private key from the cookie
  */
-export const clearPrivateKeyFromCookie = () => {
-  document.cookie = `${COOKIE_NAME}=;max-age=0;path=/;`;
+export const clearPrivateKeyFromCookie = (): boolean => {
+  try {
+    document.cookie = `${COOKIE_NAME}=;max-age=0;path=/;`;
+    return true;
+  } catch (error) {
+    console.error('Error clearing private key from cookie:', error);
+    return false;
+  }
 };
 
 /**
@@ -182,17 +216,27 @@ export const isValidPrivateKey = (key: string): boolean => {
  * This should be called whenever a user logs out to ensure
  * encryption keys don't persist in the browser
  */
-export const handleLogoutEncryptionCleanup = () => {
+export const handleLogoutEncryptionCleanup = (): void => {
+  // Skip on auth pages to prevent unnecessary console messages
+  if (isAuthPage()) {
+    return;
+  }
+  
   try {
     // Clear the private key cookie
     clearPrivateKeyFromCookie();
 
-    // Log the action (useful for debugging)
-    console.info('Encryption keys cleared during logout');
+    // Only log in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.info('Encryption keys cleared during logout');
+    }
 
     // Could add additional cleanup here in the future if needed
     // Such as clearing localStorage items or resetting other encryption state
   } catch (error) {
-    console.error('Error cleaning up encryption state during logout:', error);
+    // Only log error in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error cleaning up encryption state during logout:', error);
+    }
   }
 };

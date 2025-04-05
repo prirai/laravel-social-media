@@ -13,6 +13,7 @@ import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import PostItem from '@/components/post-item';
 import { useNotifications } from '@/contexts/NotificationContext';
+import OtpKeyboard from '@/components/otp-keyboard';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -630,19 +631,28 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         <>
                                             <div className="space-y-2">
                                                 <Label htmlFor="otp">Verification Code</Label>
-                                                <Input
-                                                    id="otp"
-                                                    type="text"
-                                                    value={otpData.otp}
-                                                    onChange={(e) => {
-                                                        setOtpData('otp', e.target.value);
-                                                        setOtpValue(e.target.value);
+                                                
+                                                {/* Replace the text input with the OTP keyboard */}
+                                                <div className="hidden">
+                                                    <Input
+                                                        id="otp"
+                                                        type="text"
+                                                        value={otpData.otp}
+                                                        onChange={(e) => {}}
+                                                        readOnly
+                                                        className="hidden"
+                                                    />
+                                                </div>
+                                                
+                                                <OtpKeyboard
+                                                    value={otpValue}
+                                                    onChange={(value) => {
+                                                        setOtpValue(value);
+                                                        setOtpData('otp', value);
                                                     }}
-                                                    placeholder="Enter 6-digit code"
-                                                    className="text-center text-lg tracking-wider"
-                                                    maxLength={6}
-                                                    required
+                                                    disabled={processingOtp}
                                                 />
+                                                
                                                 {otpError && <p className="text-sm text-red-500">{otpError}</p>}
                                             </div>
 
