@@ -7,11 +7,9 @@ import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Textarea } from '@/components/ui/textarea';
 import UserAvatar from '@/components/user-avatar';
 import { type BreadcrumbItem, type SharedData, type User } from '@/types';
-import { ChatBubbleLeftIcon, DocumentIcon, ExclamationCircleIcon, HeartIcon, PhotoIcon, PlusIcon, TrashIcon, UserGroupIcon, CalendarIcon, BellIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
+import { DocumentIcon, ExclamationCircleIcon, PhotoIcon, PlusIcon, TrashIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
-import { useState, useEffect, Fragment, ReactNode } from 'react';
-import { Dialog as HeadlessDialog, Transition } from '@headlessui/react';
+import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import PostItem from '@/components/post-item';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -85,15 +83,15 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
     const [isVerificationOpen, setIsVerificationOpen] = useState(false);
     const [isEmailVerificationOpen, setIsEmailVerificationOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [animatedPosts, setAnimatedPosts] = useState<number[]>([]);
-    const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+    const [, setAnimatedPosts] = useState<number[]>([]);
+    const [enlargedImage] = useState<string | null>(null);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [showErrorPopup, setShowErrorPopup] = useState(false);
     const [otpSent, setOtpSent] = useState(false);
     const [otpValue, setOtpValue] = useState('');
     const [otpError, setOtpError] = useState<string | null>(null);
     const [otpResendCountdown, setOtpResendCountdown] = useState(0);
-    const [verifyingOtp, setVerifyingOtp] = useState(false);
+    const [, setVerifyingOtp] = useState(false);
 
     const {
         data,
@@ -116,7 +114,6 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
         setData: setOtpData,
         post: postOtp,
         processing: processingOtp,
-        errors: otpFormErrors,
         reset: resetOtp,
     } = useForm({
         otp: ''
@@ -132,7 +129,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
             const postIds = initialPosts.map(post => post.id);
             setAnimatedPosts(postIds);
         }, 100);
-        
+
         return () => clearTimeout(timer);
     }, [initialPosts]);
 
@@ -194,7 +191,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                 user: {
                     id: user.id,
                     name: user.name,
-                    username: typeof user.username === 'string' ? user.username : undefined,
+                    username: user.username,
                     avatar: user.avatar || null,
                     verification_status: user.verification_status as 'unverified' | 'pending' | 'verified' | undefined,
                 },
@@ -305,7 +302,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
             setTimeout(() => setShowErrorPopup(false), 5000);
             return;
         }
-          
+
 
         post(route('posts.store'), {
             onSuccess: (page) => {
@@ -359,13 +356,13 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
 
     const handleEmailVerificationSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (otpSent) {
             // Verify OTP
             setVerifyingOtp(true);
             setOtpError(null);
             setOtpData('otp', otpValue);
-            
+
             postOtp(route('user.verify-email-otp'), {
                 onSuccess: () => {
                     setIsEmailVerificationOpen(false);
@@ -403,7 +400,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
             });
         }
     };
-    
+
     const handleResendOtp = () => {
         post(route('user.send-email-otp'), {
             onSuccess: () => {
@@ -425,22 +422,12 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
             }
         });
     };
-    
+
     const formatCountdown = (seconds: number): string => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
-
-    const handleImageClick = (imagePath: string, e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        console.log("Opening image:", imagePath);
-        setEnlargedImage(imagePath);
-        setIsImageModalOpen(true);
-    };
-
     const handleError = (message: string) => {
         setError(message);
         setShowErrorPopup(true);
@@ -463,39 +450,39 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     <h1 className="text-2xl font-bold md:text-3xl">Welcome back, {user.name}!</h1>
                                     <div className="mt-1 flex flex-wrap items-center gap-2">
                                         <span className="text-gray-600 dark:text-gray-300">@{user.username}</span>
-                                        
+
                                         {/* Document Verification Status */}
                                         <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                            user.verification_status === 'verified' 
-                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                                            user.verification_status === 'verified'
+                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                                                 : user.verification_status === 'pending'
                                                 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                                                 : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
                                         }`}>
                                             <span className="mr-1 size-2 rounded-full ${
-                                                user.verification_status === 'verified' 
-                                                    ? 'bg-green-500' 
+                                                user.verification_status === 'verified'
+                                                    ? 'bg-green-500'
                                                     : user.verification_status === 'pending'
                                                     ? 'bg-yellow-500'
                                                     : 'bg-gray-500'
                                             }"></span>
-                                            {user.verification_status === 'verified' 
-                                                ? 'Verified' 
+                                            {user.verification_status === 'verified'
+                                                ? 'Verified'
                                                 : user.verification_status === 'pending'
                                                 ? 'Verification Pending'
                                                 : 'Unverified'
                                             }
                                         </span>
-                                        
+
                                         {/* Email Verification Status */}
                                         <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                            user.email_verified_at 
-                                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
+                                            user.email_verified_at
+                                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
                                                 : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                                         }`}>
                                             <span className={`mr-1 size-2 rounded-full ${
-                                                user.email_verified_at 
-                                                    ? 'bg-blue-500' 
+                                                user.email_verified_at
+                                                    ? 'bg-blue-500'
                                                     : 'bg-red-500'
                                             }`}></span>
                                             {user.email_verified_at ? 'Email Verified' : 'Email Unverified'}
@@ -503,14 +490,14 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <p className="mt-4 max-w-2xl text-gray-600 dark:text-gray-300">
                                 Stay connected with your friends and discover what's happening in your community.
                             </p>
-                            
+
                             <div className="mt-6 flex flex-wrap items-center gap-4">
                                 {user.email_verified_at ? (
-                                    <Button 
+                                    <Button
                                         onClick={() => setIsOpen(true)}
                                         className="bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
                                     >
@@ -518,7 +505,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         Create Post
                                     </Button>
                                 ) : (
-                                    <Button 
+                                    <Button
                                         onClick={() => handleError('You must verify your email before creating posts.')}
                                         className="bg-gray-400 text-white hover:bg-gray-500 dark:bg-gray-700 dark:hover:bg-gray-600"
                                     >
@@ -526,9 +513,9 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         Create Post
                                     </Button>
                                 )}
-                                
-                                <Button 
-                                    variant="outline" 
+
+                                <Button
+                                    variant="outline"
                                     className="border-gray-300 bg-white/80 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/80 dark:text-gray-200 dark:hover:bg-gray-700"
                                     onClick={() => router.visit(route('messages.index'))}
                                 >
@@ -537,7 +524,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                 </Button>
                             </div>
                         </div>
-                        
+
                         {/* Decorative elements */}
                         <div className="absolute -bottom-6 -right-6 h-32 w-32 rounded-full bg-indigo-100/50 blur-2xl dark:bg-indigo-900/30"></div>
                         <div className="absolute -top-6 -left-6 h-24 w-24 rounded-full bg-blue-100/50 blur-xl dark:bg-blue-900/30"></div>
@@ -633,7 +620,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                 <DialogHeader>
                                     <DialogTitle>{otpSent ? 'Enter Verification Code' : 'Verify Your Email'}</DialogTitle>
                                     <DialogDescription>
-                                        {otpSent 
+                                        {otpSent
                                             ? `We've sent a verification code to ${user.email}. The code will expire in ${formatCountdown(otpResendCountdown)}.`
                                             : 'We will send a verification code to your registered email.'}
                                     </DialogDescription>
@@ -658,16 +645,16 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                 />
                                                 {otpError && <p className="text-sm text-red-500">{otpError}</p>}
                                             </div>
-                                            
+
                                             <div className="text-center">
                                                 {otpResendCountdown > 0 ? (
                                                     <p className="text-sm text-gray-500">
                                                         Resend code in {formatCountdown(otpResendCountdown)}
                                                     </p>
                                                 ) : (
-                                                    <Button 
-                                                        type="button" 
-                                                        variant="link" 
+                                                    <Button
+                                                        type="button"
+                                                        variant="link"
                                                         onClick={handleResendOtp}
                                                         className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                                                     >
@@ -681,11 +668,11 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                             Click the button below to receive a verification code at your email address: {user.email}
                                         </p>
                                     )}
-                                    
+
                                     <div className="flex justify-end gap-2">
-                                        <Button 
-                                            type="button" 
-                                            variant="outline" 
+                                        <Button
+                                            type="button"
+                                            variant="outline"
                                             onClick={() => {
                                                 setIsEmailVerificationOpen(false);
                                                 setOtpSent(false);
@@ -697,12 +684,12 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         >
                                             Cancel
                                         </Button>
-                                        <Button 
-                                            type="submit" 
+                                        <Button
+                                            type="submit"
                                             disabled={otpSent ? (processingOtp || otpData.otp.length !== 6) : processing}
                                         >
-                                            {otpSent 
-                                                ? (processingOtp ? 'Verifying...' : 'Verify') 
+                                            {otpSent
+                                                ? (processingOtp ? 'Verifying...' : 'Verify')
                                                 : (processing ? 'Sending...' : 'Send Verification Code')}
                                         </Button>
                                     </div>
@@ -715,8 +702,8 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                 </div>
 
                 {/* <div className="sticky bottom-6 z-10 mb-6 flex justify-end lg:hidden">
-                    <Button 
-                        onClick={() => setIsOpen(true)} 
+                    <Button
+                        onClick={() => setIsOpen(true)}
                         size="lg"
                         className="rounded-full shadow-lg"
                     >
@@ -737,7 +724,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         </DialogDescription>
                             </DialogHeader>
                                 </div>
-                                
+
                                 <div className="p-6">
                                     <form onSubmit={handleSubmit} className="space-y-6">
                                         <div className="flex items-start gap-3">
@@ -747,7 +734,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">@{user.username}</p>
                                             </div>
                                             </div>
-                                
+
                                         <div>
                                     <Textarea
                                         value={data.content}
@@ -769,7 +756,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                     </span>
                                                 )}
                                             </div>
-                                            
+
                                             <div className="flex flex-wrap gap-2">
                                                 <label
                                                     htmlFor="attachments"
@@ -862,7 +849,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                             <div className="columns-1 gap-6 space-y-6 lg:columns-2">
                                 {posts.map((post) => (
                                     <div key={post.id} className="break-inside-avoid mb-6">
-                                        <PostItem 
+                                        <PostItem
                                             post={post}
                                             onLike={handleLike}
                                             onComment={(post) => {
@@ -874,7 +861,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     </div>
                                 ))}
                             </div>
-                            
+
                             {/* "All caught up" message */}
                             <div className="mt-10 mb-14 text-center">
                                 <div className="relative">
@@ -898,25 +885,25 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                             <p className="mb-6 max-w-md text-center text-gray-500 dark:text-gray-400">
                                 Be the first to share something with your community.
                             </p>
-                            
-                            <Button 
+
+                            <Button
                                 onClick={() => {
                                     if (!user.email_verified_at) {
                                         handleError('You must verify your email before creating posts.');
                                     } else {
                                         setIsOpen(true);
                                     }
-                                }} 
+                                }}
                                 className={`flex items-center gap-2 ${
-                                    user.email_verified_at 
-                                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" 
+                                    user.email_verified_at
+                                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                                         : "bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600"
                                 } text-white shadow-md`}
                             >
                                 <PlusIcon className="h-5 w-5" />
                                 Create Your First Post
                             </Button>
-                            
+
                             <PlaceholderPattern className="absolute inset-0 -z-10 size-full stroke-neutral-900/10 dark:stroke-neutral-100/10" />
                         </div>
                     )}
@@ -978,7 +965,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     </div>
                                 </div>
                             )}
-                            
+
                             <form onSubmit={handleCommentSubmit} className="space-y-5">
                                 <div className="flex items-start gap-3">
                                     <UserAvatar user={user} className="size-8 ring-2 ring-blue-100 dark:ring-blue-900" />
@@ -1022,7 +1009,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
             {isImageModalOpen && enlargedImage && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setIsImageModalOpen(false)}>
                     <div className="relative max-h-[90vh] max-w-[90vw]">
-                        <button 
+                        <button
                             className="absolute -right-4 -top-4 rounded-full bg-white p-2 text-gray-800 shadow-lg hover:bg-gray-200"
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -1031,9 +1018,9 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                         >
                             <XMarkIcon className="h-6 w-6" />
                         </button>
-                        <img 
-                            src={enlargedImage} 
-                            alt="Enlarged view" 
+                        <img
+                            src={enlargedImage}
+                            alt="Enlarged view"
                             className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain"
                             onClick={(e) => e.stopPropagation()}
                         />
@@ -1051,7 +1038,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                             <div className="flex-1">
                                 <p className="font-medium text-amber-800 dark:text-amber-200">{error}</p>
                             </div>
-                            <button 
+                            <button
                                 className="flex-shrink-0 rounded-md p-1.5 text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-800"
                                 onClick={() => setShowErrorPopup(false)}
                             >

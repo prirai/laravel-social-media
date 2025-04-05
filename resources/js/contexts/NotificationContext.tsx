@@ -5,7 +5,7 @@ import axios from 'axios';
 export interface Notification {
     id: number;
     type: string;
-    data: any;
+    data: unknown;
     read_at: string | null;
     created_at: string;
     route: string;
@@ -47,7 +47,7 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ children })
     // Fetch unread count on component mount
     useEffect(() => {
         fetchUnreadCount();
-        
+
         // Poll for new notifications every 30 seconds
         const interval = setInterval(fetchUnreadCount, 30000);
         return () => clearInterval(interval);
@@ -64,7 +64,7 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ children })
 
     const fetchNotifications = async () => {
         if (isLoadingNotifications) return;
-        
+
         setIsLoadingNotifications(true);
         try {
             const response = await axios.get('/notifications');
@@ -81,8 +81,8 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ children })
         try {
             await axios.post(`/notifications/${notificationId}/read`);
             // Update the local state to mark as read
-            setNotifications(prevNotifications => 
-                prevNotifications.map(n => 
+            setNotifications(prevNotifications =>
+                prevNotifications.map(n =>
                     n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n
                 )
             );
@@ -96,7 +96,7 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ children })
         try {
             await axios.post('/notifications/mark-all-read');
             // Update local state
-            setNotifications(prevNotifications => 
+            setNotifications(prevNotifications =>
                 prevNotifications.map(n => ({ ...n, read_at: new Date().toISOString() }))
             );
             setUnreadCount(0);
@@ -106,13 +106,13 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ children })
     };
 
     const value = {
-        notifications, 
-        unreadCount, 
-        setNotifications, 
-        setUnreadCount, 
-        fetchNotifications, 
-        fetchUnreadCount, 
-        markAsRead, 
+        notifications,
+        unreadCount,
+        setNotifications,
+        setUnreadCount,
+        fetchNotifications,
+        fetchUnreadCount,
+        markAsRead,
         markAllAsRead,
         isLoadingNotifications
     };
