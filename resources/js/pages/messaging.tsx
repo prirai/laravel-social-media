@@ -1027,144 +1027,143 @@ export default function Messaging(props: MessagingProps) {
             </Dialog>
             
             <div className="flex h-[calc(100vh-4rem)] flex-1 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
-                <div
-                    className={`${isMobileView && selectedChat ? 'hidden' : 'flex'} ${isMobileView ? 'fixed left-0 right-0 top-[64px] bottom-0 z-40 pt-4 pb-16 px-2' : 'static'} flex-col border-r border-gray-200 bg-white md:static md:w-80 md:p-0 dark:border-gray-800 dark:bg-black`}
-                >
-                    <div className="flex flex-col">
-                        <div className="sticky top-0 z-10 bg-white p-3 dark:bg-gray-950">
-                            <div className="flex flex-col space-y-2">
-                                <div className="flex items-center justify-center gap-4 pb-2">
-                                    <div className="flex items-center justify-center p-2 bg-gray-50 dark:bg-gray-900 rounded-2xl gap-4 shadow-sm">
-                                        <Dialog open={isNewMessageOpen} onOpenChange={setIsNewMessageOpen}>
-                                            <DialogTrigger asChild>
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="icon" 
-                                                    className={`h-12 w-12 rounded-xl bg-white border-gray-100 shadow-sm hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-all ${isNewMessageOpen ? 'ring-2 ring-blue-500 text-blue-600 dark:ring-blue-400 dark:text-blue-400' : ''}`}
-                                                    title="New message"
-                                                >
-                                                    <ChatBubbleLeftIcon className={`h-5 w-5 ${isNewMessageOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`} />
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="sm:max-w-[425px]">
-                                                <DialogHeader>
-                                                    <DialogTitle>New Message</DialogTitle>
-                                                </DialogHeader>
-                                                <div className="mt-4 space-y-4">
-                                                    <div>
-                                                        <Label>Find User</Label>
-                                                        <Input
-                                                            value={searchQuery}
-                                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                                            placeholder="Search by name or username"
-                                                            className="mt-1"
-                                                        />
-                                                    </div>
-                                                    <div className="max-h-[60vh] space-y-1 overflow-y-auto">
-                                                        {allUsers
-                                                            .filter((user) => {
-                                                                const normalizedQuery = searchQuery.toLowerCase();
-                                                                return (
-                                                                    user.name.toLowerCase().includes(normalizedQuery) ||
-                                                                    user.username.toLowerCase().includes(normalizedQuery)
-                                                                );
-                                                            })
-                                                            .map((user) => (
-                                                                <button
-                                                                    key={user.id}
-                                                                    onClick={() => startNewConversation(user)}
-                                                                    className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-900"
-                                                                >
-                                                                    <UserAvatar user={user} className="size-10" />
-                                                                    <div>
-                                                                        <p className="font-medium">{user.name}</p>
-                                                                        <p className="text-sm text-gray-500">@{user.username}</p>
-                                                                    </div>
-                                                                </button>
-                                                            ))}
+                {/* Left sidebar - completely fixed and independent */}
+                <div className={`${isMobileView && selectedChat ? 'hidden' : 'block'} fixed left-0 top-[64px] bottom-0 z-10 w-80 overflow-hidden border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-black ${isMobileView ? 'w-full' : ''}`}>
+                    {/* Header with buttons */}
+                    <div className="border-b border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-950">
+                        <div className="flex flex-col space-y-2">
+                            <div className="flex items-center justify-center gap-4 pb-2">
+                                <div className="flex items-center justify-center p-2 bg-gray-50 dark:bg-gray-900 rounded-2xl gap-4 shadow-sm">
+                                    <Dialog open={isNewMessageOpen} onOpenChange={setIsNewMessageOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button 
+                                                variant="outline" 
+                                                size="icon" 
+                                                className={`h-12 w-12 rounded-xl bg-white border-gray-100 shadow-sm hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-all ${isNewMessageOpen ? 'ring-2 ring-blue-500 text-blue-600 dark:ring-blue-400 dark:text-blue-400' : ''}`}
+                                                title="New message"
+                                            >
+                                                <ChatBubbleLeftIcon className={`h-5 w-5 ${isNewMessageOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`} />
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="sm:max-w-[425px]">
+                                            <DialogHeader>
+                                                <DialogTitle>New Message</DialogTitle>
+                                            </DialogHeader>
+                                            <div className="mt-4 space-y-4">
+                                                <div>
+                                                    <Label>Find User</Label>
+                                                    <Input
+                                                        value={searchQuery}
+                                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                                        placeholder="Search by name or username"
+                                                        className="mt-1"
+                                                    />
+                                                </div>
+                                                <div className="max-h-[60vh] space-y-1 overflow-y-auto">
+                                                    {allUsers
+                                                        .filter((user) => {
+                                                            const normalizedQuery = searchQuery.toLowerCase();
+                                                            return (
+                                                                user.name.toLowerCase().includes(normalizedQuery) ||
+                                                                user.username.toLowerCase().includes(normalizedQuery)
+                                                            );
+                                                        })
+                                                        .map((user) => (
+                                                            <button
+                                                                key={user.id}
+                                                                onClick={() => startNewConversation(user)}
+                                                                className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-900"
+                                                            >
+                                                                <UserAvatar user={user} className="size-10" />
+                                                                <div>
+                                                                    <p className="font-medium">{user.name}</p>
+                                                                    <p className="text-sm text-gray-500">@{user.username}</p>
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                </div>
+                                            </div>
+                                        </DialogContent>
+                                    </Dialog>
+
+                                    <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button 
+                                                variant="outline" 
+                                                size="icon" 
+                                                className={`h-12 w-12 rounded-xl bg-white border-gray-100 shadow-sm hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-all ${isNewGroupOpen ? 'ring-2 ring-blue-500 text-blue-600 dark:ring-blue-400 dark:text-blue-400' : ''}`}
+                                                title="Create group"
+                                            >
+                                                <UsersIcon className={`h-5 w-5 ${isNewGroupOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`} />
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="sm:max-w-[425px]">
+                                            <DialogHeader>
+                                                <DialogTitle>Create New Group</DialogTitle>
+                                            </DialogHeader>
+                                            <form onSubmit={createGroup} className="mt-4 space-y-4">
+                                                <div>
+                                                    <Label htmlFor="groupName">Group Name</Label>
+                                                    <Input
+                                                        id="groupName"
+                                                        value={groupName}
+                                                        onChange={(e) => setGroupName(e.target.value)}
+                                                        placeholder="Enter group name"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label>Select Members</Label>
+                                                    <div className="mt-2 max-h-[40vh] space-y-2 overflow-y-auto rounded-md border p-2">
+                                                        {allUsers.map((user) => (
+                                                            <label
+                                                                key={user.id}
+                                                                className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-950"
+                                                            >
+                                                                <Checkbox
+                                                                    checked={selectedUsers.includes(user.id)}
+                                                                    onCheckedChange={(checked) => {
+                                                                        setSelectedUsers((current) =>
+                                                                            checked ? [...current, user.id] : current.filter((id) => id !== user.id),
+                                                                        );
+                                                                    }}
+                                                                />
+                                                                <UserAvatar user={user} className="size-8" />
+                                                                <span className="text-foreground">{user.name}</span>
+                                                            </label>
+                                                        ))}
                                                     </div>
                                                 </div>
-                                            </DialogContent>
-                                        </Dialog>
+                                                <div className="flex justify-end gap-2">
+                                                    <Button type="submit" disabled={selectedUsers.length < 2 || !groupName.trim()}>
+                                                        Create Group
+                                                    </Button>
+                                                </div>
+                                            </form>
+                                        </DialogContent>
+                                    </Dialog>
 
-                                        <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
-                                            <DialogTrigger asChild>
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="icon" 
-                                                    className={`h-12 w-12 rounded-xl bg-white border-gray-100 shadow-sm hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-all ${isNewGroupOpen ? 'ring-2 ring-blue-500 text-blue-600 dark:ring-blue-400 dark:text-blue-400' : ''}`}
-                                                    title="Create group"
-                                                >
-                                                    <UsersIcon className={`h-5 w-5 ${isNewGroupOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`} />
-                                                </Button>
-                                            </DialogTrigger>
-                                            <DialogContent className="sm:max-w-[425px]">
-                                                <DialogHeader>
-                                                    <DialogTitle>Create New Group</DialogTitle>
-                                                </DialogHeader>
-                                                <form onSubmit={createGroup} className="mt-4 space-y-4">
-                                                    <div>
-                                                        <Label htmlFor="groupName">Group Name</Label>
-                                                        <Input
-                                                            id="groupName"
-                                                            value={groupName}
-                                                            onChange={(e) => setGroupName(e.target.value)}
-                                                            placeholder="Enter group name"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <Label>Select Members</Label>
-                                                        <div className="mt-2 max-h-[40vh] space-y-2 overflow-y-auto rounded-md border p-2">
-                                                            {allUsers.map((user) => (
-                                                                <label
-                                                                    key={user.id}
-                                                                    className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-950"
-                                                                >
-                                                                    <Checkbox
-                                                                        checked={selectedUsers.includes(user.id)}
-                                                                        onCheckedChange={(checked) => {
-                                                                            setSelectedUsers((current) =>
-                                                                                checked ? [...current, user.id] : current.filter((id) => id !== user.id),
-                                                                            );
-                                                                        }}
-                                                                    />
-                                                                    <UserAvatar user={user} className="size-8" />
-                                                                    <span className="text-foreground">{user.name}</span>
-                                                                </label>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex justify-end gap-2">
-                                                        <Button type="submit" disabled={selectedUsers.length < 2 || !groupName.trim()}>
-                                                            Create Group
-                                                        </Button>
-                                                    </div>
-                                                </form>
-                                            </DialogContent>
-                                        </Dialog>
-
-                                        <Button 
-                                            variant="outline" 
-                                            size="icon" 
-                                            className={`h-12 w-12 rounded-xl bg-white border-gray-100 shadow-sm hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-all relative ${isEncryptionSetupOpen ? 'ring-2 ring-blue-500 text-blue-600 dark:ring-blue-400 dark:text-blue-400' : ''}`}
-                                            title="Encryption setup"
-                                            onClick={handleEncryptionSetup}
-                                        >
-                                            <LockClosedIcon className={`h-5 w-5 ${isEncryptionSetupOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`} />
-                                            {!hasEncryptionKeys && (
-                                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
-                                                    !
-                                                </span>
-                                            )}
-                                        </Button>
-                                    </div>
+                                    <Button 
+                                        variant="outline" 
+                                        size="icon" 
+                                        className={`h-12 w-12 rounded-xl bg-white border-gray-100 shadow-sm hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-all relative ${isEncryptionSetupOpen ? 'ring-2 ring-blue-500 text-blue-600 dark:ring-blue-400 dark:text-blue-400' : ''}`}
+                                        title="Encryption setup"
+                                        onClick={handleEncryptionSetup}
+                                    >
+                                        <LockClosedIcon className={`h-5 w-5 ${isEncryptionSetupOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`} />
+                                        {!hasEncryptionKeys && (
+                                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                                                !
+                                            </span>
+                                        )}
+                                    </Button>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <div className="flex-1 overflow-y-auto">
+                    
+                    {/* Scrollable chat list container */}
+                    <div className="h-[calc(100%-6rem)] overflow-y-auto">
                         <div className="space-y-1 p-2">
                             <EncryptionNotice className="mb-2" />
                             {[...users, ...groups]
@@ -1241,273 +1240,275 @@ export default function Messaging(props: MessagingProps) {
                     </div>
                 </div>
 
-                <div className="flex-1">
+                {/* Message area - with left margin to accommodate sidebar */}
+                <div className={`${isMobileView ? 'w-full' : 'ml-80'} flex-1 h-full overflow-hidden relative`}>
                     {selectedChat ? (
-                        <div className="flex h-full flex-col">
-                            {showEncryptionWarning && !isGroup(selectedChat) && (
-                                <div className="p-4">
-                                    <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900">
-                                        <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                                        <AlertTitle className="text-amber-800 dark:text-amber-400">
-                                            End-to-End Encryption Not Available
-                                        </AlertTitle>
-                                        <AlertDescription className="text-amber-700 dark:text-amber-500">
-                                            {selectedChat.name} hasn't set up encryption yet. Messages will be sent unencrypted. When they set up their keys, you'll be able to send encrypted messages.
-                                        </AlertDescription>
-                                    </Alert>
-                                </div>
-                            )}
-                            
-                            <div className="z-10 flex justify-center p-4">
-                                <div className="flex w-full max-w-3xl items-center justify-between rounded-full border border-gray-200 bg-white px-6 py-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                                    <div className="flex items-center gap-4">
-                                    {isMobileView && (
-                                            <Button variant="ghost" size="icon" onClick={() => setSelectedChat(null)} className="h-9 w-9 rounded-full p-0">
-                                            <ArrowLeftIcon className="h-5 w-5" />
-                                        </Button>
-                                    )}
-                                    {isGroup(selectedChat) ? (
-                                            <div className="relative">
-                                                <UserAvatar user={{ name: selectedChat.name, avatar: selectedChat.avatar }} className="size-10" />
-                                                <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
-                                                    {selectedChat.members.length}
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <UserAvatar user={selectedChat} className="size-10" />
+                        <div className="flex h-full flex-col overflow-hidden">
+                            {/* Fixed header - placed outside the scrollable area */}
+                            <div className="fixed top-[64px] left-0 right-0 z-30 bg-white dark:bg-black ml-0 md:ml-80">
+                                {showEncryptionWarning && !isGroup(selectedChat) && (
+                                    <div className="p-4">
+                                        <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900">
+                                            <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                            <AlertTitle className="text-amber-800 dark:text-amber-400">
+                                                End-to-End Encryption Not Available
+                                            </AlertTitle>
+                                            <AlertDescription className="text-amber-700 dark:text-amber-500">
+                                                {selectedChat.name} hasn't set up encryption yet. Messages will be sent unencrypted. When they set up their keys, you'll be able to send encrypted messages.
+                                            </AlertDescription>
+                                        </Alert>
+                                    </div>
+                                )}
+                                
+                                <div className="flex justify-center p-4 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 shadow-sm">
+                                    <div className="flex w-full max-w-3xl items-center justify-between rounded-full border border-gray-200 bg-white px-6 py-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                                        <div className="flex items-center gap-4">
+                                        {isMobileView && (
+                                                <Button variant="ghost" size="icon" onClick={() => setSelectedChat(null)} className="h-9 w-9 rounded-full p-0">
+                                                <ArrowLeftIcon className="h-5 w-5" />
+                                            </Button>
                                         )}
-                                            <div>
-                                            <h2 className="text-base font-medium text-gray-900 dark:text-white">{selectedChat.name}</h2>
-                                            {isGroup(selectedChat) ? (
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                    {selectedChat.members.length} members
-                                                </p>
-                                            ) : (
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                    {selectedChat.lastMessageTime ? `Active ${selectedChat.lastMessageTime}` : 'New conversation'}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center">
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            onClick={refreshMessages} 
-                                            disabled={refreshing}
-                                            className="h-10 w-10 rounded-xl border border-gray-100 bg-white text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all shadow-sm"
-                                            title="Refresh messages"
-                                        >
-                                            <ArrowPathIcon className={`h-5 w-5 ${refreshing ? 'animate-spin text-blue-600 dark:text-blue-400' : ''}`} />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="relative flex-1 overflow-hidden">
-                                <div className="absolute inset-0 overflow-y-auto pb-[140px] md:pb-[100px]">
-                                    <div className="flex min-h-full flex-col justify-end p-4">
-                                        {/* Loading indicator removed as it's now shown in the refresh button */}
-                                        
-                                            <div className="space-y-4">
-                                                {showRefreshNotice && (
-                                                    <div className="sticky top-0 z-10 mb-4 flex justify-center">
-                                                        <div className="flex items-center gap-2 rounded-full bg-green-100 px-4 py-2 text-green-800 shadow-md dark:bg-green-900 dark:text-green-200 transition-opacity">
-                                                            <span className="text-sm">Messages refreshed</span>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                
-                                                {!isGroup(selectedChat) && (
-                                                    <div className="flex justify-center">
-                                                        <div className="rounded-full bg-gray-100 px-4 py-1 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-                                                            Messages will expire in {expiresIn} {expiresIn === 1 ? 'hour' : 'hours'}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            
-                                            {messages.length === 0 && !loading ? (
-                                                <div className="flex justify-center p-8">
-                                                    <div className="text-center text-gray-500 dark:text-gray-400">
-                                                        <p>No messages yet</p>
-                                                        <p className="text-sm mt-1">Start a conversation with {!isGroup(selectedChat) ? selectedChat?.name : 'the group'}</p>
-                                                    </div>
+                                        {isGroup(selectedChat) ? (
+                                                <div className="relative">
+                                                    <UserAvatar user={{ name: selectedChat.name, avatar: selectedChat.avatar }} className="size-10" />
+                                                    <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-blue-500 text-xs text-white">
+                                                        {selectedChat.members.length}
+                                                    </span>
                                                 </div>
                                             ) : (
-                                                messages.map((message, index) => {
-                                                    const isCurrentUser = isGroup(selectedChat)
-                                                        ? isGroupMessage(message) && isCurrentUserGroupMessage(message)
-                                                        : isDirectMessage(message) && isCurrentUserMessage(message);
-                                                    const showAvatar = isGroup(selectedChat) && !isCurrentUser;
-                                                    const prevMessage = messages[index - 1];
-                                                    const isConsecutiveMessage =
-                                                        prevMessage &&
-                                                        isGroup(selectedChat) &&
-                                                        !isCurrentUser &&
-                                                        isGroupMessage(prevMessage) &&
-                                                        isGroupMessage(message) &&
-                                                        prevMessage.user_id === message.user_id;
+                                                <UserAvatar user={selectedChat} className="size-10" />
+                                            )}
+                                                <div>
+                                                <h2 className="text-base font-medium text-gray-900 dark:text-white">{selectedChat.name}</h2>
+                                                {isGroup(selectedChat) ? (
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                        {selectedChat.members.length} members
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                        {selectedChat.lastMessageTime ? `Active ${selectedChat.lastMessageTime}` : 'New conversation'}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                onClick={refreshMessages} 
+                                                disabled={refreshing}
+                                                className="h-10 w-10 rounded-xl border border-gray-100 bg-white text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all shadow-sm"
+                                                title="Refresh messages"
+                                            >
+                                                <ArrowPathIcon className={`h-5 w-5 ${refreshing ? 'animate-spin text-blue-600 dark:text-blue-400' : ''}`} />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>  
 
-                                                    return (
+                            {/* Messages container - with top padding to accommodate the fixed header and more bottom padding for mobile */}
+                            <div className="flex-1 overflow-y-auto pt-[130px] pb-[150px] md:pb-[100px]">
+                                <div className="flex min-h-full flex-col justify-end p-4">
+                                    <div className="space-y-4">
+                                        {showRefreshNotice && (
+                                            <div className="sticky top-0 z-10 mb-4 flex justify-center">
+                                                <div className="flex items-center gap-2 rounded-full bg-green-100 px-4 py-2 text-green-800 shadow-md dark:bg-green-900 dark:text-green-200 transition-opacity">
+                                                    <span className="text-sm">Messages refreshed</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {!isGroup(selectedChat) && (
+                                            <div className="flex justify-center">
+                                                <div className="rounded-full bg-gray-100 px-4 py-1 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+                                                    Messages will expire in {expiresIn} {expiresIn === 1 ? 'hour' : 'hours'}
+                                                </div>
+                                            </div>
+                                        )}
+                                    
+                                        {messages.length === 0 && !loading ? (
+                                            <div className="flex justify-center p-8">
+                                                <div className="text-center text-gray-500 dark:text-gray-400">
+                                                    <p>No messages yet</p>
+                                                    <p className="text-sm mt-1">Start a conversation with {!isGroup(selectedChat) ? selectedChat?.name : 'the group'}</p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            messages.map((message, index) => {
+                                                const isCurrentUser = isGroup(selectedChat)
+                                                    ? isGroupMessage(message) && isCurrentUserGroupMessage(message)
+                                                    : isDirectMessage(message) && isCurrentUserMessage(message);
+                                                const showAvatar = isGroup(selectedChat) && !isCurrentUser;
+                                                const prevMessage = messages[index - 1];
+                                                const isConsecutiveMessage =
+                                                    prevMessage &&
+                                                    isGroup(selectedChat) &&
+                                                    !isCurrentUser &&
+                                                    isGroupMessage(prevMessage) &&
+                                                    isGroupMessage(message) &&
+                                                    prevMessage.user_id === message.user_id;
+
+                                                return (
+                                                    <div
+                                                        key={message.id}
+                                                        className={`mb-4 flex ${isCurrentUser || isConsecutiveMessage ? 'justify-end' : 'justify-start'}`}
+                                                    >
+                                                        {showAvatar && !isConsecutiveMessage && isGroupMessage(message) && (
+                                                            <div className="flex flex-col items-center gap-1">
+                                                                <UserAvatar user={message.user} className="size-8" />
+                                                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                                    {message.user.name.split(' ')[0]}
+                                                                </span>
+                                                            </div>
+                                                        )}
+
                                                         <div
-                                                            key={message.id}
-                                                            className={`mb-4 flex ${isCurrentUser || isConsecutiveMessage ? 'justify-end' : 'justify-start'}`}
+                                                            className={`max-w-[70%] rounded-lg p-3 ${
+                                                                isCurrentUser || isConsecutiveMessage
+                                                                    ? 'bg-blue-500 text-white'
+                                                                    : 'bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-white'
+                                                            }`}
                                                         >
-                                                            {showAvatar && !isConsecutiveMessage && isGroupMessage(message) && (
-                                                                <div className="flex flex-col items-center gap-1">
-                                                                    <UserAvatar user={message.user} className="size-8" />
-                                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                                        {message.user.name.split(' ')[0]}
-                                                                    </span>
-                                                                </div>
-                                                            )}
-
-                                                            <div
-                                                                className={`max-w-[70%] rounded-lg p-3 ${
-                                                                    isCurrentUser || isConsecutiveMessage
-                                                                        ? 'bg-blue-500 text-white'
-                                                                        : 'bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-white'
-                                                                }`}
-                                                            >
-                                                                {isGroup(selectedChat) &&
-                                                                    !isCurrentUser &&
-                                                                    isGroupMessage(message) &&
-                                                                    !isConsecutiveMessage && (
-                                                                        <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
-                                                                            {message.user.name}
-                                                                        </p>
-                                                                    )}
-                                                                <div className="flex flex-col gap-1">
-                                                                    <div className="flex items-start justify-between gap-2">
-                                                                        <p className="text-sm">
-                                                                            {message.is_encrypted && (
-                                                                                <span className="inline-flex items-center mr-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded-md text-xs font-medium">
-                                                                                    <Lock className="h-3 w-3 mr-1" />
-                                                                                    E2E
-                                                                                </span>
-                                                                            )}
-                                                                            {(() => {
-                                                                                // For direct messages with encryption
-                                                                                if (isDirectMessage(message) && message.is_encrypted) {
-                                                                                    // Current user's encrypted messages
-                                                                                    if (isCurrentUser) {
-                                                                                        // If it's a self-message (messaging yourself), try to show content
-                                                                                        const isSelfMessage = selectedChat && selectedChat.id === auth.user?.id;
-                                                                                        if (isSelfMessage) {
-                                                                                            // For self-messages, we'll try to decrypt if needed
-                                                                                            const privateKey = getPrivateKeyFromCookie();
-                                                                                            if (privateKey && !message.decrypted_content) {
-                                                                                                try {
-                                                                                                    return decryptMessage(message.content, privateKey);
-                                                                                                } catch (error) {
-                                                                                                    console.error('Failed to decrypt self-message in UI:', error);
-                                                                                                    // If decryption fails, show content anyway for self-messages
-                                                                                                    return message.content;
-                                                                                                }
-                                                                                            }
-                                                                                            // Return decrypted or original content
-                                                                                            return message.decrypted_content || message.content;
-                                                                                        }
-                                                                                        return message.decrypted_content || "[Encrypted Message]";
-                                                                                    }
-                                                                                    // Other user's encrypted messages
-                                                                                    return message.decrypted_content || "[Encrypted message]";
-                                                                                }
-                                                                                // Regular messages
-                                                                                return message.content;
-                                                                            })()}
-                                                                        </p>
-                                                                        {!isGroup(selectedChat) && isCurrentUser && (
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                className="h-6 w-6 rounded-lg text-white/80 hover:bg-white/20 hover:text-white transition-all"
-                                                                                onClick={() => handleDeleteMessage(message.id)}
-                                                                            >
-                                                                                <TrashIcon className="h-4 w-4" />
-                                                                            </Button>
+                                                            {isGroup(selectedChat) &&
+                                                                !isCurrentUser &&
+                                                                isGroupMessage(message) &&
+                                                                !isConsecutiveMessage && (
+                                                                    <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                                                                        {message.user.name}
+                                                                    </p>
+                                                                )}
+                                                            <div className="flex flex-col gap-1">
+                                                                <div className="flex items-start justify-between gap-2">
+                                                                    <p className="text-sm">
+                                                                        {message.is_encrypted && (
+                                                                            <span className="inline-flex items-center mr-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded-md text-xs font-medium">
+                                                                                <Lock className="h-3 w-3 mr-1" />
+                                                                                E2E
+                                                                            </span>
                                                                         )}
+                                                                        {(() => {
+                                                                            // For direct messages with encryption
+                                                                            if (isDirectMessage(message) && message.is_encrypted) {
+                                                                                // Current user's encrypted messages
+                                                                                if (isCurrentUser) {
+                                                                                    // If it's a self-message (messaging yourself), try to show content
+                                                                                    const isSelfMessage = selectedChat && selectedChat.id === auth.user?.id;
+                                                                                    if (isSelfMessage) {
+                                                                                        // For self-messages, we'll try to decrypt if needed
+                                                                                        const privateKey = getPrivateKeyFromCookie();
+                                                                                        if (privateKey && !message.decrypted_content) {
+                                                                                            try {
+                                                                                                return decryptMessage(message.content, privateKey);
+                                                                                            } catch (error) {
+                                                                                                console.error('Failed to decrypt self-message in UI:', error);
+                                                                                                // If decryption fails, show content anyway for self-messages
+                                                                                                return message.content;
+                                                                                            }
+                                                                                        }
+                                                                                        // Return decrypted or original content
+                                                                                        return message.decrypted_content || message.content;
+                                                                                    }
+                                                                                    return message.decrypted_content || "[Encrypted Message]";
+                                                                                }
+                                                                                // Other user's encrypted messages
+                                                                                return message.decrypted_content || "[Encrypted message]";
+                                                                            }
+                                                                            // Regular messages
+                                                                            return message.content;
+                                                                        })()}
+                                                                    </p>
+                                                                    {!isGroup(selectedChat) && isCurrentUser && (
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-6 w-6 rounded-lg text-white/80 hover:bg-white/20 hover:text-white transition-all"
+                                                                            onClick={() => handleDeleteMessage(message.id)}
+                                                                        >
+                                                                            <TrashIcon className="h-4 w-4" />
+                                                                        </Button>
+                                                                    )}
+                                                                </div>
+                                                                {message.attachments && message.attachments.length > 0 && (
+                                                                    <div className="mt-2 flex flex-wrap gap-2">
+                                                                        {message.attachments.map((attachment) => (
+                                                                            <div key={attachment.id} className="group relative">
+                                                                                {attachment.file_type.startsWith('image/') ? (
+                                                                                    <img
+                                                                                        src={attachment.file_path}
+                                                                                        alt={attachment.file_name}
+                                                                                        className="max-w-[200px] rounded-lg"
+                                                                                    />
+                                                                                ) : attachment.file_type.startsWith('video/') ? (
+                                                                                    <video
+                                                                                        src={attachment.file_path}
+                                                                                        controls
+                                                                                        className="max-w-[200px] rounded-lg"
+                                                                                    />
+                                                                                ) : attachment.file_type.startsWith('audio/') ? (
+                                                                                    <audio
+                                                                                        src={attachment.file_path}
+                                                                                        controls
+                                                                                        className="w-full"
+                                                                                    />
+                                                                                ) : attachment.file_type === 'application/pdf' ? (
+                                                                                    <a
+                                                                                        href={attachment.file_path}
+                                                                                        target="_blank"
+                                                                                        rel="noopener noreferrer"
+                                                                                        className="flex items-center gap-2 rounded-lg bg-gray-100 p-2 hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800"
+                                                                                    >
+                                                                                        <FileText className="h-5 w-5" />
+                                                                                        <span className="max-w-[150px] truncate text-sm text-gray-900 dark:text-white">
+                                                                                            {attachment.file_name}
+                                                                                        </span>
+                                                                                    </a>
+                                                                                ) : (
+                                                                                    <a
+                                                                                        href={attachment.file_path}
+                                                                                        target="_blank"
+                                                                                        rel="noopener noreferrer"
+                                                                                        className="flex items-center gap-2 rounded-lg bg-gray-100 p-2 hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800"
+                                                                                    >
+                                                                                        <File className="h-5 w-5" />
+                                                                                        <span className="max-w-[150px] truncate text-sm text-gray-900 dark:text-white">
+                                                                                            {attachment.file_name}
+                                                                                        </span>
+                                                                                    </a>
+                                                                                )}
+                                                                            </div>
+                                                                        ))}
                                                                     </div>
-                                                                    {message.attachments && message.attachments.length > 0 && (
-                                                                        <div className="mt-2 flex flex-wrap gap-2">
-                                                                            {message.attachments.map((attachment) => (
-                                                                                <div key={attachment.id} className="group relative">
-                                                                                    {attachment.file_type.startsWith('image/') ? (
-                                                                                        <img
-                                                                                            src={attachment.file_path}
-                                                                                            alt={attachment.file_name}
-                                                                                            className="max-w-[200px] rounded-lg"
-                                                                                        />
-                                                                                    ) : attachment.file_type.startsWith('video/') ? (
-                                                                                        <video
-                                                                                            src={attachment.file_path}
-                                                                                            controls
-                                                                                            className="max-w-[200px] rounded-lg"
-                                                                                        />
-                                                                                    ) : attachment.file_type.startsWith('audio/') ? (
-                                                                                        <audio
-                                                                                            src={attachment.file_path}
-                                                                                            controls
-                                                                                            className="w-full"
-                                                                                        />
-                                                                                    ) : attachment.file_type === 'application/pdf' ? (
-                                                                                        <a
-                                                                                            href={attachment.file_path}
-                                                                                            target="_blank"
-                                                                                            rel="noopener noreferrer"
-                                                                                            className="flex items-center gap-2 rounded-lg bg-gray-100 p-2 hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800"
-                                                                                        >
-                                                                                            <FileText className="h-5 w-5" />
-                                                                                            <span className="max-w-[150px] truncate text-sm text-gray-900 dark:text-white">
-                                                                                                {attachment.file_name}
-                                                                                            </span>
-                                                                                        </a>
-                                                                                    ) : (
-                                                                                        <a
-                                                                                            href={attachment.file_path}
-                                                                                            target="_blank"
-                                                                                            rel="noopener noreferrer"
-                                                                                            className="flex items-center gap-2 rounded-lg bg-gray-100 p-2 hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800"
-                                                                                        >
-                                                                                            <File className="h-5 w-5" />
-                                                                                            <span className="max-w-[150px] truncate text-sm text-gray-900 dark:text-white">
-                                                                                                {attachment.file_name}
-                                                                                            </span>
-                                                                                        </a>
-                                                                                    )}
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <div className="mt-1 flex items-center justify-end gap-2 text-xs opacity-70">
-                                                                    {message.is_encrypted && (
-                                                                        <span className="flex items-center gap-1 text-blue-500 dark:text-blue-400">
-                                                                            <Lock className="h-3 w-3" />
-                                                                            {isDirectMessage(message) && isCurrentUser ? (
-                                                                                <span title="Only you can see the plaintext. The recipient receives the encrypted version.">
-                                                                                    Sent encrypted
-                                                                                </span>
-                                                                            ) : (
-                                                                                "Encrypted"
-                                                                            )}
-                                                                        </span>
-                                                                    )}
-                                                                    <span>{new Date(message.created_at).toLocaleTimeString()}</span>
-                                                                </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="mt-1 flex items-center justify-end gap-2 text-xs opacity-70">
+                                                                {message.is_encrypted && (
+                                                                    <span className="flex items-center gap-1 text-blue-500 dark:text-blue-400">
+                                                                        <Lock className="h-3 w-3" />
+                                                                        {isDirectMessage(message) && isCurrentUser ? (
+                                                                            <span title="Only you can see the plaintext. The recipient receives the encrypted version.">
+                                                                                Sent encrypted
+                                                                            </span>
+                                                                        ) : (
+                                                                            "Encrypted"
+                                                                        )}
+                                                                    </span>
+                                                                )}
+                                                                <span>{new Date(message.created_at).toLocaleTimeString()}</span>
                                                             </div>
                                                         </div>
-                                                    );
-                                                })
-                                            )}
-                                                <div ref={messagesEndRef} />
-                                            </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                        <div ref={messagesEndRef} />
                                     </div>
                                 </div>
                             </div>
                             
-                            <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-black md:left-[320px] mb-20 md:mb-0">
+                            {/* Fixed message input at bottom - adjusted to account for sidebar and mobile bottom nav */}
+                            <div className="fixed bottom-0 right-0 z-50 border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-black mb-[70px] md:mb-0 w-full md:w-[calc(100%-320px)]">
                                 <form onSubmit={sendMessage} className="flex flex-col">
                                     {selectedFiles.length > 0 && (
                                         <div className="border-t border-gray-200 bg-white px-4 py-2 dark:border-gray-800 dark:bg-black">
@@ -1524,9 +1525,9 @@ export default function Messaging(props: MessagingProps) {
                                                         </button>
                                                     </div>
                                                 ))}
-                            </div>
-                        </div>
-                    )}
+                                            </div>
+                                        </div>
+                                    )}
                                     
                                     <div className="flex items-center gap-2 p-4">
                                         <div className="relative flex-1">
