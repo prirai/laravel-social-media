@@ -59,10 +59,6 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 </div>
                 
                 <div className="rounded-2xl border border-gray-200 bg-white/80 p-6 shadow-lg backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/80">
-                    <div className="mb-6 text-center">
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome Back</h1>
-                        <p className="mt-2 text-gray-600 dark:text-gray-300">Sign in to continue to SimpleSocial</p>
-                    </div>
                     
                     <form className="flex flex-col gap-4" onSubmit={submit}>
                         <div className="grid gap-4">
@@ -117,7 +113,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     checked={data.remember}
                                     onClick={() => setData('remember', !data.remember)}
                                     tabIndex={3}
-                                    className="mr-2 text-blue-600 border-gray-300 dark:border-gray-600 dark:bg-white rounded focus:ring-blue-500 dark:focus:ring-blue-400"
+                                    className="mr-2 h-5 w-5 text-blue-600 border-gray-300 dark:border-gray-600 dark:bg-transparent rounded focus:ring-blue-500 dark:focus:ring-blue-400 dark:data-[state=checked]:bg-blue-500 dark:data-[state=checked]:border-blue-500 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                                 />
                                 <Label htmlFor="remember" className="text-sm text-gray-600 dark:text-gray-400">
                                     Remember me

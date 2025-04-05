@@ -54,10 +54,6 @@ export default function Register() {
                 </div>
                 
                 <div className="rounded-2xl border border-gray-200 bg-white/80 p-6 shadow-lg backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/80">
-                    <div className="mb-6 text-center">
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Join SimpleSocial</h1>
-                        <p className="mt-2 text-gray-600 dark:text-gray-300">Create your account to get started</p>
-                    </div>
                     
                     <form className="flex flex-col gap-5" onSubmit={submit}>
                         <div className="grid gap-5">
