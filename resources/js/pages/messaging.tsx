@@ -13,7 +13,7 @@ import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { File, FileText, LockIcon, Paperclip, Shield, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { encryptMessage, decryptMessage, getPrivateKeyFromCookie } from '@/utils/crypto';
 import { EncryptionNotice } from '@/components/encryption-notice';
 import { cn } from '@/lib/utils';
@@ -89,6 +89,7 @@ interface AllUser {
     username: string;
     avatar: string | null;
     verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
+    public_key?: string;
 }
 
 interface Group {
@@ -116,13 +117,7 @@ function isGroup(chat: Chat | null): chat is Group {
 interface MessagingProps {
     users: User[];
     groups: Group[];
-    allUsers: Array<{
-        id: number;
-        name: string;
-        username: string;
-        avatar: string | null;
-        verification_status?: 'unverified' | 'pending' | 'verified' | undefined;
-    }>;
+    allUsers: AllUser[];
 }
 
 const isGroupMessage = (message: Message): message is GroupMessage => {
@@ -133,7 +128,8 @@ const isDirectMessage = (message: Message): message is DirectMessage => {
     return 'sender_id' in message && !('user_id' in message);
 };
 
-export default function Messaging({ users: initialUsers = [], groups: initialGroups = [], allUsers = [] }: MessagingProps) {
+export default function Messaging(props: MessagingProps) {
+    const { users: initialUsers = [], groups: initialGroups = [], allUsers: initialAllUsers = [] } = props;
     const { auth } = usePage<SharedData>().props;
     const [users, setUsers] = useState<User[]>(initialUsers);
     const [groups, setGroups] = useState<Group[]>(initialGroups);
@@ -161,6 +157,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
     const [initialLoadDone, setInitialLoadDone] = useState(false);
     const [showRefreshNotice, setShowRefreshNotice] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [allUsers, setAllUsers] = useState<AllUser[]>(initialAllUsers);
 
     const { data, setData, reset } = useForm({
         content: '',
@@ -188,11 +185,21 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
     // Memoize the selected chat ID to prevent unnecessary rerenders
     const selectedChatId = selectedChat ? selectedChat.id : null;
 
+    // Add a computed value for whether the selected chat has a public key
+    const selectedChatHasPublicKey = useMemo(() => {
+        if (!selectedChat || isGroup(selectedChat)) return false;
+        return !!selectedChat.public_key;
+    }, [selectedChat]);
+
     useEffect(() => {
         if (!selectedChat) return;
         
         setLoading(true);
         setMessages([]);
+        // Reset encryption state only when changing chats
+        // When a user has a public key, encryption will be enabled by default
+        setIsEncrypted(false);
+        setIsEncryptionToggled(false);
         
         const endpoint = isGroup(selectedChat)
             ? route('groups.messages', selectedChat.id.replace('group_', ''))
@@ -239,6 +246,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                     setMessages(processedMessages);
                     
                     if (response.data.user && response.data.user.public_key) {
+                        // Update the public key in our users array
                         setUsers(prevUsers => 
                             prevUsers.map(user => 
                                 user.id === selectedChat.id 
@@ -247,10 +255,17 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                             )
                         );
                         
+                        // Update the selected chat's public key
                         setSelectedChat((prevChat) => {
                             if (!prevChat || isGroup(prevChat)) return prevChat;
                             return { ...prevChat, public_key: response.data.user.public_key };
                         });
+                        
+                        // If the recipient has a public key and we have our own private key,
+                        // enable encryption by default only if user hasn't explicitly toggled it
+                        if (hasEncryptionKeys && !isGroup(selectedChat) && !isEncryptionToggled) {
+                            setIsEncrypted(true);
+                        }
                     }
                 } else {
                     setMessages(loadedMessages);
@@ -264,7 +279,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
             .finally(() => {
                 setLoading(false);
             });
-    }, [selectedChat ? (isGroup(selectedChat) ? `group_${selectedChat.id}` : selectedChat.id) : null]);
+    }, [selectedChat ? (isGroup(selectedChat) ? `group_${selectedChat.id}` : selectedChat.id) : null, hasEncryptionKeys]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -400,8 +415,6 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                 return [...filteredMessages, messageData];
             });
             
-            setIsEncrypted(false);
-
             if (isGroup(selectedChat)) {
                 setGroups((currentGroups) =>
                     currentGroups.map((group) =>
@@ -530,76 +543,116 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
         });
     };
 
+    /**
+     * Ensures we have a public key for the specified user.
+     * Checks local state first, then fetches from server if needed.
+     */
     const ensurePublicKey = async (userId: number): Promise<string | undefined> => {
-        const existingUser = users.find(u => u.id === userId);
-        if (existingUser?.public_key) {
-            return existingUser.public_key;
+        // First check if we already have the public key in our current state
+        const user = users.find(u => u.id === userId);
+        if (user?.public_key) {
+            return user.public_key;
         }
         
+        // Try to find in allUsers array as well
+        const allUser = allUsers.find(u => u.id === userId);
+        if (allUser && 'public_key' in allUser && allUser.public_key) {
+            // Update our main users array
+            setUsers(prevUsers => 
+                prevUsers.map(u => 
+                    u.id === userId ? { ...u, public_key: allUser.public_key } : u
+                )
+            );
+            
+            // Update selected chat if this is the current one
+            if (selectedChat && !isGroup(selectedChat) && selectedChat.id === userId) {
+                setSelectedChat({
+                    ...selectedChat,
+                    public_key: allUser.public_key
+                });
+            }
+            
+            return allUser.public_key;
+        }
+        
+        // If we don't have it locally, fetch from server
         try {
             const response = await axios.get(route('messages.get', userId));
-            if (response.data.user?.public_key) {
+            
+            if (response.data.user && response.data.user.public_key) {
+                const fetchedPublicKey = response.data.user.public_key;
+                
+                // Update our users cache
                 setUsers(prevUsers => 
-                    prevUsers.map(user => 
-                        user.id === userId 
-                            ? { ...user, public_key: response.data.user.public_key } 
-                            : user
+                    prevUsers.map(u => 
+                        u.id === userId ? { ...u, public_key: fetchedPublicKey } : u
                     )
                 );
                 
+                // Update allUsers array with type assertion
+                setAllUsers(prevAllUsers => 
+                    prevAllUsers.map(u => 
+                        u.id === userId 
+                            ? { ...u, public_key: fetchedPublicKey } as AllUser
+                            : u
+                    )
+                );
+                
+                // Update selected chat if this is the current one
                 if (selectedChat && !isGroup(selectedChat) && selectedChat.id === userId) {
-                    setSelectedChat((prevChat) => {
-                        if (!prevChat || isGroup(prevChat)) return prevChat;
-                        const updatedChat: User = {
-                            ...prevChat,
-                            public_key: response.data.user.public_key
-                        };
-                        return updatedChat;
+                    setSelectedChat({
+                        ...selectedChat,
+                        public_key: fetchedPublicKey
                     });
                 }
                 
-                return response.data.user.public_key;
-            } else {
-                setShowEncryptionWarning(true);
-                
-                setTimeout(() => {
-                    setShowEncryptionWarning(false);
-                }, 5000);
+                return fetchedPublicKey;
             }
+            
+            // User has no public key
+            console.warn(`User ${userId} has no public key`);
+            return undefined;
         } catch (error) {
-            console.error('Error fetching public key for user:', error);
+            console.error('Error fetching user public key:', error);
+            throw error;
         }
-        
-        return undefined;
     };
 
     const toggleEncryption = async () => {
-        if (!hasEncryptionKeys) {
+        // If this is a group chat, encryption isn't supported
+        if (isGroup(selectedChat)) {
+            console.warn('Encryption not supported for group chats');
+            return;
+        }
+        
+        // Ensure we have our own private key
+        const privateKey = getPrivateKeyFromCookie();
+        if (!privateKey) {
             setIsEncryptionSetupOpen(true);
             return;
         }
         
-        if (!selectedChat || isGroup(selectedChat)) {
-            alert('Encryption is only supported for direct messages');
-            return;
-        }
-        
-        if (!selectedChat.public_key) {
+        // Ensure the recipient has a public key
+        if (!selectedChat?.public_key) {
+            // Try to fetch the latest public key in case it was recently created
             try {
-                const publicKey = await ensurePublicKey(selectedChat.id);
-                if (!publicKey) {
-                    alert('Cannot enable encryption: recipient has no public key');
-                    return;
+                if (selectedChat) {
+                    const updatedPublicKey = await ensurePublicKey(selectedChat.id);
+                    if (!updatedPublicKey) {
+                        alert(`Encryption unavailable: ${selectedChat.name} hasn't set up encryption yet.`);
+                        return;
+                    }
                 }
             } catch (error) {
-                console.error('Error checking recipient public key:', error);
-                alert('Cannot enable encryption at this time. Please try again.');
+                console.error('Error checking public key:', error);
+                alert('Encryption unavailable: Could not verify recipient encryption setup.');
                 return;
             }
         }
         
+        // Toggle encryption state
         setIsEncrypted(!isEncrypted);
-        setIsEncryptionToggled(!isEncrypted);
+        setIsEncryptionToggled(true);
     };
 
     const refreshMessages = () => {
@@ -653,20 +706,40 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                     
                     setMessages(processedMessages);
                     
-                    // Update user's public key if available
+                    // Update the user's public key information from the response
+                    // This ensures the encryption lock button becomes available when a user has setup encryption
                     if (response.data.user && response.data.user.public_key) {
+                        const fetchedPublicKey = response.data.user.public_key;
+                        
+                        // Update the public key in the users array
                         setUsers(prevUsers => 
                             prevUsers.map(user => 
                                 user.id === selectedChat.id 
-                                    ? { ...user, public_key: response.data.user.public_key } 
+                                    ? { ...user, public_key: fetchedPublicKey } 
                                     : user
                             )
                         );
                         
+                        // Update the selected chat's public key
                         setSelectedChat((prevChat) => {
                             if (!prevChat || isGroup(prevChat)) return prevChat;
-                            return { ...prevChat, public_key: response.data.user.public_key };
+                            return { ...prevChat, public_key: fetchedPublicKey };
                         });
+
+                        // Also update the public key in the allUsers array for completeness
+                        setAllUsers(prevAllUsers => 
+                            prevAllUsers.map(u => 
+                                u.id === selectedChat.id 
+                                    ? { ...u, public_key: fetchedPublicKey } as AllUser
+                                    : u
+                            )
+                        );
+                        
+                        // If the recipient has a public key and we have our own private key,
+                        // enable encryption by default only if user hasn't explicitly toggled it
+                        if (hasEncryptionKeys && !isGroup(selectedChat) && !isEncryptionToggled) {
+                            setIsEncrypted(true);
+                        }
                     }
                 } else {
                     // For group messages, just set them directly
@@ -1163,11 +1236,20 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                         <div className="relative flex-1">
                                             <input
                                                 type="text"
-                                        value={message}
-                                        onChange={(e) => setMessage(e.target.value)}
+                                                value={message}
+                                                onChange={(e) => setMessage(e.target.value)}
                                                 placeholder={`Message ${isGroup(selectedChat) ? selectedChat.name : selectedChat?.name}`}
-                                                className="w-full rounded-full border border-gray-200 bg-gray-100 px-4 py-2 pr-10 focus:border-blue-500 focus:outline-none dark:border-gray-800 dark:bg-gray-900"
-                                    />
+                                                className={`w-full rounded-full border ${
+                                                    isEncrypted 
+                                                        ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' 
+                                                        : 'border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-900'
+                                                } px-4 py-2 pr-10 focus:border-blue-500 focus:outline-none`}
+                                            />
+                                            {isEncrypted && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                    <Lock className="h-4 w-4 text-green-500 dark:text-green-400" />
+                                                </div>
+                                            )}
                                         </div>
                                         <input
                                             type="file"
@@ -1191,26 +1273,61 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                             <Paperclip className="h-5 w-5" />
                                         </label>
                                         
-                                        {selectedChat && !isGroup(selectedChat) && (
-                                            <button
+                                        {!hasEncryptionKeys || isGroup(selectedChat) || !selectedChatHasPublicKey ? (
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    disabled
+                                                    title={
+                                                        !hasEncryptionKeys
+                                                            ? "You need to set up encryption first"
+                                                            : isGroup(selectedChat)
+                                                                ? "Encryption is only available for direct messages"
+                                                                : `${selectedChat?.name} hasn't set up encryption yet`
+                                                    }
+                                                    className="h-9 w-9 rounded-full transition-all"
+                                                >
+                                                    <Lock
+                                                        className="h-5 w-5 text-gray-400 opacity-50 dark:text-gray-500"
+                                                    />
+                                                </Button>
+                                                {!isGroup(selectedChat) && hasEncryptionKeys && !selectedChatHasPublicKey && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={refreshMessages}
+                                                        className="text-xs text-gray-500"
+                                                        title="Refresh to check if encryption is available"
+                                                    >
+                                                        <ArrowPathIcon className="h-3 w-3 mr-1" />
+                                                        Refresh keys
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <Button
                                                 type="button"
+                                                variant="ghost"
+                                                size="icon"
                                                 onClick={toggleEncryption}
-                                                className={`flex h-10 w-10 items-center justify-center rounded-full border ${
-                                                    isEncrypted 
-                                                        ? 'border-green-500 bg-green-100 text-green-500 dark:border-green-700 dark:bg-green-950 dark:text-green-400' 
-                                                        : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-200 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800'
+                                                title={isEncrypted ? "Disable encryption for this message" : "Enable encryption for this message"}
+                                                className={`h-9 w-9 rounded-full transition-all ${
+                                                    isEncrypted
+                                                        ? 'text-green-500 dark:text-green-400'
+                                                        : 'text-gray-700 dark:text-gray-300'
                                                 }`}
-                                                title={
-                                                    !selectedChat.public_key 
-                                                    ? `${selectedChat.name} hasn't set up encryption yet` 
-                                                    : isEncrypted 
-                                                    ? "Encryption enabled" 
-                                                    : "Enable encryption"
-                                                }
-                                                disabled={!selectedChat.public_key}
                                             >
-                                                <LockIcon className={`h-5 w-5 ${!selectedChat.public_key ? 'opacity-50' : ''}`} />
-                                            </button>
+                                                <Lock
+                                                    className={`h-5 w-5 transition-colors ${
+                                                        isEncrypted
+                                                            ? 'text-green-500 dark:text-green-400'
+                                                            : 'text-gray-700 dark:text-gray-300'
+                                                    }`}
+                                                />
+                                            </Button>
                                         )}
                                         
                                         <Button
@@ -1221,16 +1338,16 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                             <span className="text-sm">{isSending ? 'Sending...' : 'Send'}</span>
                                             <PaperAirplaneIcon className="h-4 w-4" />
                                         </Button>
-                                </div>
-                            </form>
                                     </div>
-                                </div>
+                                </form>
+                            </div>
+                        </div>
                     ) : (
                         <div className="hidden h-full flex-1 flex-col items-center justify-center md:flex">
                             <div className="flex flex-col items-center text-center">
                                 <div className="mb-4 rounded-full bg-gray-100 p-6 dark:bg-gray-800">
                                     <MessageSquare className="h-10 w-10 text-gray-400" />
-                                        </div>
+                                </div>
                                 <h3 className="mb-2 text-xl font-medium text-gray-900 dark:text-white">Your Messages</h3>
                                 <p className="text-gray-500 dark:text-gray-400">Select a conversation or start a new one</p>
                                 <div className="mt-6 max-w-md space-y-4 px-4">
@@ -1249,7 +1366,7 @@ export default function Messaging({ users: initialUsers = [], groups: initialGro
                                         </div>
                                     </div>
                                 </div>
-                                                    </div>
+                            </div>
                             <PlaceholderPattern className="absolute inset-0 -z-10 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
                         </div>
                     )}
