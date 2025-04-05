@@ -1,25 +1,35 @@
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
-import UserAvatar from '@/components/user-avatar';
-import { EncryptionSetupDialog } from '@/components/encryption-setup-dialog';
+import { Head, usePage, useForm, router } from '@inertiajs/react';
+import { Fragment, type FormEvent, useEffect, useRef, useState, useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem, type SharedData } from '@/types';
-import { ArrowLeftIcon, MagnifyingGlassIcon, PaperAirplaneIcon, PlusIcon, TrashIcon, UsersIcon } from '@heroicons/react/24/outline';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
-import { Head, router, useForm, usePage } from '@inertiajs/react';
-import axios from 'axios';
-import { File, FileText, LockIcon, Paperclip, Shield, X } from 'lucide-react';
-import { useEffect, useRef, useState, useMemo } from 'react';
-import { encryptMessage, decryptMessage, getPrivateKeyFromCookie } from '@/utils/crypto';
+import { type BreadcrumbItem } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { EncryptionNotice } from '@/components/encryption-notice';
+import UserAvatar from '@/components/user-avatar';
 import { cn } from '@/lib/utils';
-import { Lock } from 'lucide-react';
-import { MessageSquare } from 'lucide-react';
+import { getPrivateKeyFromCookie, encryptMessage, decryptMessage, generateKeyPair, savePrivateKeyToFile, savePrivateKeyToCookie, isValidPrivateKey } from '@/utils/crypto';
+import axios from 'axios';
+import { Loader2, ArrowDown, Trash2, Lock, LockOpen, File, FileText, X, MessageSquare, Paperclip, Shield, Key, Info, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { 
+    ArrowPathIcon, 
+    ArrowLeftIcon, 
+    PaperClipIcon,
+    TrashIcon,
+    LockClosedIcon, 
+    PlusIcon,
+    MagnifyingGlassIcon, 
+    UsersIcon,
+    ChatBubbleLeftIcon,
+    PaperAirplaneIcon
+} from '@heroicons/react/24/outline';
+import { type SharedData } from '@/types';
+import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -215,6 +225,29 @@ export default function Messaging(props: MessagingProps) {
                     const processedMessages = loadedMessages.map((message: DirectMessage) => {
                         // If this is an encrypted message sent by the current user
                         if (message.is_encrypted && message.sender_id === auth.user?.id) {
+                            // For self-messages (when sender and receiver are the same user)
+                            const isSelfMessage = selectedChat.id === auth.user?.id;
+                            
+                            // For self-messages, attempt to decrypt
+                            if (isSelfMessage) {
+                                if (privateKey) {
+                                    try {
+                                        const decryptedContent = decryptMessage(message.content, privateKey);
+                                        return {
+                                            ...message,
+                                            decrypted_content: decryptedContent
+                                        };
+                                    } catch (error) {
+                                        console.error('Failed to decrypt self-message:', error);
+                                        // Even if decryption fails, for self-messages show the content
+                                        return {
+                                            ...message,
+                                            decrypted_content: message.content
+                                        };
+                                    }
+                                }
+                            }
+                            
                             return {
                                 ...message,
                                 decrypted_content: "[Encrypted Message]"
@@ -328,6 +361,7 @@ export default function Messaging(props: MessagingProps) {
         let contentToSend = message;
         const isContentEncrypted = isEncrypted && !isGroup(selectedChat);
         const originalContent = message;
+        const isSelfMessage = !isGroup(selectedChat) && selectedChat.id === auth.user?.id;
 
         if (isContentEncrypted) {
             let recipientPublicKey = selectedChat.public_key;
@@ -350,6 +384,7 @@ export default function Messaging(props: MessagingProps) {
             }
             
             try {
+                // For self-messages, we'll still encrypt but ensure we can display it
                 contentToSend = encryptMessage(message, recipientPublicKey);
                 formData.append('is_encrypted', '1');
             } catch (error) {
@@ -379,7 +414,8 @@ export default function Messaging(props: MessagingProps) {
                 created_at: tempTime,
                 expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
                 is_encrypted: isContentEncrypted,
-                decrypted_content: isContentEncrypted ? originalContent : undefined,
+                // For self-messages, always show the original content
+                decrypted_content: isSelfMessage ? originalContent : (isContentEncrypted ? originalContent : undefined),
                 original_content: originalContent,
             };
             
@@ -400,11 +436,42 @@ export default function Messaging(props: MessagingProps) {
 
             let messageData = response.data.message;
             if (messageData.is_encrypted && messageData.sender_id === auth.user?.id) {
-                messageData = {
-                    ...messageData,
-                    decrypted_content: originalContent,
-                    original_content: originalContent
-                };
+                // For self-messages (when sender and receiver are the same user)
+                const isSelfMessage = selectedChat.id === auth.user?.id;
+                
+                if (isSelfMessage) {
+                    // Try to decrypt the content for self-messages
+                    const privateKey = getPrivateKeyFromCookie();
+                    if (privateKey) {
+                        try {
+                            const decryptedContent = decryptMessage(messageData.content, privateKey);
+                            messageData = {
+                                ...messageData,
+                                decrypted_content: decryptedContent,
+                                original_content: originalContent
+                            };
+                        } catch (error) {
+                            console.error('Failed to decrypt sent self-message:', error);
+                            messageData = {
+                                ...messageData,
+                                decrypted_content: messageData.content,
+                                original_content: originalContent
+                            };
+                        }
+                    } else {
+                        messageData = {
+                            ...messageData,
+                            decrypted_content: messageData.content,
+                            original_content: originalContent
+                        };
+                    }
+                } else {
+                    messageData = {
+                        ...messageData,
+                        decrypted_content: originalContent,
+                        original_content: originalContent
+                    };
+                }
             }
 
             setMessages((prev) => {
@@ -675,6 +742,30 @@ export default function Messaging(props: MessagingProps) {
                     const processedMessages = loadedMessages.map((message: DirectMessage) => {
                         // If this is an encrypted message sent by the current user
                         if (message.is_encrypted && message.sender_id === auth.user?.id) {
+                            // For self-messages (when sender and receiver are the same user)
+                            const isSelfMessage = selectedChat.id === auth.user?.id;
+                            
+                            // For self-messages, attempt to decrypt
+                            if (isSelfMessage) {
+                                const privateKey = getPrivateKeyFromCookie();
+                                if (privateKey) {
+                                    try {
+                                        const decryptedContent = decryptMessage(message.content, privateKey);
+                                        return {
+                                            ...message,
+                                            decrypted_content: decryptedContent
+                                        };
+                                    } catch (error) {
+                                        console.error('Failed to decrypt self-message:', error);
+                                        // Even if decryption fails, for self-messages show the content
+                                        return {
+                                            ...message,
+                                            decrypted_content: message.content
+                                        };
+                                    }
+                                }
+                            }
+                            
                             return {
                                 ...message,
                                 decrypted_content: "[Encrypted Message]"
@@ -762,124 +853,312 @@ export default function Messaging(props: MessagingProps) {
             });
     };
 
+    const handleEncryptionSetup = () => {
+        console.log('Encryption setup button clicked');
+        // Force both state variables to true
+        setIsEncryptionSetupOpen(true);
+        setShowEncryptionSetup(true);
+        console.log('Dialog state updated:', { isEncryptionSetupOpen: true, showEncryptionSetup: true });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs} fullWidth={true}>
             <Head title="Messages" />
             
-            <EncryptionSetupDialog 
-                open={isEncryptionSetupOpen || showEncryptionSetup} 
-                onOpenChange={(isOpen) => {
-                    setIsEncryptionSetupOpen(isOpen);
-                    setShowEncryptionSetup(isOpen);
-                }} 
-                onSetupComplete={() => {
-                    setIsEncryptionSetupOpen(false);
-                    setShowEncryptionSetup(false);
-                    setHasEncryptionKeys(true);
-                }}
-            />
+            <Dialog open={isEncryptionSetupOpen} onOpenChange={setIsEncryptionSetupOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Shield className="h-5 w-5 text-blue-500" />
+                            End-to-End Encryption Setup
+                        </DialogTitle>
+                        <DialogDescription>
+                            Set up encryption for secure private messages that only you and your recipient can read.
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="mt-4">
+                        <Alert className="mb-4 bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                            <Info className="h-4 w-4" />
+                            <AlertDescription>
+                                <strong>One-time setup:</strong> Messages will be encrypted using public key cryptography.
+                                Your private key will never be stored on our servers and is only used on your device.
+                            </AlertDescription>
+                        </Alert>
+                        
+                        <Tabs defaultValue="generate">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="generate">Generate New Keys</TabsTrigger>
+                                <TabsTrigger value="upload">Use Existing Key</TabsTrigger>
+                            </TabsList>
+                            
+                            <TabsContent value="generate" className="mt-4 space-y-4">
+                                <div className="space-y-2">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                        Generate a new encryption key pair. Your private key will be downloaded 
+                                        automatically - <strong>keep it secure</strong> as it won't be stored on our servers.
+                                    </p>
+                                    
+                                    <div className="rounded-md bg-gray-50 p-4 dark:bg-gray-900">
+                                        <div className="flex items-center gap-3">
+                                            <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900">
+                                                <Key className="h-5 w-5 text-blue-500 dark:text-blue-300" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-sm font-medium">New Encryption Keys</h3>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    Public key is stored on server, private key stays on your device
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <Button 
+                                    onClick={async () => {
+                                        try {
+                                            // Generate new key pair
+                                            const { publicKey, privateKey } = await generateKeyPair();
+                                            
+                                            // Get current username for the filename
+                                            let username = '';
+                                            if (auth?.user?.username && typeof auth.user.username === 'string') {
+                                                username = auth.user.username;
+                                            }
+                                            
+                                            // Save private key as a file for the user to backup
+                                            savePrivateKeyToFile(privateKey, username);
+                                            
+                                            // Temporarily store in cookie for encryption operations
+                                            savePrivateKeyToCookie(privateKey);
+                                            
+                                            // Submit public key to server
+                                            const response = await axios.post(route('user.update-public-key'), {
+                                                public_key: publicKey
+                                            });
+                                            
+                                            // Update state
+                                            setHasEncryptionKeys(true);
+                                            setIsEncryptionSetupOpen(false);
+                                            setShowEncryptionSetup(false);
+                                            
+                                        } catch (error) {
+                                            console.error('Error generating keys:', error);
+                                            alert('Failed to complete encryption setup. Please try again.');
+                                        }
+                                    }}
+                                    className="w-full"
+                                >
+                                    Generate and Download Keys
+                                </Button>
+                            </TabsContent>
+                            
+                            <TabsContent value="upload" className="mt-4 space-y-4">
+                                <div className="space-y-2">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                        If you already have a private key from a previous setup, paste it below.
+                                    </p>
+                                    
+                                    <div className="space-y-2">
+                                        <Label htmlFor="privateKey">Your Private Key</Label>
+                                        <Textarea 
+                                            id="privateKey"
+                                            placeholder="Paste your private key here (begins with -----BEGIN RSA PRIVATE KEY-----)"
+                                            className="font-mono text-xs h-40"
+                                            rows={5}
+                                            onChange={(e) => {
+                                                // Store the private key text in a local variable
+                                                const privateKeyText = e.target.value;
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <Button 
+                                    onClick={async () => {
+                                        // Get the private key from the textarea
+                                        const privateKeyTextarea = document.getElementById('privateKey') as HTMLTextAreaElement;
+                                        const privateKey = privateKeyTextarea?.value;
+                                        
+                                        if (!privateKey || !privateKey.trim()) {
+                                            alert('Please enter your private key');
+                                            return;
+                                        }
+                                        
+                                        try {
+                                            // Validate if the entered key is a valid RSA private key
+                                            if (!isValidPrivateKey(privateKey)) {
+                                                alert('Invalid private key format');
+                                                return;
+                                            }
+                                            
+                                            // Store the private key in a cookie
+                                            savePrivateKeyToCookie(privateKey);
+                                            
+                                            // Update state
+                                            setHasEncryptionKeys(true);
+                                            setIsEncryptionSetupOpen(false);
+                                            setShowEncryptionSetup(false);
+                                        } catch (error) {
+                                            console.error('Error processing private key:', error);
+                                            alert('Error processing private key');
+                                        }
+                                    }}
+                                    className="w-full"
+                                >
+                                    Use This Private Key
+                                </Button>
+                            </TabsContent>
+                        </Tabs>
+                        
+                        <div className="mt-6 rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800 dark:border-yellow-900 dark:bg-yellow-950/30 dark:text-yellow-300">
+                            <div className="flex items-start gap-2">
+                                <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                                <div>
+                                    <h4 className="font-medium">Important Security Note</h4>
+                                    <p className="mt-1 text-xs">
+                                        Your private key is the only way to decrypt messages sent to you. If you lose it, you won't be able to read encrypted messages. Store it securely and consider backing it up in a password manager.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
             
             <div className="flex h-[calc(100vh-4rem)] flex-1 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
                 <div
                     className={`${isMobileView && selectedChat ? 'hidden' : 'flex'} ${isMobileView ? 'fixed left-0 right-0 top-[64px] bottom-0 z-40 pt-4 pb-16 px-2' : 'static'} flex-col border-r border-gray-200 bg-white md:static md:w-80 md:p-0 dark:border-gray-800 dark:bg-black`}
                 >
                     <div className="flex flex-col">
-                        <div className="border-b border-gray-200 p-4 dark:border-gray-800">
-                            <div className="flex items-center gap-2">
-                                <div className="flex w-full gap-2">
-                            <Dialog open={isNewMessageOpen} onOpenChange={setIsNewMessageOpen}>
-                                <DialogTrigger asChild>
-                                    <Button className="flex-1" variant="outline">
-                                        <PlusIcon className="mr-2 h-5 w-5" />
-                                        New Message
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-[425px]">
-                                    <DialogHeader>
-                                        <DialogTitle>New Message</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="mt-4 space-y-4">
-                                        <div className="relative">
-                                            <MagnifyingGlassIcon className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                                            <Input
-                                                type="text"
-                                                placeholder="Search users..."
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
-                                                className="pl-10"
-                                            />
-                                        </div>
-                                        <div className="max-h-[60vh] space-y-2 overflow-y-auto">
-                                            {filteredUsers.map((user) => (
-                                                <button
-                                                    key={user.id}
-                                                    onClick={() => startNewConversation(user)}
-                                                    className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+                        <div className="sticky top-0 z-10 bg-white p-3 dark:bg-gray-950">
+                            <div className="flex flex-col space-y-2">
+                                <div className="flex items-center justify-center gap-4 pb-2">
+                                    <div className="flex items-center justify-center p-2 bg-gray-50 dark:bg-gray-900 rounded-2xl gap-4 shadow-sm">
+                                        <Dialog open={isNewMessageOpen} onOpenChange={setIsNewMessageOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="icon" 
+                                                    className={`h-12 w-12 rounded-xl bg-white border-gray-100 shadow-sm hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-all ${isNewMessageOpen ? 'ring-2 ring-blue-500 text-blue-600 dark:ring-blue-400 dark:text-blue-400' : ''}`}
+                                                    title="New message"
                                                 >
-                                                    <UserAvatar user={user} className="size-10" />
+                                                    <ChatBubbleLeftIcon className={`h-5 w-5 ${isNewMessageOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`} />
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="sm:max-w-[425px]">
+                                                <DialogHeader>
+                                                    <DialogTitle>New Message</DialogTitle>
+                                                </DialogHeader>
+                                                <div className="mt-4 space-y-4">
                                                     <div>
-                                                        <p className="font-medium">{user.name}</p>
-                                                        <p className="text-sm text-gray-500">@{user.username}</p>
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
-
-                            <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
-                                <DialogTrigger asChild>
-                                    <Button className="flex-1" variant="outline">
-                                        <UsersIcon className="mr-2 h-5 w-5" />
-                                        New Group
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-[425px]">
-                                    <DialogHeader>
-                                        <DialogTitle>Create New Group</DialogTitle>
-                                    </DialogHeader>
-                                    <form onSubmit={createGroup} className="mt-4 space-y-4">
-                                        <div>
-                                            <Label htmlFor="groupName">Group Name</Label>
-                                            <Input
-                                                id="groupName"
-                                                value={groupName}
-                                                onChange={(e) => setGroupName(e.target.value)}
-                                                placeholder="Enter group name"
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label>Select Members</Label>
-                                            <div className="mt-2 max-h-[40vh] space-y-2 overflow-y-auto rounded-md border p-2">
-                                                {allUsers.map((user) => (
-                                                    <label
-                                                        key={user.id}
-                                                        className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-950"
-                                                    >
-                                                        <Checkbox
-                                                            checked={selectedUsers.includes(user.id)}
-                                                            onCheckedChange={(checked) => {
-                                                                setSelectedUsers((current) =>
-                                                                    checked ? [...current, user.id] : current.filter((id) => id !== user.id),
-                                                                );
-                                                            }}
+                                                        <Label>Find User</Label>
+                                                        <Input
+                                                            value={searchQuery}
+                                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                                            placeholder="Search by name or username"
+                                                            className="mt-1"
                                                         />
-                                                        <UserAvatar user={user} className="size-8" />
-                                                        <span className="text-foreground">{user.name}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-end gap-2">
-                                            <Button type="submit" disabled={selectedUsers.length < 2 || !groupName.trim()}>
-                                                Create Group
-                                            </Button>
-                                        </div>
-                                    </form>
-                                </DialogContent>
-                            </Dialog>
+                                                    </div>
+                                                    <div className="max-h-[60vh] space-y-1 overflow-y-auto">
+                                                        {allUsers
+                                                            .filter((user) => {
+                                                                const normalizedQuery = searchQuery.toLowerCase();
+                                                                return (
+                                                                    user.name.toLowerCase().includes(normalizedQuery) ||
+                                                                    user.username.toLowerCase().includes(normalizedQuery)
+                                                                );
+                                                            })
+                                                            .map((user) => (
+                                                                <button
+                                                                    key={user.id}
+                                                                    onClick={() => startNewConversation(user)}
+                                                                    className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-gray-100 dark:hover:bg-gray-900"
+                                                                >
+                                                                    <UserAvatar user={user} className="size-10" />
+                                                                    <div>
+                                                                        <p className="font-medium">{user.name}</p>
+                                                                        <p className="text-sm text-gray-500">@{user.username}</p>
+                                                                    </div>
+                                                                </button>
+                                                            ))}
+                                                    </div>
+                                                </div>
+                                            </DialogContent>
+                                        </Dialog>
+
+                                        <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="icon" 
+                                                    className={`h-12 w-12 rounded-xl bg-white border-gray-100 shadow-sm hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-all ${isNewGroupOpen ? 'ring-2 ring-blue-500 text-blue-600 dark:ring-blue-400 dark:text-blue-400' : ''}`}
+                                                    title="Create group"
+                                                >
+                                                    <UsersIcon className={`h-5 w-5 ${isNewGroupOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`} />
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="sm:max-w-[425px]">
+                                                <DialogHeader>
+                                                    <DialogTitle>Create New Group</DialogTitle>
+                                                </DialogHeader>
+                                                <form onSubmit={createGroup} className="mt-4 space-y-4">
+                                                    <div>
+                                                        <Label htmlFor="groupName">Group Name</Label>
+                                                        <Input
+                                                            id="groupName"
+                                                            value={groupName}
+                                                            onChange={(e) => setGroupName(e.target.value)}
+                                                            placeholder="Enter group name"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label>Select Members</Label>
+                                                        <div className="mt-2 max-h-[40vh] space-y-2 overflow-y-auto rounded-md border p-2">
+                                                            {allUsers.map((user) => (
+                                                                <label
+                                                                    key={user.id}
+                                                                    className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-950"
+                                                                >
+                                                                    <Checkbox
+                                                                        checked={selectedUsers.includes(user.id)}
+                                                                        onCheckedChange={(checked) => {
+                                                                            setSelectedUsers((current) =>
+                                                                                checked ? [...current, user.id] : current.filter((id) => id !== user.id),
+                                                                            );
+                                                                        }}
+                                                                    />
+                                                                    <UserAvatar user={user} className="size-8" />
+                                                                    <span className="text-foreground">{user.name}</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button type="submit" disabled={selectedUsers.length < 2 || !groupName.trim()}>
+                                                            Create Group
+                                                        </Button>
+                                                    </div>
+                                                </form>
+                                            </DialogContent>
+                                        </Dialog>
+
+                                        <Button 
+                                            variant="outline" 
+                                            size="icon" 
+                                            className={`h-12 w-12 rounded-xl bg-white border-gray-100 shadow-sm hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-all relative ${isEncryptionSetupOpen ? 'ring-2 ring-blue-500 text-blue-600 dark:ring-blue-400 dark:text-blue-400' : ''}`}
+                                            title="Encryption setup"
+                                            onClick={handleEncryptionSetup}
+                                        >
+                                            <LockClosedIcon className={`h-5 w-5 ${isEncryptionSetupOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`} />
+                                            {!hasEncryptionKeys && (
+                                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                                                    !
+                                                </span>
+                                            )}
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1017,10 +1296,10 @@ export default function Messaging(props: MessagingProps) {
                                             size="icon" 
                                             onClick={refreshMessages} 
                                             disabled={refreshing}
-                                            className="h-9 w-9 rounded-full p-0"
+                                            className="h-10 w-10 rounded-xl border border-gray-100 bg-white text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all shadow-sm"
                                             title="Refresh messages"
                                         >
-                                            <ArrowPathIcon className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+                                            <ArrowPathIcon className={`h-5 w-5 ${refreshing ? 'animate-spin text-blue-600 dark:text-blue-400' : ''}`} />
                                         </Button>
                                     </div>
                                 </div>
@@ -1113,6 +1392,23 @@ export default function Messaging(props: MessagingProps) {
                                                                                 if (isDirectMessage(message) && message.is_encrypted) {
                                                                                     // Current user's encrypted messages
                                                                                     if (isCurrentUser) {
+                                                                                        // If it's a self-message (messaging yourself), try to show content
+                                                                                        const isSelfMessage = selectedChat && selectedChat.id === auth.user?.id;
+                                                                                        if (isSelfMessage) {
+                                                                                            // For self-messages, we'll try to decrypt if needed
+                                                                                            const privateKey = getPrivateKeyFromCookie();
+                                                                                            if (privateKey && !message.decrypted_content) {
+                                                                                                try {
+                                                                                                    return decryptMessage(message.content, privateKey);
+                                                                                                } catch (error) {
+                                                                                                    console.error('Failed to decrypt self-message in UI:', error);
+                                                                                                    // If decryption fails, show content anyway for self-messages
+                                                                                                    return message.content;
+                                                                                                }
+                                                                                            }
+                                                                                            // Return decrypted or original content
+                                                                                            return message.decrypted_content || message.content;
+                                                                                        }
                                                                                         return message.decrypted_content || "[Encrypted Message]";
                                                                                     }
                                                                                     // Other user's encrypted messages
@@ -1126,7 +1422,7 @@ export default function Messaging(props: MessagingProps) {
                                                                             <Button
                                                                                 variant="ghost"
                                                                                 size="icon"
-                                                                                className="h-6 w-6 text-white/70 hover:bg-white/10 hover:text-white"
+                                                                                className="h-6 w-6 rounded-lg text-white/80 hover:bg-white/20 hover:text-white transition-all"
                                                                                 onClick={() => handleDeleteMessage(message.id)}
                                                                             >
                                                                                 <TrashIcon className="h-4 w-4" />
@@ -1266,78 +1562,64 @@ export default function Messaging(props: MessagingProps) {
                                             className="hidden"
                                             id="file-upload"
                                         />
-                                        <label
-                                            htmlFor="file-upload"
-                                            className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 hover:bg-gray-200 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
-                                        >
-                                            <Paperclip className="h-5 w-5" />
-                                        </label>
-                                        
-                                        {!hasEncryptionKeys || isGroup(selectedChat) || !selectedChatHasPublicKey ? (
-                                            <div className="flex items-center gap-1">
+                                        <div className="flex items-center gap-2">
+                                            <label
+                                                htmlFor="file-upload"
+                                                className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-100 bg-white text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all shadow-sm cursor-pointer"
+                                            >
+                                                <PaperClipIcon className="h-5 w-5" />
+                                            </label>
+                                            
+                                            {!hasEncryptionKeys || isGroup(selectedChat) || !selectedChatHasPublicKey ? (
+                                                <div className="flex items-center gap-1">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        disabled
+                                                        title={
+                                                            !hasEncryptionKeys
+                                                                ? "You need to set up encryption first"
+                                                                : isGroup(selectedChat)
+                                                                    ? "Encryption is only available for direct messages"
+                                                                    : `${selectedChat?.name} hasn't set up encryption yet`
+                                                        }
+                                                        className="h-10 w-10 rounded-xl border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 transition-all shadow-sm"
+                                                    >
+                                                        <Lock
+                                                            className="h-5 w-5 text-gray-400 opacity-50 dark:text-gray-500"
+                                                        />
+                                                    </Button>
+                                                </div>
+                                            ) : (
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
                                                     size="icon"
-                                                    disabled
-                                                    title={
-                                                        !hasEncryptionKeys
-                                                            ? "You need to set up encryption first"
-                                                            : isGroup(selectedChat)
-                                                                ? "Encryption is only available for direct messages"
-                                                                : `${selectedChat?.name} hasn't set up encryption yet`
-                                                    }
-                                                    className="h-9 w-9 rounded-full transition-all"
-                                                >
-                                                    <Lock
-                                                        className="h-5 w-5 text-gray-400 opacity-50 dark:text-gray-500"
-                                                    />
-                                                </Button>
-                                                {!isGroup(selectedChat) && hasEncryptionKeys && !selectedChatHasPublicKey && (
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={refreshMessages}
-                                                        className="text-xs text-gray-500"
-                                                        title="Refresh to check if encryption is available"
-                                                    >
-                                                        <ArrowPathIcon className="h-3 w-3 mr-1" />
-                                                        Refresh keys
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={toggleEncryption}
-                                                title={isEncrypted ? "Disable encryption for this message" : "Enable encryption for this message"}
-                                                className={`h-9 w-9 rounded-full transition-all ${
-                                                    isEncrypted
-                                                        ? 'text-green-500 dark:text-green-400'
-                                                        : 'text-gray-700 dark:text-gray-300'
-                                                }`}
-                                            >
-                                                <Lock
-                                                    className={`h-5 w-5 transition-colors ${
+                                                    onClick={toggleEncryption}
+                                                    title={isEncrypted ? "Disable encryption for this message" : "Enable encryption for this message"}
+                                                    className={`h-10 w-10 rounded-xl border transition-all shadow-sm ${
                                                         isEncrypted
-                                                            ? 'text-green-500 dark:text-green-400'
-                                                            : 'text-gray-700 dark:text-gray-300'
+                                                            ? 'border-green-200 bg-green-50 text-green-600 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400'
+                                                            : 'border-gray-100 bg-white text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
                                                     }`}
-                                                />
+                                                >
+                                                    <Lock className="h-5 w-5" />
+                                                </Button>
+                                            )}
+                                            
+                                            <Button
+                                                type="submit"
+                                                disabled={(!message.trim() && !selectedFiles.length) || isSending}
+                                                className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500 text-white hover:bg-blue-600 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {isSending ? (
+                                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                                ) : (
+                                                    <PaperAirplaneIcon className="h-5 w-5" />
+                                                )}
                                             </Button>
-                                        )}
-                                        
-                                        <Button
-                                            type="submit"
-                                            disabled={(!message.trim() && !selectedFiles.length) || isSending}
-                                            className="flex h-10 items-center gap-2 rounded-full bg-blue-500 px-4 text-white hover:bg-blue-600"
-                                        >
-                                            <span className="text-sm">{isSending ? 'Sending...' : 'Send'}</span>
-                                            <PaperAirplaneIcon className="h-4 w-4" />
-                                        </Button>
+                                        </div>
                                     </div>
                                 </form>
                             </div>

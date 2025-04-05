@@ -5,6 +5,7 @@ import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { handleLogoutEncryptionCleanup } from '@/utils/crypto';
 
 import HeadingSmall from '@/components/heading-small';
 
@@ -16,6 +17,9 @@ export default function DeleteUser() {
 
     const deleteUser: FormEventHandler = (e) => {
         e.preventDefault();
+        
+        // Clear encryption keys before deleting account
+        handleLogoutEncryptionCleanup();
 
         destroy(route('profile.destroy'), {
             preserveScroll: true,

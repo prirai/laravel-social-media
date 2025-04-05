@@ -5,6 +5,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Transition } from '@headlessui/react';
 import { Head, useForm } from '@inertiajs/react';
 import { FormEventHandler, useRef } from 'react';
+import { handleLogoutEncryptionCleanup } from '@/utils/crypto';
 
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
@@ -18,11 +19,17 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+type PasswordForm = {
+    current_password: string;
+    password: string;
+    password_confirmation: string;
+};
+
 export default function Password() {
     const passwordInput = useRef<HTMLInputElement>(null);
     const currentPasswordInput = useRef<HTMLInputElement>(null);
 
-    const { data, setData, errors, put, reset, processing, recentlySuccessful } = useForm({
+    const { data, setData, errors, put, reset, processing, recentlySuccessful } = useForm<Required<PasswordForm>>({
         current_password: '',
         password: '',
         password_confirmation: '',
@@ -33,7 +40,11 @@ export default function Password() {
 
         put(route('password.update'), {
             preserveScroll: true,
-            onSuccess: () => reset(),
+            onSuccess: () => {
+                reset();
+                // Password change requires regenerating encryption keys
+                handleLogoutEncryptionCleanup();
+            },
             onError: (errors) => {
                 if (errors.password) {
                     reset('password', 'password_confirmation');

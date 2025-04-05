@@ -1,6 +1,25 @@
 import forge from 'node-forge';
 import { saveAs } from 'file-saver';
 
+// Add TypeScript declaration for Inertia page
+declare global {
+  interface Window {
+    __page: {
+      props: {
+        auth: {
+          user: {
+            id: number;
+            name: string;
+            username: string;
+            email: string;
+            avatar?: string | null;
+          } | null;
+        }
+      }
+    }
+  }
+}
+
 const COOKIE_NAME = 'pki_private_key';
 
 interface KeyPair {
@@ -31,9 +50,40 @@ export const generateKeyPair = async (): Promise<KeyPair> => {
 /**
  * Save the private key to a text file for backup
  */
-export const savePrivateKeyToFile = (privateKey: string) => {
+export const savePrivateKeyToFile = (privateKey: string, username?: string) => {
+  // Get current timestamp in YYYYMMDDHHMMSS format
+  const now = new Date();
+  const timestamp = now.getFullYear().toString() +
+    (now.getMonth() + 1).toString().padStart(2, '0') +
+    now.getDate().toString().padStart(2, '0') +
+    now.getHours().toString().padStart(2, '0') +
+    now.getMinutes().toString().padStart(2, '0') +
+    now.getSeconds().toString().padStart(2, '0');
+  
+  // Default filename if no username is provided
+  let filename = `user_secure_msg_privkey_${timestamp}.txt`;
+  
+  try {
+    // Try to get username from provided parameter
+    if (username && username.trim() !== '') {
+      filename = `${username}_secure_msg_privkey_${timestamp}.txt`;
+      console.log(`Creating file with username: ${username}`);
+    } 
+    // If no username provided, try to get from window.__page
+    else if (window.__page?.props?.auth?.user?.username) {
+      const authUsername = window.__page.props.auth.user.username;
+      filename = `${authUsername}_secure_msg_privkey_${timestamp}.txt`;
+      console.log(`Creating file with auth username: ${authUsername}`);
+    } else {
+      console.log('No username provided for private key file');
+    }
+  } catch (error) {
+    console.error('Error creating filename for private key:', error);
+    // Fall back to default filename with timestamp
+  }
+  
   const blob = new Blob([privateKey], { type: 'text/plain;charset=utf-8' });
-  saveAs(blob, 'secure_messaging_private_key.txt');
+  saveAs(blob, filename);
 };
 
 /**
@@ -123,5 +173,25 @@ export const isValidPrivateKey = (key: string): boolean => {
     return true;
   } catch (error) {
     return false;
+  }
+};
+
+/**
+ * Handle encryption cleanup during user logout
+ * This should be called whenever a user logs out to ensure
+ * encryption keys don't persist in the browser
+ */
+export const handleLogoutEncryptionCleanup = () => {
+  try {
+    // Clear the private key cookie
+    clearPrivateKeyFromCookie();
+    
+    // Log the action (useful for debugging)
+    console.info('Encryption keys cleared during logout');
+    
+    // Could add additional cleanup here in the future if needed
+    // Such as clearing localStorage items or resetting other encryption state
+  } catch (error) {
+    console.error('Error cleaning up encryption state during logout:', error);
   }
 }; 

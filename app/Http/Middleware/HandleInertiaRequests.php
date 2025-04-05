@@ -4,7 +4,9 @@ namespace App\Http\Middleware;
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
 use Inertia\Middleware;
+use Symfony\Component\HttpFoundation\Response;
 use Tighten\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
@@ -26,6 +28,23 @@ class HandleInertiaRequests extends Middleware
     public function version(Request $request): ?string
     {
         return parent::version($request);
+    }
+
+    /**
+     * Handle the request and check for invalid session before proceeding.
+     */
+    public function handle(Request $request, \Closure $next): Response
+    {
+        try {
+            $response = parent::handle($request, $next);
+            return $response;
+        } catch (TokenMismatchException $e) {
+            // If there's a CSRF token mismatch, redirect to login
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'CSRF token mismatch. Please refresh and try again.'], 419);
+            }
+            return redirect()->route('login');
+        }
     }
 
     /**

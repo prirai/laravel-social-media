@@ -25,23 +25,38 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
   const [setupComplete, setSetupComplete] = useState(false);
   const [showKeyDownloadInfo, setShowKeyDownloadInfo] = useState(false);
   
+  // Debug the open state
+  useEffect(() => {
+    console.log('EncryptionSetupDialog - open state changed:', open);
+  }, [open]);
+  
   // Check if private key is already in cookies
   useEffect(() => {
     const storedKey = getPrivateKeyFromCookie();
     if (storedKey) {
+      console.log('EncryptionSetupDialog - existing key found in cookie');
       setSetupComplete(true);
       onSetupComplete();
+    } else {
+      console.log('EncryptionSetupDialog - no key found in cookie');
     }
   }, [onSetupComplete]);
 
   const handleGenerateKeys = async () => {
     try {
+      console.log('EncryptionSetupDialog - generating keys');
       setIsGenerating(true);
       // Generate new key pair
       const { publicKey, privateKey } = await generateKeyPair();
       
+      // Get current username for the filename
+      let username = '';
+      if (window.__page?.props?.auth?.user?.username) {
+        username = window.__page.props.auth.user.username;
+      }
+      
       // Save private key as a file for the user to backup
-      savePrivateKeyToFile(privateKey);
+      savePrivateKeyToFile(privateKey, username);
       setShowKeyDownloadInfo(true);
       
       // Temporarily store in cookie for encryption operations
@@ -83,6 +98,7 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
       
       // Small delay to let the user see the download info
       setTimeout(() => {
+        console.log('EncryptionSetupDialog - setup complete after key generation');
         setSetupComplete(true);
         onSetupComplete();
       }, 3000);
@@ -101,6 +117,7 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
     }
     
     try {
+      console.log('EncryptionSetupDialog - processing uploaded key');
       setIsUploading(true);
       
       // Validate if the entered key is a valid RSA private key
@@ -112,6 +129,7 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
       // Store the private key in a cookie
       savePrivateKeyToCookie(privateKey);
       
+      console.log('EncryptionSetupDialog - setup complete after key upload');
       setSetupComplete(true);
       onSetupComplete();
     } catch (error) {
@@ -122,13 +140,23 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
     }
   };
   
-  // If setup is already complete, don't show the dialog
+  // If setup is already complete, don't show the dialog but notify parent
   if (setupComplete) {
+    console.log('EncryptionSetupDialog - setup is complete, returning null');
     return null;
   }
 
+  // If not open, return null
+  if (!open) {
+    console.log('EncryptionSetupDialog - dialog is not open, returning null');
+    return null;
+  }
+
+  // Force the dialog to be open if open prop is true
+  console.log('EncryptionSetupDialog - rendering dialog with open =', open);
+  
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} modal={true} defaultOpen={open}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
