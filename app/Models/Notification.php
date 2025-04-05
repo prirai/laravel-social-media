@@ -58,6 +58,9 @@ class Notification extends Model
      */
     public static function createFriendRequest($userId, $fromUserId, $friendRequestId)
     {
+        // Remove previous friend request notifications from the same sender
+        self::removeExistingFriendRequests($userId, $fromUserId);
+        
         return self::create([
             'user_id' => $userId,
             'from_user_id' => $fromUserId,
@@ -67,5 +70,19 @@ class Notification extends Model
             ],
             'route' => route('profile.show', User::find($fromUserId)->username),
         ]);
+    }
+    
+    /**
+     * Remove existing friend request notifications from a specific sender.
+     * 
+     * @param int $userId The recipient user ID
+     * @param int $fromUserId The sender user ID
+     */
+    public static function removeExistingFriendRequests($userId, $fromUserId)
+    {
+        return self::where('user_id', $userId)
+            ->where('from_user_id', $fromUserId)
+            ->where('type', 'friend_request')
+            ->delete();
     }
 }

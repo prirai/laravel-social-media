@@ -15,31 +15,54 @@ class NotificationsController extends Controller
     {
         $user = auth()->user();
         
-        $notifications = Notification::where('user_id', $user->id)
+        // Get all notifications
+        $allNotifications = Notification::where('user_id', $user->id)
             ->with('fromUser')
             ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function($notification) {
-                return [
-                    'id' => $notification->id,
-                    'type' => $notification->type,
-                    'data' => $notification->data,
-                    'read_at' => $notification->read_at,
-                    'created_at' => $notification->created_at,
-                    'route' => $notification->route,
-                    'from_user' => $notification->fromUser ? [
-                        'id' => $notification->fromUser->id,
-                        'name' => $notification->fromUser->name,
-                        'username' => $notification->fromUser->username,
-                        'avatar' => $notification->fromUser->avatar,
-                        'verification_status' => $notification->fromUser->verification_status,
-                    ] : null,
-                ];
-            });
+            ->get();
+        
+        // Handle duplicate friend requests by keeping only the most recent one from each user
+        $friendRequestIds = [];
+        $filteredNotifications = collect();
+        
+        foreach ($allNotifications as $notification) {
+            // For friend requests, only keep the most recent from each sender
+            if ($notification->type === 'friend_request' && isset($notification->from_user_id)) {
+                $fromUserId = $notification->from_user_id;
+                
+                // If we haven't seen this sender yet, or this notification is newer
+                if (!isset($friendRequestIds[$fromUserId])) {
+                    $friendRequestIds[$fromUserId] = $notification->id;
+                    $filteredNotifications->push($notification);
+                }
+            } else {
+                // Keep all other notification types
+                $filteredNotifications->push($notification);
+            }
+        }
+        
+        // Transform the notifications for the response
+        $transformedNotifications = $filteredNotifications->map(function($notification) {
+            return [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'data' => $notification->data,
+                'read_at' => $notification->read_at,
+                'created_at' => $notification->created_at,
+                'route' => $notification->route,
+                'from_user' => $notification->fromUser ? [
+                    'id' => $notification->fromUser->id,
+                    'name' => $notification->fromUser->name,
+                    'username' => $notification->fromUser->username,
+                    'avatar' => $notification->fromUser->avatar,
+                    'verification_status' => $notification->fromUser->verification_status,
+                ] : null,
+            ];
+        });
         
         return response()->json([
-            'notifications' => $notifications,
-            'unread_count' => $notifications->whereNull('read_at')->count(),
+            'notifications' => $transformedNotifications,
+            'unread_count' => $filteredNotifications->whereNull('read_at')->count(),
         ]);
     }
 
