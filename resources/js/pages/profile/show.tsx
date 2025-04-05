@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
 import UserAvatar from '@/components/user-avatar';
 import { type BreadcrumbItem, SharedData } from '@/types';
-import { FlagIcon, EnvelopeIcon, ChatBubbleLeftIcon, DocumentIcon, HeartIcon, UserGroupIcon, PhotoIcon, CalendarIcon, LinkIcon } from '@heroicons/react/24/outline';
+import { FlagIcon, EnvelopeIcon, HeartIcon, UserGroupIcon, PhotoIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
@@ -73,10 +73,6 @@ interface UserProfile {
 
 export default function ShowProfile({ user, isOwnProfile = false }: { user: UserProfile, isOwnProfile: boolean }) {
     const [isReportOpen, setIsReportOpen] = useState(false);
-    const [friendRequestStatus, setFriendRequestStatus] = useState<'pending' | 'accepted' | 'rejected' | null>(
-        user.friend_request?.status || null
-    );
-
     const { data, setData, post, processing, reset } = useForm({
         reason: '',
     });
@@ -196,23 +192,23 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                 {/* Profile Header - Enhanced */}
                 <div className="relative mb-8 overflow-hidden rounded-xl border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-blue-950">
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/80 dark:to-black/80"></div>
-                    
+
                     <div className="relative p-6 md:p-8">
                         <div className="flex flex-col gap-6 md:flex-row md:items-center md:gap-8">
-                            <UserAvatar 
-                                user={user} 
-                                className="size-24 md:size-32 ring-4 ring-white dark:ring-gray-900 shadow-lg" 
-                                linkable={false} 
+                            <UserAvatar
+                                user={user}
+                                className="size-24 md:size-32 ring-4 ring-white dark:ring-gray-900 shadow-lg"
+                                linkable={false}
                             />
-                            
+
                             <div className="flex-1">
                                 <h1 className="text-2xl font-bold md:text-3xl">{user.name}</h1>
                                 <div className="flex items-center gap-2 mt-1">
                                     <p className="text-gray-600 dark:text-gray-400">@{user.username}</p>
                                     {user.verification_status && (
                                         <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                            user.verification_status === 'verified' 
-                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                                            user.verification_status === 'verified'
+                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                                                 : user.verification_status === 'pending'
                                                 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                                                 : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
@@ -347,12 +343,12 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                             <div className="flex items-center gap-2">
                                 <CalendarIcon className="h-5 w-5 text-gray-500" />
                                 <span className="text-sm font-medium">
-                                    {user.created_at 
-                                        ? `Joined ${new Date(user.created_at).toLocaleDateString('en-US', { 
-                                            month: 'long', 
-                                            day: 'numeric', 
+                                    {user.created_at
+                                        ? `Joined ${new Date(user.created_at).toLocaleDateString('en-US', {
+                                            month: 'long',
+                                            day: 'numeric',
                                             year: 'numeric'
-                                          })}` 
+                                          })}`
                                         : 'Joined recently'}
                                 </span>
                                                 </div>
@@ -372,13 +368,13 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                             Friends
                         </TabsTrigger>
                     </TabsList>
-                    
+
                     <TabsContent value="posts" className="mt-0">
                         <h2 className="sr-only">Posts</h2>
                         <div className="space-y-6">
                             {user.posts && user.posts.length > 0 ? (
                                 user.posts.map((post) => (
-                                    <PostItem 
+                                    <PostItem
                                         key={post.id}
                                         post={post}
                                         onLike={handleLike}
@@ -398,14 +394,14 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                                         )}
                                     </div>
                     </TabsContent>
-                    
+
                     <TabsContent value="friends" className="mt-0">
                         <h2 className="sr-only">Friends</h2>
                         {user.friends && user.friends.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                 {user.friends.map((friend) => (
-                                    <div 
-                                        key={friend.id} 
+                                    <div
+                                        key={friend.id}
                                         className="flex items-center gap-4 p-4 rounded-xl border bg-white dark:bg-black transition-all hover:shadow-md"
                                         onClick={() => router.visit(route('profile.show', friend.username))}
                                         style={{ cursor: 'pointer' }}
@@ -416,8 +412,8 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
                                             <p className="text-sm text-gray-500">@{friend.username}</p>
                                             {friend.verification_status && (
                                                 <span className={`text-xs px-1.5 py-0.5 rounded-full inline-block mt-1 ${
-                                                    friend.verification_status === 'verified' 
-                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                                                    friend.verification_status === 'verified'
+                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                                                         : friend.verification_status === 'pending'
                                                         ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                                                         : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'

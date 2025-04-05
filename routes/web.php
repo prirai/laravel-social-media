@@ -57,6 +57,11 @@ Route::post('user/submit-verification', [VerificationController::class, 'submit'
 //email verification 
 Route::post('user/verify-email', [CustomEmailVerificationController::class, 'submit'])->name('user.verify-email');
 
+// Password reset OTP routes (not requiring authentication)
+Route::post('user/password-reset/send-otp', [UserController::class, 'sendPasswordResetOtp'])->name('user.password-reset.send-otp');
+Route::post('user/password-reset/verify-otp', [UserController::class, 'verifyPasswordResetOtp'])->name('user.password-reset.verify-otp');
+Route::post('user/password-reset/reset', [UserController::class, 'resetPasswordAfterOtp'])->name('user.password-reset.reset');
+
 // New OTP verification routes
 Route::post('user/send-email-otp', [UserController::class, 'sendEmailOtp'])->name('user.send-email-otp');
 Route::post('user/verify-email-otp', [UserController::class, 'verifyEmailWithOtp'])->name('user.verify-email-otp');

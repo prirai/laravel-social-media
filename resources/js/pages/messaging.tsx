@@ -1,5 +1,5 @@
 import { Head, usePage, useForm, router } from '@inertiajs/react';
-import { Fragment, type FormEvent, useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -10,19 +10,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { EncryptionNotice } from '@/components/encryption-notice';
 import UserAvatar from '@/components/user-avatar';
-import { cn } from '@/lib/utils';
 import { getPrivateKeyFromCookie, encryptMessage, decryptMessage, generateKeyPair, savePrivateKeyToFile, savePrivateKeyToCookie, isValidPrivateKey } from '@/utils/crypto';
 import axios from 'axios';
-import { Loader2, ArrowDown, Trash2, Lock, LockOpen, File, FileText, X, MessageSquare, Paperclip, Shield, Key, Info, AlertCircle } from 'lucide-react';
+import { Loader2, Lock, File, FileText, X, MessageSquare, Shield, Key, Info, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
-    ArrowPathIcon, 
-    ArrowLeftIcon, 
+import {
+    ArrowPathIcon,
+    ArrowLeftIcon,
     PaperClipIcon,
     TrashIcon,
-    LockClosedIcon, 
-    PlusIcon,
-    MagnifyingGlassIcon, 
+    LockClosedIcon,
     UsersIcon,
     ChatBubbleLeftIcon,
     PaperAirplaneIcon
@@ -121,7 +118,7 @@ interface Group {
 type Chat = User | Group;
 
 function isGroup(chat: Chat | null): chat is Group {
-    return chat !== null && 'isGroup' in chat && chat.isGroup === true;
+    return chat !== null && 'isGroup' in chat && chat.isGroup;
 }
 
 interface MessagingProps {
@@ -153,23 +150,21 @@ export default function Messaging(props: MessagingProps) {
     const [groupName, setGroupName] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
-    const [expiresIn, setExpiresIn] = useState(24);
-    const [showExpirationOptions, setShowExpirationOptions] = useState(false);
+    const [expiresIn] = useState(24);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [message, setMessage] = useState('');
     const [isEncrypted, setIsEncrypted] = useState(false);
     const [isEncryptionSetupOpen, setIsEncryptionSetupOpen] = useState(false);
     const [hasEncryptionKeys, setHasEncryptionKeys] = useState(false);
-    const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
+    const [, setShowEncryptionSetup] = useState(false);
     const [isEncryptionToggled, setIsEncryptionToggled] = useState(false);
-    const [showEncryptionWarning, setShowEncryptionWarning] = useState(false);
+    const [showEncryptionWarning] = useState(false);
     const [isSending, setIsSending] = useState(false);
-    const [initialLoadDone, setInitialLoadDone] = useState(false);
     const [showRefreshNotice, setShowRefreshNotice] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [allUsers, setAllUsers] = useState<AllUser[]>(initialAllUsers);
 
-    const { data, setData, reset } = useForm({
+    const { reset } = useForm({
         content: '',
         expires_in: 24,
     });
@@ -178,7 +173,7 @@ export default function Messaging(props: MessagingProps) {
         const privateKey = getPrivateKeyFromCookie();
         const hasKeys = !!privateKey;
         setHasEncryptionKeys(hasKeys);
-        
+
         if (!hasKeys) {
             const timer = setTimeout(() => {
                 setShowEncryptionSetup(true);
@@ -192,10 +187,6 @@ export default function Messaging(props: MessagingProps) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    // Memoize the selected chat ID to prevent unnecessary rerenders
-    const selectedChatId = selectedChat ? selectedChat.id : null;
-
-    // Add a computed value for whether the selected chat has a public key
     const selectedChatHasPublicKey = useMemo(() => {
         if (!selectedChat || isGroup(selectedChat)) return false;
         return !!selectedChat.public_key;
@@ -203,14 +194,14 @@ export default function Messaging(props: MessagingProps) {
 
     useEffect(() => {
         if (!selectedChat) return;
-        
+
         setLoading(true);
         setMessages([]);
         // Reset encryption state only when changing chats
         // When a user has a public key, encryption will be enabled by default
         setIsEncrypted(false);
         setIsEncryptionToggled(false);
-        
+
         const endpoint = isGroup(selectedChat)
             ? route('groups.messages', selectedChat.id.replace('group_', ''))
             : route('messages.get', selectedChat.id);
@@ -218,16 +209,16 @@ export default function Messaging(props: MessagingProps) {
         axios.get(endpoint)
             .then((response) => {
                 const loadedMessages = response.data.messages || [];
-                
+
                 if (!isGroup(selectedChat)) {
                     const privateKey = getPrivateKeyFromCookie();
-                    
+
                     const processedMessages = loadedMessages.map((message: DirectMessage) => {
                         // If this is an encrypted message sent by the current user
                         if (message.is_encrypted && message.sender_id === auth.user?.id) {
                             // For self-messages (when sender and receiver are the same user)
                             const isSelfMessage = selectedChat.id === auth.user?.id;
-                            
+
                             // For self-messages, attempt to decrypt
                             if (isSelfMessage) {
                                 if (privateKey) {
@@ -247,13 +238,13 @@ export default function Messaging(props: MessagingProps) {
                                     }
                                 }
                             }
-                            
+
                             return {
                                 ...message,
                                 decrypted_content: "[Encrypted Message]"
                             };
                         }
-                        
+
                         // If message is encrypted and we have a private key, try to decrypt
                         if (message.is_encrypted && message.sender_id !== auth.user?.id) {
                             if (privateKey) {
@@ -272,28 +263,28 @@ export default function Messaging(props: MessagingProps) {
                                 }
                             }
                         }
-                        
+
                         return message;
                     });
-                    
+
                     setMessages(processedMessages);
-                    
+
                     if (response.data.user && response.data.user.public_key) {
                         // Update the public key in our users array
-                        setUsers(prevUsers => 
-                            prevUsers.map(user => 
-                                user.id === selectedChat.id 
-                                    ? { ...user, public_key: response.data.user.public_key } 
+                        setUsers(prevUsers =>
+                            prevUsers.map(user =>
+                                user.id === selectedChat.id
+                                    ? { ...user, public_key: response.data.user.public_key }
                                     : user
                             )
                         );
-                        
+
                         // Update the selected chat's public key
                         setSelectedChat((prevChat) => {
                             if (!prevChat || isGroup(prevChat)) return prevChat;
                             return { ...prevChat, public_key: response.data.user.public_key };
                         });
-                        
+
                         // If the recipient has a public key and we have our own private key,
                         // enable encryption by default only if user hasn't explicitly toggled it
                         if (hasEncryptionKeys && !isGroup(selectedChat) && !isEncryptionToggled) {
@@ -303,7 +294,7 @@ export default function Messaging(props: MessagingProps) {
                 } else {
                     setMessages(loadedMessages);
                 }
-                
+
                 scrollToBottom();
             })
             .catch(error => {
@@ -346,9 +337,9 @@ export default function Messaging(props: MessagingProps) {
     const sendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedChat || (!message.trim() && !selectedFiles.length)) return;
-        
+
         if (isSending) return;
-        
+
         setIsSending(true);
 
         if (isEncrypted && isGroup(selectedChat)) {
@@ -365,11 +356,11 @@ export default function Messaging(props: MessagingProps) {
 
         if (isContentEncrypted) {
             let recipientPublicKey = selectedChat.public_key;
-            
+
             if (!recipientPublicKey) {
                 try {
                     recipientPublicKey = await ensurePublicKey(selectedChat.id);
-                    
+
                     if (!recipientPublicKey) {
                         alert('Cannot send encrypted message: recipient has no public key');
                         setIsSending(false);
@@ -382,7 +373,7 @@ export default function Messaging(props: MessagingProps) {
                     return;
                 }
             }
-            
+
             try {
                 // For self-messages, we'll still encrypt but ensure we can display it
                 contentToSend = encryptMessage(message, recipientPublicKey);
@@ -402,10 +393,10 @@ export default function Messaging(props: MessagingProps) {
 
         const tempMessage = message;
         const tempTime = new Date().toISOString();
-        
+
         setMessage('');
         setSelectedFiles([]);
-        
+
         if (!isGroup(selectedChat)) {
             const optimisticMessage: DirectMessage = {
                 id: -Date.now(),
@@ -418,7 +409,7 @@ export default function Messaging(props: MessagingProps) {
                 decrypted_content: isSelfMessage ? originalContent : (isContentEncrypted ? originalContent : undefined),
                 original_content: originalContent,
             };
-            
+
             setMessages(prev => [...prev, optimisticMessage]);
             scrollToBottom();
         }
@@ -438,7 +429,7 @@ export default function Messaging(props: MessagingProps) {
             if (messageData.is_encrypted && messageData.sender_id === auth.user?.id) {
                 // For self-messages (when sender and receiver are the same user)
                 const isSelfMessage = selectedChat.id === auth.user?.id;
-                
+
                 if (isSelfMessage) {
                     // Try to decrypt the content for self-messages
                     const privateKey = getPrivateKeyFromCookie();
@@ -475,13 +466,13 @@ export default function Messaging(props: MessagingProps) {
             }
 
             setMessages((prev) => {
-                const filteredMessages = prev.filter(msg => 
+                const filteredMessages = prev.filter(msg =>
                     !('sender_id' in msg) || msg.id > 0
                 );
-                
+
                 return [...filteredMessages, messageData];
             });
-            
+
             if (isGroup(selectedChat)) {
                 setGroups((currentGroups) =>
                     currentGroups.map((group) =>
@@ -541,11 +532,9 @@ export default function Messaging(props: MessagingProps) {
             console.error('Error creating group:', error);
         }
     };
-
-    const filteredUsers = allUsers.filter(
+    allUsers.filter(
         (user) => user.name.toLowerCase().includes(searchQuery.toLowerCase()) || user.username.toLowerCase().includes(searchQuery.toLowerCase()),
     );
-
     const startNewConversation = async (user: {
         id: number;
         name: string;
@@ -560,10 +549,10 @@ export default function Messaging(props: MessagingProps) {
             lastMessageTime: null,
             unreadCount: 0,
         };
-        
+
         if (!user.public_key) {
             try {
-                const response = await axios.get(route('messages.get', user.id));
+                await axios.get(route('messages.get', user.id));
                 const existingUser = users.find(u => u.id === user.id);
                 if (existingUser && existingUser.public_key) {
                     newUser.public_key = existingUser.public_key;
@@ -572,7 +561,7 @@ export default function Messaging(props: MessagingProps) {
                 console.error('Error fetching user data:', error);
             }
         }
-        
+
         setSelectedChat(newUser);
         setIsNewMessageOpen(false);
     };
@@ -586,17 +575,6 @@ export default function Messaging(props: MessagingProps) {
         if (!auth.user) return false;
         return message.user_id === auth.user.id;
     };
-
-    const formatExpirationTime = (expiresAt: string) => {
-        const expirationDate = new Date(expiresAt);
-        const now = new Date();
-        const diffInHours = Math.round((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60));
-
-        if (diffInHours <= 0) return 'Expired';
-        if (diffInHours < 24) return `Expires in ${diffInHours}h`;
-        return `Expires in ${Math.round(diffInHours / 24)}d`;
-    };
-
     const handleDeleteMessage = (messageId: number) => {
         if (!selectedChat) return;
 
@@ -620,17 +598,17 @@ export default function Messaging(props: MessagingProps) {
         if (user?.public_key) {
             return user.public_key;
         }
-        
+
         // Try to find in allUsers array as well
         const allUser = allUsers.find(u => u.id === userId);
         if (allUser && 'public_key' in allUser && allUser.public_key) {
             // Update our main users array
-            setUsers(prevUsers => 
-                prevUsers.map(u => 
+            setUsers(prevUsers =>
+                prevUsers.map(u =>
                     u.id === userId ? { ...u, public_key: allUser.public_key } : u
                 )
             );
-            
+
             // Update selected chat if this is the current one
             if (selectedChat && !isGroup(selectedChat) && selectedChat.id === userId) {
                 setSelectedChat({
@@ -638,33 +616,33 @@ export default function Messaging(props: MessagingProps) {
                     public_key: allUser.public_key
                 });
             }
-            
+
             return allUser.public_key;
         }
-        
+
         // If we don't have it locally, fetch from server
         try {
             const response = await axios.get(route('messages.get', userId));
-            
+
             if (response.data.user && response.data.user.public_key) {
                 const fetchedPublicKey = response.data.user.public_key;
-                
+
                 // Update our users cache
-                setUsers(prevUsers => 
-                    prevUsers.map(u => 
+                setUsers(prevUsers =>
+                    prevUsers.map(u =>
                         u.id === userId ? { ...u, public_key: fetchedPublicKey } : u
                     )
                 );
-                
+
                 // Update allUsers array with type assertion
-                setAllUsers(prevAllUsers => 
-                    prevAllUsers.map(u => 
-                        u.id === userId 
+                setAllUsers(prevAllUsers =>
+                    prevAllUsers.map(u =>
+                        u.id === userId
                             ? { ...u, public_key: fetchedPublicKey } as AllUser
                             : u
                     )
                 );
-                
+
                 // Update selected chat if this is the current one
                 if (selectedChat && !isGroup(selectedChat) && selectedChat.id === userId) {
                     setSelectedChat({
@@ -672,10 +650,10 @@ export default function Messaging(props: MessagingProps) {
                         public_key: fetchedPublicKey
                     });
                 }
-                
+
                 return fetchedPublicKey;
             }
-            
+
             // User has no public key
             console.warn(`User ${userId} has no public key`);
             return undefined;
@@ -691,14 +669,14 @@ export default function Messaging(props: MessagingProps) {
             console.warn('Encryption not supported for group chats');
             return;
         }
-        
+
         // Ensure we have our own private key
         const privateKey = getPrivateKeyFromCookie();
         if (!privateKey) {
             setIsEncryptionSetupOpen(true);
             return;
         }
-        
+
         // Ensure the recipient has a public key
         if (!selectedChat?.public_key) {
             // Try to fetch the latest public key in case it was recently created
@@ -716,7 +694,7 @@ export default function Messaging(props: MessagingProps) {
                 return;
             }
         }
-        
+
         // Toggle encryption state
         setIsEncrypted(!isEncrypted);
         setIsEncryptionToggled(true);
@@ -724,19 +702,19 @@ export default function Messaging(props: MessagingProps) {
 
     const refreshMessages = () => {
         if (!selectedChat) return;
-        
+
         setShowRefreshNotice(false);
         setRefreshing(true);
-        
+
         // Different endpoints for group vs direct messages
         const endpoint = isGroup(selectedChat)
             ? route('groups.messages', selectedChat.id.replace('group_', ''))
             : route('messages.get', selectedChat.id);
-        
+
         axios.get(endpoint)
             .then(response => {
                 const loadedMessages = response.data.messages || [];
-                
+
                 if (!isGroup(selectedChat)) {
                     // Process direct messages for encryption
                     const processedMessages = loadedMessages.map((message: DirectMessage) => {
@@ -744,7 +722,7 @@ export default function Messaging(props: MessagingProps) {
                         if (message.is_encrypted && message.sender_id === auth.user?.id) {
                             // For self-messages (when sender and receiver are the same user)
                             const isSelfMessage = selectedChat.id === auth.user?.id;
-                            
+
                             // For self-messages, attempt to decrypt
                             if (isSelfMessage) {
                                 const privateKey = getPrivateKeyFromCookie();
@@ -765,13 +743,13 @@ export default function Messaging(props: MessagingProps) {
                                     }
                                 }
                             }
-                            
+
                             return {
                                 ...message,
                                 decrypted_content: "[Encrypted Message]"
                             };
                         }
-                        
+
                         // If message is encrypted and we have a private key, try to decrypt
                         if (message.is_encrypted && message.sender_id !== auth.user?.id) {
                             const privateKey = getPrivateKeyFromCookie();
@@ -791,26 +769,26 @@ export default function Messaging(props: MessagingProps) {
                                 }
                             }
                         }
-                        
+
                         return message;
                     });
-                    
+
                     setMessages(processedMessages);
-                    
+
                     // Update the user's public key information from the response
                     // This ensures the encryption lock button becomes available when a user has setup encryption
                     if (response.data.user && response.data.user.public_key) {
                         const fetchedPublicKey = response.data.user.public_key;
-                        
+
                         // Update the public key in the users array
-                        setUsers(prevUsers => 
-                            prevUsers.map(user => 
-                                user.id === selectedChat.id 
-                                    ? { ...user, public_key: fetchedPublicKey } 
+                        setUsers(prevUsers =>
+                            prevUsers.map(user =>
+                                user.id === selectedChat.id
+                                    ? { ...user, public_key: fetchedPublicKey }
                                     : user
                             )
                         );
-                        
+
                         // Update the selected chat's public key
                         setSelectedChat((prevChat) => {
                             if (!prevChat || isGroup(prevChat)) return prevChat;
@@ -818,14 +796,14 @@ export default function Messaging(props: MessagingProps) {
                         });
 
                         // Also update the public key in the allUsers array for completeness
-                        setAllUsers(prevAllUsers => 
-                            prevAllUsers.map(u => 
-                                u.id === selectedChat.id 
+                        setAllUsers(prevAllUsers =>
+                            prevAllUsers.map(u =>
+                                u.id === selectedChat.id
                                     ? { ...u, public_key: fetchedPublicKey } as AllUser
                                     : u
                             )
                         );
-                        
+
                         // If the recipient has a public key and we have our own private key,
                         // enable encryption by default only if user hasn't explicitly toggled it
                         if (hasEncryptionKeys && !isGroup(selectedChat) && !isEncryptionToggled) {
@@ -836,14 +814,14 @@ export default function Messaging(props: MessagingProps) {
                     // For group messages, just set them directly
                     setMessages(loadedMessages);
                 }
-                
+
                 // Show refresh notification
                 setRefreshing(false);
                 setShowRefreshNotice(true);
                 setTimeout(() => {
                     setShowRefreshNotice(false);
                 }, 2000);
-                
+
                 // Scroll to bottom to show newest messages
                 scrollToBottom();
             })
@@ -864,7 +842,7 @@ export default function Messaging(props: MessagingProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs} fullWidth={true}>
             <Head title="Messages" />
-            
+
             <Dialog open={isEncryptionSetupOpen} onOpenChange={setIsEncryptionSetupOpen}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
@@ -876,7 +854,7 @@ export default function Messaging(props: MessagingProps) {
                             Set up encryption for secure private messages that only you and your recipient can read.
                         </DialogDescription>
                     </DialogHeader>
-                    
+
                     <div className="mt-4">
                         <Alert className="mb-4 bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
                             <Info className="h-4 w-4" />
@@ -885,20 +863,20 @@ export default function Messaging(props: MessagingProps) {
                                 Your private key will never be stored on our servers and is only used on your device.
                             </AlertDescription>
                         </Alert>
-                        
+
                         <Tabs defaultValue="generate">
                             <TabsList className="grid w-full grid-cols-2">
                                 <TabsTrigger value="generate">Generate New Keys</TabsTrigger>
                                 <TabsTrigger value="upload">Use Existing Key</TabsTrigger>
                             </TabsList>
-                            
+
                             <TabsContent value="generate" className="mt-4 space-y-4">
                                 <div className="space-y-2">
                                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                                        Generate a new encryption key pair. Your private key will be downloaded 
+                                        Generate a new encryption key pair. Your private key will be downloaded
                                         automatically - <strong>keep it secure</strong> as it won't be stored on our servers.
                                     </p>
-                                    
+
                                     <div className="rounded-md bg-gray-50 p-4 dark:bg-gray-900">
                                         <div className="flex items-center gap-3">
                                             <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900">
@@ -913,35 +891,34 @@ export default function Messaging(props: MessagingProps) {
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <Button 
+
+                                <Button
                                     onClick={async () => {
                                         try {
                                             // Generate new key pair
                                             const { publicKey, privateKey } = await generateKeyPair();
-                                            
+
                                             // Get current username for the filename
                                             let username = '';
                                             if (auth?.user?.username && typeof auth.user.username === 'string') {
                                                 username = auth.user.username;
                                             }
-                                            
+
                                             // Save private key as a file for the user to backup
                                             savePrivateKeyToFile(privateKey, username);
-                                            
+
                                             // Temporarily store in cookie for encryption operations
                                             savePrivateKeyToCookie(privateKey);
-                                            
+
                                             // Submit public key to server
-                                            const response = await axios.post(route('user.update-public-key'), {
+                                            await axios.post(route('user.update-public-key'), {
                                                 public_key: publicKey
                                             });
-                                            
-                                            // Update state
+// Update state
                                             setHasEncryptionKeys(true);
                                             setIsEncryptionSetupOpen(false);
                                             setShowEncryptionSetup(false);
-                                            
+
                                         } catch (error) {
                                             console.error('Error generating keys:', error);
                                             alert('Failed to complete encryption setup. Please try again.');
@@ -952,16 +929,16 @@ export default function Messaging(props: MessagingProps) {
                                     Generate and Download Keys
                                 </Button>
                             </TabsContent>
-                            
+
                             <TabsContent value="upload" className="mt-4 space-y-4">
                                 <div className="space-y-2">
                                     <p className="text-sm text-gray-500 dark:text-gray-400">
                                         If you already have a private key from a previous setup, paste it below.
                                     </p>
-                                    
+
                                     <div className="space-y-2">
                                         <Label htmlFor="privateKey">Your Private Key</Label>
-                                        <Textarea 
+                                        <Textarea
                                             id="privateKey"
                                             placeholder="Paste your private key here (begins with -----BEGIN RSA PRIVATE KEY-----)"
                                             className="font-mono text-xs h-40"
@@ -973,28 +950,28 @@ export default function Messaging(props: MessagingProps) {
                                         />
                                     </div>
                                 </div>
-                                
-                                <Button 
+
+                                <Button
                                     onClick={async () => {
                                         // Get the private key from the textarea
                                         const privateKeyTextarea = document.getElementById('privateKey') as HTMLTextAreaElement;
                                         const privateKey = privateKeyTextarea?.value;
-                                        
+
                                         if (!privateKey || !privateKey.trim()) {
                                             alert('Please enter your private key');
                                             return;
                                         }
-                                        
+
                                         try {
                                             // Validate if the entered key is a valid RSA private key
                                             if (!isValidPrivateKey(privateKey)) {
                                                 alert('Invalid private key format');
                                                 return;
                                             }
-                                            
+
                                             // Store the private key in a cookie
                                             savePrivateKeyToCookie(privateKey);
-                                            
+
                                             // Update state
                                             setHasEncryptionKeys(true);
                                             setIsEncryptionSetupOpen(false);
@@ -1010,7 +987,7 @@ export default function Messaging(props: MessagingProps) {
                                 </Button>
                             </TabsContent>
                         </Tabs>
-                        
+
                         <div className="mt-6 rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800 dark:border-yellow-900 dark:bg-yellow-950/30 dark:text-yellow-300">
                             <div className="flex items-start gap-2">
                                 <AlertCircle className="h-5 w-5 flex-shrink-0" />
@@ -1025,7 +1002,7 @@ export default function Messaging(props: MessagingProps) {
                     </div>
                 </DialogContent>
             </Dialog>
-            
+
             <div className="flex h-[calc(100vh-4rem)] flex-1 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
                 {/* Left sidebar - completely fixed and independent */}
                 <div className={`${isMobileView && selectedChat ? 'hidden' : 'block'} fixed left-0 top-[64px] bottom-0 z-10 w-80 overflow-hidden border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-black ${isMobileView ? 'w-full' : ''}`}>
@@ -1036,9 +1013,9 @@ export default function Messaging(props: MessagingProps) {
                                 <div className="flex items-center justify-center p-2 bg-gray-50 dark:bg-gray-900 rounded-2xl gap-4 shadow-sm">
                                     <Dialog open={isNewMessageOpen} onOpenChange={setIsNewMessageOpen}>
                                         <DialogTrigger asChild>
-                                            <Button 
-                                                variant="outline" 
-                                                size="icon" 
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
                                                 className={`h-12 w-12 rounded-xl bg-white border-gray-100 shadow-sm hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-all ${isNewMessageOpen ? 'ring-2 ring-blue-500 text-blue-600 dark:ring-blue-400 dark:text-blue-400' : ''}`}
                                                 title="New message"
                                             >
@@ -1088,9 +1065,9 @@ export default function Messaging(props: MessagingProps) {
 
                                     <Dialog open={isNewGroupOpen} onOpenChange={setIsNewGroupOpen}>
                                         <DialogTrigger asChild>
-                                            <Button 
-                                                variant="outline" 
-                                                size="icon" 
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
                                                 className={`h-12 w-12 rounded-xl bg-white border-gray-100 shadow-sm hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-all ${isNewGroupOpen ? 'ring-2 ring-blue-500 text-blue-600 dark:ring-blue-400 dark:text-blue-400' : ''}`}
                                                 title="Create group"
                                             >
@@ -1143,9 +1120,9 @@ export default function Messaging(props: MessagingProps) {
                                         </DialogContent>
                                     </Dialog>
 
-                                    <Button 
-                                        variant="outline" 
-                                        size="icon" 
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
                                         className={`h-12 w-12 rounded-xl bg-white border-gray-100 shadow-sm hover:bg-blue-50 hover:text-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 transition-all relative ${isEncryptionSetupOpen ? 'ring-2 ring-blue-500 text-blue-600 dark:ring-blue-400 dark:text-blue-400' : ''}`}
                                         title="Encryption setup"
                                         onClick={handleEncryptionSetup}
@@ -1161,7 +1138,7 @@ export default function Messaging(props: MessagingProps) {
                             </div>
                         </div>
                     </div>
-                    
+
                     {/* Scrollable chat list container */}
                     <div className="h-[calc(100%-6rem)] overflow-y-auto">
                         <div className="space-y-1 p-2">
@@ -1229,8 +1206,8 @@ export default function Messaging(props: MessagingProps) {
                                                 </p>
                                             )}
                                             <p className="truncate text-sm text-gray-500 dark:text-gray-400">
-                                                {chat.lastMessage || (isGroup(chat) 
-                                                    ? `Start chatting in ${chat.name}` 
+                                                {chat.lastMessage || (isGroup(chat)
+                                                    ? `Start chatting in ${chat.name}`
                                                     : `Start chatting with ${chat.name}`)}
                                             </p>
                                         </div>
@@ -1245,7 +1222,7 @@ export default function Messaging(props: MessagingProps) {
                     {selectedChat ? (
                         <div className="flex h-full flex-col overflow-hidden">
                             {/* Fixed header - placed outside the scrollable area */}
-                            <div className="fixed top-[64px] left-0 right-0 z-30 bg-white dark:bg-black ml-0 md:ml-80">
+                            <div className="fixed top-[64px] left-0 right-0 z-30 ml-0 md:ml-80">
                                 {showEncryptionWarning && !isGroup(selectedChat) && (
                                     <div className="p-4">
                                         <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900">
@@ -1259,9 +1236,9 @@ export default function Messaging(props: MessagingProps) {
                                         </Alert>
                                     </div>
                                 )}
-                                
-                                <div className="flex justify-center p-4 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 shadow-sm">
-                                    <div className="flex w-full max-w-3xl items-center justify-between rounded-full border border-gray-200 bg-white px-6 py-3 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+
+                                <div className="flex justify-center p-4">
+                                    <div className="flex w-full max-w-3xl items-center justify-between rounded-full border px-6 py-3">
                                         <div className="flex items-center gap-4">
                                         {isMobileView && (
                                                 <Button variant="ghost" size="icon" onClick={() => setSelectedChat(null)} className="h-9 w-9 rounded-full p-0">
@@ -1291,12 +1268,12 @@ export default function Messaging(props: MessagingProps) {
                                                 )}
                                             </div>
                                         </div>
-                                        
+
                                         <div className="flex items-center">
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                onClick={refreshMessages} 
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={refreshMessages}
                                                 disabled={refreshing}
                                                 className="h-10 w-10 rounded-xl border border-gray-100 bg-white text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all shadow-sm"
                                                 title="Refresh messages"
@@ -1306,7 +1283,7 @@ export default function Messaging(props: MessagingProps) {
                                         </div>
                                     </div>
                                 </div>
-                            </div>  
+                            </div>
 
                             {/* Messages container - with top padding to accommodate the fixed header and more bottom padding for mobile */}
                             <div className="flex-1 overflow-y-auto pt-[130px] pb-[150px] md:pb-[100px]">
@@ -1319,7 +1296,7 @@ export default function Messaging(props: MessagingProps) {
                                                 </div>
                                             </div>
                                         )}
-                                        
+
                                         {!isGroup(selectedChat) && (
                                             <div className="flex justify-center">
                                                 <div className="rounded-full bg-gray-100 px-4 py-1 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
@@ -1327,7 +1304,7 @@ export default function Messaging(props: MessagingProps) {
                                                 </div>
                                             </div>
                                         )}
-                                    
+
                                         {messages.length === 0 && !loading ? (
                                             <div className="flex justify-center p-8">
                                                 <div className="text-center text-gray-500 dark:text-gray-400">
@@ -1506,7 +1483,7 @@ export default function Messaging(props: MessagingProps) {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             {/* Fixed message input at bottom - adjusted to account for sidebar and mobile bottom nav */}
                             <div className="fixed bottom-0 right-0 z-50 border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-black mb-[70px] md:mb-0 w-full md:w-[calc(100%-320px)]">
                                 <form onSubmit={sendMessage} className="flex flex-col">
@@ -1528,7 +1505,7 @@ export default function Messaging(props: MessagingProps) {
                                             </div>
                                         </div>
                                     )}
-                                    
+
                                     <div className="flex items-center gap-2 p-4">
                                         <div className="relative flex-1">
                                             <input
@@ -1537,8 +1514,8 @@ export default function Messaging(props: MessagingProps) {
                                                 onChange={(e) => setMessage(e.target.value)}
                                                 placeholder={`Message ${isGroup(selectedChat) ? selectedChat.name : selectedChat?.name}`}
                                                 className={`w-full rounded-full border ${
-                                                    isEncrypted 
-                                                        ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' 
+                                                    isEncrypted
+                                                        ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
                                                         : 'border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-900'
                                                 } px-4 py-2 pr-10 focus:border-blue-500 focus:outline-none`}
                                             />
@@ -1570,7 +1547,7 @@ export default function Messaging(props: MessagingProps) {
                                             >
                                                 <PaperClipIcon className="h-5 w-5" />
                                             </label>
-                                            
+
                                             {!hasEncryptionKeys || isGroup(selectedChat) || !selectedChatHasPublicKey ? (
                                                 <div className="flex items-center gap-1">
                                                     <Button
@@ -1608,7 +1585,7 @@ export default function Messaging(props: MessagingProps) {
                                                     <Lock className="h-5 w-5" />
                                                 </Button>
                                             )}
-                                            
+
                                             <Button
                                                 type="submit"
                                                 disabled={(!message.trim() && !selectedFiles.length) || isSending}
@@ -1642,7 +1619,7 @@ export default function Messaging(props: MessagingProps) {
                                             <div className="text-left">
                                                 <h4 className="font-medium text-blue-800 dark:text-blue-300">End-to-End Encryption Available</h4>
                                                 <p className="mt-1 text-sm text-blue-600 dark:text-blue-400">
-                                                    Your private messages can be protected with end-to-end encryption. 
+                                                    Your private messages can be protected with end-to-end encryption.
                                                     Look for the lock toggle when messaging one-on-one.
                                                 </p>
                                             </div>

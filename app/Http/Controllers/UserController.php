@@ -106,4 +106,91 @@ class UserController extends Controller
             'message' => 'Public key updated successfully'
         ]);
     }
+
+    /**
+     * Send an OTP to an email for password reset verification
+     * This method doesn't require authentication
+     */
+    public function sendPasswordResetOtp(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+        ]);
+        
+        // Check if user exists
+        $user = User::where('email', $validated['email'])->first();
+        
+        if (!$user) {
+            // We don't want to reveal if an email exists or not for security reasons
+            // Return success even if user doesn't exist
+            return response()->json(['message' => 'If your email exists in our system, we\'ll send a verification code.']);
+        }
+        
+        // Generate a 6-digit OTP
+        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        
+        // Store OTP in cache with expiry time of 5 minutes
+        $cacheKey = 'password_reset_otp_' . $validated['email'];
+        Cache::put($cacheKey, $otp, now()->addMinutes(5));
+        
+        // Send OTP to the user's email
+        try {
+            Mail::to($validated['email'])->send(new \App\Mail\PasswordResetOtp($user, $otp));
+            return response()->json(['message' => 'Verification code sent successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to send verification code'], 500);
+        }
+    }
+
+    /**
+     * Verify OTP for password reset (no authentication required)
+     */
+    public function verifyPasswordResetOtp(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'otp' => 'required|string|size:6',
+        ]);
+        
+        $cacheKey = 'password_reset_otp_' . $validated['email'];
+        $storedOtp = Cache::get($cacheKey);
+        
+        if (!$storedOtp || $storedOtp !== $validated['otp']) {
+            return response()->json(['errors' => ['otp' => ['Invalid verification code']]], 422);
+        }
+        
+        // OTP is valid, clear it from cache
+        Cache::forget($cacheKey);
+        
+        // Return success
+        return response()->json(['message' => 'OTP verified successfully']);
+    }
+
+    /**
+     * Reset password directly after OTP verification
+     * This method doesn't require authentication
+     */
+    public function resetPasswordAfterOtp(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|min:8|confirmed',
+        ]);
+        
+        // Check if user exists
+        $user = User::where('email', $validated['email'])->first();
+        
+        if (!$user) {
+            return response()->json(['errors' => ['email' => ['User not found']]], 422);
+        }
+        
+        // Update the password
+        $user->password = bcrypt($validated['password']);
+        $user->save();
+        
+        // Return success
+        return response()->json([
+            'message' => 'Password has been reset successfully'
+        ]);
+    }
 } 

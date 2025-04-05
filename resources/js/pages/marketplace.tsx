@@ -70,7 +70,7 @@ interface Listing {
     created_at: string;
 }
 
-export default function Marketplace({ listings: initialListings = [], flash = {} }: { listings: Listing[], flash: any }) {
+export default function Marketplace({ listings: initialListings = [], flash = {} }: { listings: Listing[], flash: unknown }) {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('All Categories');
     const [loadedImages, setLoadedImages] = useState<{ [key: string]: boolean }>({});
@@ -81,7 +81,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
     const [showErrorPopup, setShowErrorPopup] = useState(false);
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
     const [isVerificationOpen, setIsVerificationOpen] = useState(false);
-    
+
     // Add this function to filter listings
     const filteredListings = useMemo(() => {
         if (selectedCategory === 'All Categories') {
@@ -104,7 +104,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
         }
     };
 
-    const { data, setData, post, processing, errors, reset, progress } = useForm({
+    const { data, setData, post, processing, errors, reset } = useForm({
         title: '',
         price: '',
         category: '',
@@ -133,28 +133,28 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
 
     const handleVerificationSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // We need to send the document through FormData
         if (!(data as any).document) {
             alert('Please select a document to upload');
             return;
         }
-        
+
         // Set loading state
         const submitButton = e.currentTarget.querySelector('button[type="submit"]');
         if (submitButton instanceof HTMLButtonElement) {
             submitButton.innerHTML = 'Submitting...';
             submitButton.disabled = true;
         }
-        
+
         // Create FormData manually and append the document
         const formData = new FormData();
         formData.append('document', (data as any).document);
         formData.append('notes', (data as any).notes || '');
-        
+
         // Using a different approach to avoid linter errors with FormData
         const url = route('user.submit-verification');
-        
+
         // Perform fetch manually
         fetch(url, {
             method: 'POST',
@@ -171,14 +171,14 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
             }
             return response.json();
         })
-        .then(data => {
+        .then(() => {
             // Success handling
             setIsVerificationOpen(false);
             // Reset form
             resetVerificationForm();
             // Show success message
             handleSuccess('Verification document submitted successfully. It will be reviewed by our team.');
-            
+
             // Optionally refresh the page to update user status
             setTimeout(() => {
                 window.location.reload();
@@ -187,7 +187,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
         .catch(error => {
             console.error('Error:', error);
             alert('Error submitting verification document. Please try again.');
-            
+
             // Reset button state on error
             if (submitButton instanceof HTMLButtonElement) {
                 submitButton.innerHTML = 'Submit';
@@ -212,14 +212,14 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
             handleError('You must verify your document before creating listings in the marketplace.');
             return;
         }
-        
+
         // Create FormData object to properly handle file uploads
         const formData = new FormData();
         formData.append('title', data.title);
         formData.append('price', data.price);
         formData.append('category', data.category);
         formData.append('description', data.description);
-        
+
         // Append each image file
         data.images.forEach((image: File) => {
             formData.append('images[]', image);
@@ -255,7 +255,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                         {flash.error}
                     </div>
                 )}
-                
+
                 {/* Information Card - Moved to top */}
                 <div className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">
                     <div className="space-y-4">
@@ -269,7 +269,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                                 ) are pending verification by our administrators.
                             </p>
                         </div>
-                        
+
                         <div className="flex items-start gap-2">
                             <div className="mt-1 flex-shrink-0">
                                 <CheckCircleIcon className="h-5 w-5 text-green-500" />
@@ -283,16 +283,16 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
 
                         <div className="mt-4 rounded-lg bg-amber-50 p-4 dark:bg-amber-950/50">
                             <p className="text-amber-800 dark:text-amber-200">
-                                <strong>Disclaimer:</strong> While we strive to maintain a safe marketplace, buyers are solely responsible 
-                                for verifying the authenticity and condition of items before making a purchase. Our verification process 
-                                is limited to basic listing compliance. We do not guarantee the quality, safety, or legitimacy of any 
-                                listed items. The site and its administrators shall not be held liable for any losses, damages, or harm 
+                                <strong>Disclaimer:</strong> While we strive to maintain a safe marketplace, buyers are solely responsible
+                                for verifying the authenticity and condition of items before making a purchase. Our verification process
+                                is limited to basic listing compliance. We do not guarantee the quality, safety, or legitimacy of any
+                                listed items. The site and its administrators shall not be held liable for any losses, damages, or harm
                                 arising from transactions between users.
                             </p>
                         </div>
                     </div>
                 </div>
-                
+
                 {/* Header with Create Listing button and Category filter */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-wrap gap-2">
@@ -312,10 +312,10 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                             );
                         })}
                     </div>
-                    
+
                     <Dialog open={isOpen} onOpenChange={setIsOpen}>
                         <DialogTrigger asChild>
-                            <Button 
+                            <Button
                                 className="flex items-center gap-2"
                                 onClick={(e) => {
                                     e.preventDefault(); // Prevent default to handle manually
@@ -489,17 +489,17 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                 {filteredListings.length > 0 ? (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {filteredListings.map((listing) => (
-                            <div 
-                                key={listing.id} 
+                            <div
+                                key={listing.id}
                                 className="overflow-hidden rounded-xl border shadow-sm cursor-pointer transition-shadow hover:shadow-md"
                                 onClick={() => handleListingClick(listing.id)}
                             >
                                 <div className="relative h-[200px] w-full flex justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900">
                                     {listing.images[0] ? (
                                         <>
-                                            <div 
-                                                className="absolute inset-0 bg-cover bg-center blur-xl opacity-50 scale-110" 
-                                                style={{ 
+                                            <div
+                                                className="absolute inset-0 bg-cover bg-center blur-xl opacity-50 scale-110"
+                                                style={{
                                                     backgroundImage: `url(${listing.images[0]})`,
                                                 }}
                                             />
@@ -556,21 +556,21 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                                             <span className="text-sm text-gray-500">{listing.category}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <UserAvatar 
-                                                user={listing.seller || { 
+                                            <UserAvatar
+                                                user={listing.seller || {
                                                     name: 'Unknown User',
                                                     avatar: null,
                                                     username: 'unknown',
                                                     verification_status: 'unverified'
-                                                }} 
-                                                className="size-6" 
+                                                }}
+                                                className="size-6"
                                             />
                                             <span className="text-sm text-gray-500">
                                                 {listing.seller?.name || 'Unknown User'}
                                             </span>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Separate the delete button to prevent navigation */}
                                             {auth.user && listing.seller?.username === auth.user.username && (
                                         <div className="mt-2 flex justify-end">
@@ -594,15 +594,15 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                 ) : (
                     <div className="flex min-h-[50vh] flex-col items-center justify-center rounded-xl border">
                         <p className="mb-4 text-lg font-medium">
-                            {selectedCategory === 'All Categories' 
-                                ? 'No listings yet' 
+                            {selectedCategory === 'All Categories'
+                                ? 'No listings yet'
                                 : `No listings in ${selectedCategory}`}
                         </p>
-                        <Button 
+                        <Button
                             onClick={(e) => {
                                 e.preventDefault();
                                 handleCreateListingClick();
-                            }} 
+                            }}
                             className="flex items-center gap-2"
                         >
                             <PlusIcon className="h-5 w-5" />
@@ -627,7 +627,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                                     Please submit your verification documents to unlock marketplace selling features.
                                 </p>
                             </div>
-                            <button 
+                            <button
                                 className="flex-shrink-0 rounded-md p-1.5 text-amber-500 hover:bg-amber-100 dark:hover:bg-amber-800"
                                 onClick={() => setShowErrorPopup(false)}
                             >
@@ -635,9 +635,9 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                             </button>
                         </div>
                         <div className="mt-3 flex justify-end">
-                            <Button 
-                                size="sm" 
-                                variant="outline" 
+                            <Button
+                                size="sm"
+                                variant="outline"
                                 className="border-amber-200 bg-white text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:bg-amber-900 dark:text-amber-300 dark:hover:bg-amber-800"
                                 onClick={() => {
                                     setIsVerificationOpen(true);
@@ -650,7 +650,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                     </div>
                 </div>
             )}
-            
+
             {/* Success Popup */}
             {showSuccessPopup && successMessage && (
                 <div className="fixed bottom-4 right-4 z-50 max-w-md animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -662,7 +662,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                             <div className="flex-1">
                                 <p className="font-medium text-green-800 dark:text-green-200">{successMessage}</p>
                             </div>
-                            <button 
+                            <button
                                 className="flex-shrink-0 rounded-md p-1.5 text-green-500 hover:bg-green-100 dark:hover:bg-green-800"
                                 onClick={() => setShowSuccessPopup(false)}
                             >
@@ -674,4 +674,4 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
             )}
         </AppLayout>
     );
-} 
+}

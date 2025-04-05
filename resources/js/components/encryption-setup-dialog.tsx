@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateKeyPair, savePrivateKeyToFile, savePrivateKeyToCookie, getPrivateKeyFromCookie, isValidPrivateKey } from '@/utils/crypto';
-import { AlertCircle, ArrowDownCircle, Info, Key, Lock, Shield, Upload } from 'lucide-react';
+import { AlertCircle, ArrowDownCircle, Info, Key, Shield } from 'lucide-react';
 import axios from 'axios';
 
 interface EncryptionSetupDialogProps {
@@ -24,12 +23,12 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
   const [privateKeyError, setPrivateKeyError] = useState('');
   const [setupComplete, setSetupComplete] = useState(false);
   const [showKeyDownloadInfo, setShowKeyDownloadInfo] = useState(false);
-  
+
   // Debug the open state
   useEffect(() => {
     console.log('EncryptionSetupDialog - open state changed:', open);
   }, [open]);
-  
+
   // Check if private key is already in cookies
   useEffect(() => {
     const storedKey = getPrivateKeyFromCookie();
@@ -48,32 +47,32 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
       setIsGenerating(true);
       // Generate new key pair
       const { publicKey, privateKey } = await generateKeyPair();
-      
+
       // Get current username for the filename
       let username = '';
       if (window.__page?.props?.auth?.user?.username) {
         username = window.__page.props.auth.user.username;
       }
-      
+
       // Save private key as a file for the user to backup
       savePrivateKeyToFile(privateKey, username);
       setShowKeyDownloadInfo(true);
-      
+
       // Temporarily store in cookie for encryption operations
       savePrivateKeyToCookie(privateKey);
-      
+
       // Submit public key to server with retry logic
       let success = false;
       let attempts = 0;
       const maxAttempts = 3;
-      
+
       while (!success && attempts < maxAttempts) {
         try {
           attempts++;
           const response = await axios.post(route('user.update-public-key'), {
             public_key: publicKey
           });
-          
+
           if (response.data.success) {
             success = true;
             console.log('Public key successfully uploaded', response.data);
@@ -84,18 +83,11 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
           }
         } catch (err) {
           console.error(`Attempt ${attempts}: Error uploading public key:`, err);
-          if (attempts >= maxAttempts) {
-            throw err; // Re-throw if we've exhausted retries
-          }
           // Wait longer before retrying
           await new Promise(resolve => setTimeout(resolve, 1500));
         }
       }
-      
-      if (!success) {
-        throw new Error('Failed to update public key after multiple attempts');
-      }
-      
+
       // Small delay to let the user see the download info
       setTimeout(() => {
         console.log('EncryptionSetupDialog - setup complete after key generation');
@@ -109,26 +101,26 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
       setIsGenerating(false);
     }
   };
-  
+
   const handleUploadPrivateKey = async () => {
     if (!privateKey.trim()) {
       setPrivateKeyError('Please enter your private key');
       return;
     }
-    
+
     try {
       console.log('EncryptionSetupDialog - processing uploaded key');
       setIsUploading(true);
-      
+
       // Validate if the entered key is a valid RSA private key
       if (!isValidPrivateKey(privateKey)) {
         setPrivateKeyError('Invalid private key format');
         return;
       }
-      
+
       // Store the private key in a cookie
       savePrivateKeyToCookie(privateKey);
-      
+
       console.log('EncryptionSetupDialog - setup complete after key upload');
       setSetupComplete(true);
       onSetupComplete();
@@ -139,7 +131,7 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
       setIsUploading(false);
     }
   };
-  
+
   // If setup is already complete, don't show the dialog but notify parent
   if (setupComplete) {
     console.log('EncryptionSetupDialog - setup is complete, returning null');
@@ -154,7 +146,7 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
 
   // Force the dialog to be open if open prop is true
   console.log('EncryptionSetupDialog - rendering dialog with open =', open);
-  
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal={true} defaultOpen={open}>
       <DialogContent className="sm:max-w-[500px]">
@@ -167,7 +159,7 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
             Set up encryption for secure private messages that only you and your recipient can read.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="mt-4">
           <Alert className="mb-4 bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
             <Info className="h-4 w-4" />
@@ -176,7 +168,7 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
               Your private key will never be stored on our servers and is only used on your device.
             </AlertDescription>
           </Alert>
-          
+
           {showKeyDownloadInfo && (
             <Alert className="mb-4 bg-green-50 text-green-800 dark:bg-green-950 dark:text-green-300">
               <ArrowDownCircle className="h-4 w-4" />
@@ -185,20 +177,20 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
               </AlertDescription>
             </Alert>
           )}
-          
+
           <Tabs defaultValue="generate" value={tab} onValueChange={(value) => setTab(value as 'generate' | 'upload')}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="generate">Generate New Keys</TabsTrigger>
               <TabsTrigger value="upload">Use Existing Key</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="generate" className="mt-4 space-y-4">
               <div className="space-y-2">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Generate a new encryption key pair. Your private key will be downloaded 
+                  Generate a new encryption key pair. Your private key will be downloaded
                   automatically - <strong>keep it secure</strong> as it won't be stored on our servers.
                 </p>
-                
+
                 <div className="rounded-md bg-gray-50 p-4 dark:bg-gray-900">
                   <div className="flex items-center gap-3">
                     <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900">
@@ -213,25 +205,25 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
                   </div>
                 </div>
               </div>
-              
-              <Button 
-                onClick={handleGenerateKeys} 
+
+              <Button
+                onClick={handleGenerateKeys}
                 disabled={isGenerating}
                 className="w-full"
               >
                 {isGenerating ? 'Generating Keys...' : 'Generate and Download Keys'}
               </Button>
             </TabsContent>
-            
+
             <TabsContent value="upload" className="mt-4 space-y-4">
               <div className="space-y-2">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   If you already have a private key from a previous setup, paste it below.
                 </p>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="privateKey">Your Private Key</Label>
-                  <Textarea 
+                  <Textarea
                     id="privateKey"
                     value={privateKey}
                     onChange={(e) => {
@@ -247,9 +239,9 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
                   )}
                 </div>
               </div>
-              
-              <Button 
-                onClick={handleUploadPrivateKey} 
+
+              <Button
+                onClick={handleUploadPrivateKey}
                 disabled={isUploading || !privateKey.trim()}
                 className="w-full"
               >
@@ -257,7 +249,7 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
               </Button>
             </TabsContent>
           </Tabs>
-          
+
           <div className="mt-6 rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800 dark:border-yellow-900 dark:bg-yellow-950/30 dark:text-yellow-300">
             <div className="flex items-start gap-2">
               <AlertCircle className="h-5 w-5 flex-shrink-0" />
@@ -273,4 +265,4 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
       </DialogContent>
     </Dialog>
   );
-} 
+}

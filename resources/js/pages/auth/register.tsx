@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
+import { cn } from '@/lib/utils';
+import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 
 type RegisterForm = {
     name: string;
@@ -46,107 +48,154 @@ export default function Register() {
     return (
         <AuthLayout title="Create an account" description="Enter your details below to create your account">
             <Head title="Register" />
-            <form className="flex flex-col gap-6" onSubmit={submit}>
-                <div className="grid gap-6">
-                    <div className="grid gap-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input
-                            id="name"
-                            type="text"
-                            required
-                            autoFocus
-                            tabIndex={1}
-                            autoComplete="name"
-                            value={data.name}
-                            onChange={(e) => setData('name', e.target.value)}
-                            disabled={processing}
-                            placeholder="Full name"
-                        />
-                        <InputError message={errors.name} className="mt-2" />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="username">Username</Label>
-                        <Input
-                            id="username"
-                            type="text"
-                            required
-                            tabIndex={2}
-                            autoComplete="username"
-                            value={data.username}
-                            onChange={(e) => setData('username', e.target.value)}
-                            disabled={processing}
-                            placeholder="Choose a username"
-                        />
-                        <InputError message={errors.username} className="mt-2" />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="email">Email address</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            required
-                            tabIndex={3}
-                            autoComplete="email"
-                            value={data.email}
-                            onChange={(e) => setData('email', e.target.value)}
-                            disabled={processing}
-                            placeholder="email@example.com"
-                        />
-                        <InputError message={errors.email} />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            required
-                            tabIndex={4}
-                            autoComplete="new-password"
-                            value={data.password}
-                            onChange={(e) => setData('password', e.target.value)}
-                            disabled={processing}
-                            placeholder="Password"
-                        />
-                        <InputError message={errors.password} />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="password_confirmation">Confirm password</Label>
-                        <Input
-                            id="password_confirmation"
-                            type="password"
-                            required
-                            tabIndex={5}
-                            autoComplete="new-password"
-                            value={data.password_confirmation}
-                            onChange={(e) => setData('password_confirmation', e.target.value)}
-                            disabled={processing}
-                            placeholder="Confirm password"
-                        />
-                        <InputError message={errors.password_confirmation} />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="avatar">Profile Picture (Optional)</Label>
-                        <Input id="avatar" type="file" tabIndex={6} accept="image/*" onChange={handleAvatarChange} disabled={processing} />
-                        <InputError message={errors.avatar} className="mt-2" />
-                    </div>
-                    <Button type="submit" className="mt-2 w-full" tabIndex={7} disabled={processing}>
-                        {processing && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-                        Create account
-                    </Button>
+            <div className="relative mx-auto w-full max-w-md p-4 sm:p-6">
+                <div className="absolute inset-0 -z-10">
+                    <PlaceholderPattern className="size-full stroke-neutral-900/10 dark:stroke-neutral-100/10" />
                 </div>
+                
+                <div className="rounded-2xl border border-gray-200 bg-white/80 p-6 shadow-lg backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/80">
+                    <div className="mb-6 text-center">
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Join SimpleSocial</h1>
+                        <p className="mt-2 text-gray-600 dark:text-gray-300">Create your account to get started</p>
+                    </div>
+                    
+                    <form className="flex flex-col gap-5" onSubmit={submit}>
+                        <div className="grid gap-5">
+                            <div className="grid gap-2">
+                                <Label htmlFor="name" className="text-gray-700 dark:text-gray-300">Name</Label>
+                                <Input
+                                    id="name"
+                                    type="text"
+                                    required
+                                    autoFocus
+                                    tabIndex={1}
+                                    autoComplete="name"
+                                    value={data.name}
+                                    onChange={(e) => setData('name', e.target.value)}
+                                    disabled={processing}
+                                    placeholder="Full name"
+                                    className={cn(
+                                        "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400",
+                                        errors.name && 'border-red-500 dark:border-red-500'
+                                    )}
+                                />
+                                <InputError message={errors.name} className="mt-1" />
+                            </div>
 
-                <div className="text-muted-foreground text-center text-sm">
-                    Already have an account?{' '}
-                    <TextLink href={route('login')} tabIndex={8}>
-                        Log in
-                    </TextLink>
+                            <div className="grid gap-2">
+                                <Label htmlFor="username" className="text-gray-700 dark:text-gray-300">Username</Label>
+                                <Input
+                                    id="username"
+                                    type="text"
+                                    required
+                                    tabIndex={2}
+                                    autoComplete="username"
+                                    value={data.username}
+                                    onChange={(e) => setData('username', e.target.value)}
+                                    disabled={processing}
+                                    placeholder="Choose a username"
+                                    className={cn(
+                                        "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400",
+                                        errors.username && 'border-red-500 dark:border-red-500'
+                                    )}
+                                />
+                                <InputError message={errors.username} className="mt-1" />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="email" className="text-gray-700 dark:text-gray-300">Email address</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    required
+                                    tabIndex={3}
+                                    autoComplete="email"
+                                    value={data.email}
+                                    onChange={(e) => setData('email', e.target.value)}
+                                    disabled={processing}
+                                    placeholder="email@example.com"
+                                    className={cn(
+                                        "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400",
+                                        errors.email && 'border-red-500 dark:border-red-500'
+                                    )}
+                                />
+                                <InputError message={errors.email} className="mt-1" />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="password" className="text-gray-700 dark:text-gray-300">Password</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    required
+                                    tabIndex={4}
+                                    autoComplete="new-password"
+                                    value={data.password}
+                                    onChange={(e) => setData('password', e.target.value)}
+                                    disabled={processing}
+                                    placeholder="Password"
+                                    className={cn(
+                                        "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400",
+                                        errors.password && 'border-red-500 dark:border-red-500'
+                                    )}
+                                />
+                                <InputError message={errors.password} className="mt-1" />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="password_confirmation" className="text-gray-700 dark:text-gray-300">Confirm password</Label>
+                                <Input
+                                    id="password_confirmation"
+                                    type="password"
+                                    required
+                                    tabIndex={5}
+                                    autoComplete="new-password"
+                                    value={data.password_confirmation}
+                                    onChange={(e) => setData('password_confirmation', e.target.value)}
+                                    disabled={processing}
+                                    placeholder="Confirm password"
+                                    className={cn(
+                                        "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400",
+                                        errors.password_confirmation && 'border-red-500 dark:border-red-500'
+                                    )}
+                                />
+                                <InputError message={errors.password_confirmation} className="mt-1" />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="avatar" className="text-gray-700 dark:text-gray-300">Profile Picture (Optional)</Label>
+                                <Input
+                                    id="avatar"
+                                    type="file"
+                                    tabIndex={6}
+                                    accept="image/*"
+                                    onChange={handleAvatarChange}
+                                    disabled={processing}
+                                    className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+                                />
+                                <InputError message={errors.avatar} className="mt-1" />
+                            </div>
+                            
+                            <Button
+                                type="submit"
+                                className="mt-2 w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600"
+                                tabIndex={7}
+                                disabled={processing}
+                            >
+                                {processing && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                                Create account
+                            </Button>
+                        </div>
+
+                        <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                            Already have an account?{' '}
+                            <TextLink href={route('login')} tabIndex={8} className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                                Log in
+                            </TextLink>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </AuthLayout>
     );
 }

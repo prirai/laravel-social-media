@@ -1,4 +1,4 @@
-import { Link, usePage, router } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { useState, useEffect, useRef } from "react";
 import UserAvatar from '@/components/user-avatar';
 import axios from 'axios';
@@ -13,8 +13,6 @@ import {
 import {
     Bell,
     LogOut,
-    Menu,
-    MessageSquare,
     Moon,
     Search,
     Settings,
@@ -24,8 +22,8 @@ import {
     LayoutGrid,
     ShoppingBag,
     Mail,
-    Heart as HeartIcon,
     Home,
+    Computer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -33,11 +31,11 @@ import { Icon } from "@/components/icon";
 import { Input } from "@/components/ui/input";
 import AppLogo from "@/components/app-logo";
 import { Breadcrumbs } from "./breadcrumbs";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { type BreadcrumbItem as TypesBreadcrumbItem } from '@/types';
+import { type SharedData, type Auth, type User as UserType } from '@/types';
 
 dayjs.extend(relativeTime);
 
@@ -48,25 +46,10 @@ interface NavItem {
     icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 }
 
-interface SharedData {
-    props: {
-        auth: {
-            user: {
-                id: number;
-                name: string;
-                email: string;
-                avatar?: string;
-            } | null;
-        };
-    };
-    url: string;
-    [key: string]: any; // Add index signature for PageProps compatibility
-}
-
 interface Notification {
     id: number;
     type: string;
-    data: any;
+    data: unknown;
     read_at: string | null;
     created_at: string;
     route: string;
@@ -96,15 +79,6 @@ const mainNavItems: NavItem[] = [
         icon: Mail,
     },
 ];
-
-const rightNavItems: NavItem[] = [
-    {
-        title: 'Notifications',
-        url: '/notifications',
-        icon: Bell,
-    },
-];
-
 // Navigation and UI elements
 // Define active item styles once to use in both desktop and mobile
 const activeItemStyles = "text-blue-600 bg-gradient-to-br from-blue-50 to-blue-100 shadow-sm dark:from-blue-900/20 dark:to-blue-800/20 dark:text-blue-300";
@@ -118,39 +92,52 @@ interface AppHeaderProps {
 
 export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const page = usePage<SharedData>();
-    const { auth } = page.props;
+    const { auth } = page.props as unknown as { auth: Auth };
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<Array<{ id: number; name: string; username: string; avatar: string | null }>>([]);
     const [showSearchResults, setShowSearchResults] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
 
     const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+    const [systemPrefersDark, setSystemPrefersDark] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const notificationsRef = useRef<HTMLDivElement>(null);
     const mobileNotificationsRef = useRef<HTMLDivElement>(null);
-    
+
     // Get notification state and methods from context
-    const { 
+    const {
         notifications,
         unreadCount,
         fetchNotifications,
         fetchUnreadCount,
         markAsRead,
         markAllAsRead,
-        isLoadingNotifications 
+        isLoadingNotifications
     } = useNotifications();
 
     useEffect(() => {
         const localTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setSystemPrefersDark(prefersDark);
+        
         if (localTheme) {
             setTheme(localTheme);
         } else {
-            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            if (prefersDark) {
                 setTheme('dark');
             } else {
                 setTheme('light');
             }
         }
+
+        // Setup listener for system theme changes
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const handleChange = (e: MediaQueryListEvent) => {
+            setSystemPrefersDark(e.matches);
+        };
+        
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
 
     useEffect(() => {
@@ -194,7 +181,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                 setShowSearchResults(false);
             }
         }
-        
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
@@ -205,7 +192,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
         const handleClickOutside = (event: MouseEvent) => {
             const isClickInsideDesktopNotifications = notificationsRef.current && notificationsRef.current.contains(event.target as Node);
             const isClickInsideMobileNotifications = mobileNotificationsRef.current && mobileNotificationsRef.current.contains(event.target as Node);
-            
+
             if (!isClickInsideDesktopNotifications && !isClickInsideMobileNotifications) {
                 setShowNotifications(false);
             }
@@ -241,7 +228,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                     markAllAsRead();
                 }
             }, 3000); // Give users 3 seconds to see which ones are unread
-            
+
             return () => clearTimeout(timer);
         }
     }, [showNotifications, notifications]);
@@ -251,7 +238,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
         if (!notification.read_at) {
             markAsRead(notification.id);
         }
-        
+
         // Navigate to the notification route
         if (notification.route) {
             setShowNotifications(false);
@@ -271,267 +258,268 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                             <span className="ml-2 text-xl font-semibold text-gray-900 dark:text-white">
                                 SimpleSocial
                             </span>
-                                                    </Link>
+                        </Link>
 
                         {/* Add proper spacing between logo and navigation */}
                         <div className="hidden items-center gap-2 lg:flex">
-                        {mainNavItems.map((item) => {
-                            const isActive = page.url === item.url;
-                            return (
-                                        <Link
-                                    key={item.title}
-                                            href={item.url}
-                                    className={cn(
-                                        "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium",
-                                        isActive 
-                                            ? activeItemStyles
-                                            : inactiveItemStyles
-                                    )}
-                                >
-                                    {item.icon && (
-                                        <Icon 
-                                            iconNode={item.icon} 
-                                            className={cn(
-                                                "h-5 w-5", 
-                                                isActive ? activeIconStyles : inactiveIconStyles
-                                            )} 
-                                        />
-                                    )}
-                                            {item.title}
-                                        </Link>
-                            );
-                        })}
+                            {mainNavItems.map((item) => {
+                                const isActive = page.url === item.url;
+                                return (
+                                    <Link
+                                        key={item.title}
+                                        href={item.url}
+                                        className={cn(
+                                            "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium",
+                                            isActive
+                                                ? activeItemStyles
+                                                : inactiveItemStyles
+                                        )}
+                                    >
+                                        {item.icon && (
+                                            <Icon
+                                                iconNode={item.icon}
+                                                className={cn(
+                                                    "h-5 w-5",
+                                                    isActive ? activeIconStyles : inactiveIconStyles
+                                                )}
+                                            />
+                                        )}
+                                        {item.title}
+                                    </Link>
+                                );
+                            })}
                         </div>
                     </div>
 
                     {/* Right side actions - add consistent spacing */}
                     <div className="flex items-center gap-3 md:gap-4">
-                    {/* Search button - Make visible on all screen sizes */}
-                    <div className="relative" ref={searchRef}>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-lg"
-                            onClick={() => {
-                                setShowSearchResults(!showSearchResults);
-                                if (showSearchResults) {
-                                    setSearchQuery('');
-                                    setSearchResults([]);
-                                }
-                            }}
-                        >
-                            <Search className={cn(
-                                "h-5 w-5",
-                                inactiveIconStyles
-                            )} />
-                            <span className="sr-only">Search</span>
-                        </Button>
-
-                        {/* Unified search dropdown - centered on mobile, right-aligned on desktop */}
-                        {showSearchResults && (
-                            <div className={`absolute z-50 mt-2 w-80 max-w-[90vw] rounded-xl border bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800 ${
-                                window.innerWidth < 640 
-                                    ? 'left-1/2 -translate-x-1/2 right-auto' 
-                                    : 'right-0 top-full'
-                            }`}>
-                                <div className="space-y-2">
-                                    <h3 className="font-semibold">Search Users</h3>
-                                    <Input
-                                        type="text"
-                                        placeholder="Search users..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="mb-2 rounded-lg"
-                                        autoFocus
-                                    />
-                                    <div className="max-h-96 space-y-1 overflow-y-auto">
-                                        {searchResults.map((user) => (
-                                            <Link
-                                                key={user.id}
-                                                href={route('profile.show', user.username)}
-                                                className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                onClick={() => {
-                                                    setShowSearchResults(false);
-                                                    setSearchQuery('');
-                                                }}
-                                            >
-                                                <UserAvatar user={user} className="size-8" />
-                                                <div>
-                                                    <p className="font-medium text-sm">{user.name}</p>
-                                                    <p className="text-xs text-gray-500">@{user.username}</p>
-                                                </div>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                    
-                                    {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
-                                        <div className="p-2 text-center text-sm text-gray-500">
-                                            No users found
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                        {/* Action buttons with consistent spacing */}
-                        <div className="flex items-center gap-2 md:gap-3">
-                            {/* Notifications Button */}
-                        <div className="relative md:block" ref={notificationsRef}>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
+                        {/* Search button - Make visible on all screen sizes */}
+                        <div className="relative" ref={searchRef}>
+                            <Button
+                                variant="ghost"
+                                size="icon"
                                 className="rounded-lg"
                                 onClick={() => {
-                                    setShowNotifications(!showNotifications);
-                                    if (!showNotifications) {
-                                        fetchNotifications();
+                                    setShowSearchResults(!showSearchResults);
+                                    if (showSearchResults) {
+                                        setSearchQuery('');
+                                        setSearchResults([]);
                                     }
                                 }}
                             >
-                                <Bell className={cn(
+                                <Search className={cn(
                                     "h-5 w-5",
-                                    page.url === "/notifications" ? activeIconStyles : inactiveIconStyles
+                                    inactiveIconStyles
                                 )} />
-                                {unreadCount > 0 && (
-                                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
-                                        {unreadCount > 99 ? '99+' : unreadCount}
-                                    </span>
-                                )}
-                                <span className="sr-only">Notifications</span>
-                                                        </Button>
-                                            {showNotifications && (
-                                <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                                                    <div className="flex items-center justify-between">
-                                                        <h3 className="font-semibold">Notifications</h3>
-                                        <div className="flex gap-2">
-                                            {unreadCount > 0 && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="rounded-lg text-xs"
-                                                    onClick={markAllAsRead}
+                                <span className="sr-only">Search</span>
+                            </Button>
+
+                            {/* Unified search dropdown - centered on mobile, right-aligned on desktop */}
+                            {showSearchResults && (
+                                <div className={`absolute z-50 mt-2 w-80 max-w-[90vw] rounded-xl border bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800 ${
+                                    window.innerWidth < 640
+                                        ? 'left-1/2 -translate-x-1/2 right-auto'
+                                        : 'right-0 top-full'
+                                }`}>
+                                    <div className="space-y-2">
+                                        <h3 className="font-semibold">Search Users</h3>
+                                        <Input
+                                            type="text"
+                                            placeholder="Search users..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="mb-2 rounded-lg"
+                                            autoFocus
+                                        />
+                                        <div className="max-h-96 space-y-1 overflow-y-auto">
+                                            {searchResults.map((user) => (
+                                                <Link
+                                                    key={user.id}
+                                                    href={route('profile.show', user.username)}
+                                                    className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                    onClick={() => {
+                                                        setShowSearchResults(false);
+                                                        setSearchQuery('');
+                                                    }}
                                                 >
-                                                    Mark all as read
-                                                </Button>
-                                            )}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                className="rounded-lg"
-                                                            onClick={() => setShowNotifications(false)}
-                                                        >
-                                                <X className="h-5 w-5" />
-                                                        </Button>
+                                                    <UserAvatar user={user} className="size-8" />
+                                                    <div>
+                                                        <p className="font-medium text-sm">{user.name}</p>
+                                                        <p className="text-xs text-gray-500">@{user.username}</p>
                                                     </div>
-                                    </div>
-                                    
-                                    {isLoadingNotifications ? (
-                                        <div className="mt-4 flex items-center justify-center py-4">
-                                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary"></div>
-                                        </div>
-                                    ) : notifications.length > 0 ? (
-                                        <div className="mt-2 max-h-80 overflow-y-auto">
-                                            {notifications.map((notification) => (
-                                                <div 
-                                                    key={notification.id}
-                                                    onClick={() => handleNotificationClick(notification)}
-                                                    className={cn(
-                                                        "cursor-pointer rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700",
-                                                        !notification.read_at && "bg-blue-50 dark:bg-blue-900/20"
-                                                    )}
-                                                >
-                                                    <div className="flex items-start gap-3">
-                                                        {notification.from_user && (
-                                                            <UserAvatar user={notification.from_user} className="size-10" />
-                                                        )}
-                                                        <div className="flex-1">
-                                                            <div className="text-sm">
-                                                                {notification.type === 'friend_request' && (
-                                                                    <span>
-                                                                        <span className="font-medium">{notification.from_user?.name}</span> sent you a friend request
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className="mt-1 text-xs text-gray-500">
-                                                                {dayjs(notification.created_at).fromNow()}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                                </Link>
                                             ))}
                                         </div>
-                                    ) : (
-                                        <div className="mt-4 text-center text-sm text-gray-500 py-8">
-                                            No notifications yet
-                                        </div>
-                                    )}
+
+                                        {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+                                            <div className="p-2 text-center text-sm text-gray-500">
+                                                No users found
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>
 
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-lg md:flex"
-                            onClick={toggleTheme}
-                        >
-                            <div className="relative h-5 w-5">
-                                <Sun className="h-5 w-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-                                <Moon className="absolute inset-0 h-5 w-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+                        {/* Action buttons with consistent spacing */}
+                        <div className="flex items-center gap-2 md:gap-3">
+                            {/* Notifications Button */}
+                            <div className="relative md:block" ref={notificationsRef}>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="rounded-lg"
+                                    onClick={() => {
+                                        setShowNotifications(!showNotifications);
+                                        if (!showNotifications) {
+                                            fetchNotifications();
+                                        }
+                                    }}
+                                >
+                                    <Bell className={cn(
+                                        "h-5 w-5",
+                                        page.url === "/notifications" ? activeIconStyles : inactiveIconStyles
+                                    )} />
+                                    {unreadCount > 0 && (
+                                        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
+                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                        </span>
+                                    )}
+                                    <span className="sr-only">Notifications</span>
+                                </Button>
+                                {showNotifications && (
+                                    <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="font-semibold">Notifications</h3>
+                                            <div className="flex gap-2">
+                                                {unreadCount > 0 && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="rounded-lg text-xs"
+                                                        onClick={markAllAsRead}
+                                                    >
+                                                        Mark all as read
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="rounded-lg"
+                                                    onClick={() => setShowNotifications(false)}
+                                                >
+                                                    <X className="h-5 w-5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        {isLoadingNotifications ? (
+                                            <div className="mt-4 flex items-center justify-center py-4">
+                                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary"></div>
+                                            </div>
+                                        ) : notifications.length > 0 ? (
+                                            <div className="mt-2 max-h-80 overflow-y-auto">
+                                                {notifications.map((notification) => (
+                                                    <div
+                                                        key={notification.id}
+                                                        onClick={() => handleNotificationClick(notification)}
+                                                        className={cn(
+                                                            "cursor-pointer rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700",
+                                                            !notification.read_at && "bg-blue-50 dark:bg-blue-900/20"
+                                                        )}
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            {notification.from_user && (
+                                                                <UserAvatar user={notification.from_user} className="size-10" />
+                                                            )}
+                                                            <div className="flex-1">
+                                                                <div className="text-sm">
+                                                                    {notification.type === 'friend_request' && (
+                                                                        <span>
+                                                                            <span className="font-medium">{notification.from_user?.name}</span> sent you a friend request
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="mt-1 text-xs text-gray-500">
+                                                                    {dayjs(notification.created_at).fromNow()}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="mt-4 text-center text-sm text-gray-500 py-8">
+                                                No notifications yet
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                                                <span className="sr-only">Toggle theme</span>
-                                            </Button>
+
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="rounded-lg md:flex"
+                                onClick={toggleTheme}
+                            >
+                                <div className="relative h-5 w-5">
+                                    <Sun className={`h-5 w-5 transition-all ${theme === 'light' ? 'scale-100 rotate-0' : 'scale-0 -rotate-90'}`} />
+                                    <Moon className={`absolute inset-0 h-5 w-5 transition-all ${theme === 'dark' ? 'scale-100 rotate-0' : 'scale-0 rotate-90'}`} />
+                                    <Computer className={`absolute inset-0 h-5 w-5 transition-all ${theme === 'system' ? 'scale-100 rotate-0' : 'scale-0 rotate-90'}`} />
+                                </div>
+                                <span className="sr-only">Toggle theme</span>
+                            </Button>
 
                             {/* User Menu */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                        <UserAvatar
-                                            user={auth.user}
-                                            className="h-8 w-8 ring-2 ring-blue-500/20 dark:ring-blue-500/30"
-                                        />
-                                        <span className="hidden text-sm font-medium lg:inline-block">
-                                            {auth.user?.name}
-                                        </span>
-                                    </div>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg">
-                                <DropdownMenuLabel className="font-normal">
-                                    <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">{auth.user?.name}</p>
-                                        <p className="text-xs leading-none text-gray-500 dark:text-gray-400">
-                                            {auth.user?.email}
-                                        </p>
-                                    </div>
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <Link href={`/profile/${auth.user?.username}`}>
-                                    <DropdownMenuItem>
-                                        <User className="mr-2 h-4 w-4" />
-                                        <span>Profile</span>
-                                    </DropdownMenuItem>
-                                </Link>
-                                <Link href="/settings">
-                                    <DropdownMenuItem>
-                                        <Settings className="mr-2 h-4 w-4" />
-                                        <span>Settings</span>
-                                    </DropdownMenuItem>
-                                </Link>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem asChild>
-                                    <Link href={route('logout')} method="post" className="flex w-full items-center">
-                                        <LogOut className="mr-2 h-4 w-4" />
-                                        <span>Log out</span>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="rounded-lg">
+                                        <div className="flex items-center gap-2">
+                                            <UserAvatar
+                                                user={auth.user}
+                                                className="h-8 w-8 ring-2 ring-blue-500/20 dark:ring-blue-500/30"
+                                            />
+                                            <span className="hidden text-sm font-medium lg:inline-block">
+                                                {auth.user?.name}
+                                            </span>
+                                        </div>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg">
+                                    <DropdownMenuLabel className="font-normal">
+                                        <div className="flex flex-col space-y-1">
+                                            <p className="text-sm font-medium leading-none">{auth.user?.name}</p>
+                                            <p className="text-xs leading-none text-gray-500 dark:text-gray-400">
+                                                {auth.user?.email}
+                                            </p>
+                                        </div>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <Link href={`/profile/${auth.user?.username}`}>
+                                        <DropdownMenuItem>
+                                            <User className="mr-2 h-4 w-4" />
+                                            <span>Profile</span>
+                                        </DropdownMenuItem>
                                     </Link>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                    <Link href="/settings">
+                                        <DropdownMenuItem>
+                                            <Settings className="mr-2 h-4 w-4" />
+                                            <span>Settings</span>
+                                        </DropdownMenuItem>
+                                    </Link>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem asChild>
+                                        <Link href={route('logout')} method="post" className="flex w-full items-center">
+                                            <LogOut className="mr-2 h-4 w-4" />
+                                            <span>Log out</span>
+                                        </Link>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
                 </div>
-            </div>
             </header>
 
             {/* Mobile bottom navigation - improved styling */}

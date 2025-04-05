@@ -14,7 +14,7 @@ export default ({ children, breadcrumbs, fullWidth, ...props }: AppLayoutProps) 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
+                    .then(() => {
                         console.log('ServiceWorker registration successful');
                     })
                     .catch(err => {
