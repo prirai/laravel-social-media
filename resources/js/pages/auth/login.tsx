@@ -117,7 +117,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     checked={data.remember}
                                     onClick={() => setData('remember', !data.remember)}
                                     tabIndex={3}
-                                    className="mr-2 text-blue-600 border-gray-300 dark:border-gray-600 dark:bg-transparent rounded focus:ring-blue-500 dark:focus:ring-blue-400"
+                                    className="mr-2 text-blue-600 border-gray-300 dark:border-gray-600 dark:bg-white rounded focus:ring-blue-500 dark:focus:ring-blue-400"
                                 />
                                 <Label htmlFor="remember" className="text-sm text-gray-600 dark:text-gray-400">
                                     Remember me
