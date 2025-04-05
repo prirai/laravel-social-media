@@ -56,12 +56,17 @@ class UserCrudController extends CrudController
                 $color = $verified ? 'success' : 'danger';
                 $text = $verified ? 'Verified' : 'Not Verified';
                 
-                // Add a verify button if not verified
+                // Add buttons based on verification status
                 $button = '';
                 if (!$verified) {
                     $url = backpack_url('user/verify-email/'.$entry->id);
                     $button = ' <a href="'.$url.'" class="btn btn-sm btn-success ml-2">
                         <i class="la la-check"></i> Verify
+                    </a>';
+                } else {
+                    $url = backpack_url('user/unverify-email/'.$entry->id);
+                    $button = ' <a href="'.$url.'" class="btn btn-sm btn-danger ml-2" onclick="return confirm(\'Are you sure you want to unverify this email?\')">
+                        <i class="la la-times"></i> Unverify
                     </a>';
                 }
                 
@@ -254,6 +259,22 @@ class UserCrudController extends CrudController
         $user->save();
         
         \Alert::success('Email verified successfully.')->flash();
+        return redirect()->back();
+    }
+    
+    /**
+     * Unverify a user's email address
+     *
+     * @param int $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function unverifyEmail($id)
+    {
+        $user = \App\Models\User::findOrFail($id);
+        $user->email_verified_at = null;
+        $user->save();
+        
+        \Alert::success('Email unverified successfully.')->flash();
         return redirect()->back();
     }
 }

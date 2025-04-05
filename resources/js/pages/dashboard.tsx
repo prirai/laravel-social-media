@@ -82,6 +82,11 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
     const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [showErrorPopup, setShowErrorPopup] = useState(false);
+    const [otpSent, setOtpSent] = useState(false);
+    const [otpValue, setOtpValue] = useState('');
+    const [otpError, setOtpError] = useState<string | null>(null);
+    const [otpResendCountdown, setOtpResendCountdown] = useState(0);
+    const [verifyingOtp, setVerifyingOtp] = useState(false);
 
     const {
         data,
@@ -96,6 +101,18 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
         attachments: [] as File[],
         document: null as File | null,
         notes: '',
+    });
+
+    // For email verification OTP
+    const {
+        data: otpData,
+        setData: setOtpData,
+        post: postOtp,
+        processing: processingOtp,
+        errors: otpFormErrors,
+        reset: resetOtp,
+    } = useForm({
+        otp: ''
     });
 
     const authUserId = auth.user?.id;
@@ -326,14 +343,79 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
 
     const handleEmailVerificationSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (otpSent) {
+            // Verify OTP
+            setVerifyingOtp(true);
+            setOtpError(null);
+            setOtpData('otp', otpValue);
+            
+            postOtp(route('user.verify-email-otp'), {
+                onSuccess: () => {
+                    setIsEmailVerificationOpen(false);
+                    // Update the auth user state to reflect verified email
+                    router.reload();
+                },
+                onError: (errors) => {
+                    setVerifyingOtp(false);
+                    setOtpError(errors.otp || 'Invalid OTP. Please try again.');
+                },
+                preserveScroll: true,
+            });
+        } else {
+            // Request OTP
+            post(route('user.send-email-otp'), {
+                onSuccess: () => {
+                    setOtpSent(true);
+                    // Start 5 minute countdown for OTP expiry
+                    setOtpResendCountdown(300); // 300 seconds = 5 minutes
+                    const countdownInterval = setInterval(() => {
+                        setOtpResendCountdown((prev) => {
+                            if (prev <= 1) {
+                                clearInterval(countdownInterval);
+                                return 0;
+                            }
+                            return prev - 1;
+                        });
+                    }, 1000);
+                },
+                onError: (errors) => {
+                    setError(errors.email || 'Failed to send verification code. Please try again.');
+                    setShowErrorPopup(true);
+                    setTimeout(() => setShowErrorPopup(false), 5000);
+                }
+            });
+        }
+    };
     
-        post(route('user.verify-email'), {
+    const handleResendOtp = () => {
+        post(route('user.send-email-otp'), {
             onSuccess: () => {
-                setIsEmailVerificationOpen(false);
+                setOtpResendCountdown(300);
+                const countdownInterval = setInterval(() => {
+                    setOtpResendCountdown((prev) => {
+                        if (prev <= 1) {
+                            clearInterval(countdownInterval);
+                            return 0;
+                        }
+                        return prev - 1;
+                    });
+                }, 1000);
             },
+            onError: (errors) => {
+                setError(errors.email || 'Failed to resend verification code. Please try again.');
+                setShowErrorPopup(true);
+                setTimeout(() => setShowErrorPopup(false), 5000);
+            }
         });
     };
     
+    const formatCountdown = (seconds: number): string => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
+
     const handleImageClick = (imagePath: string, e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -533,18 +615,80 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                             </DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle>Verify Your Email</DialogTitle>
-                                    <DialogDescription>We will send a verification link to your registered email.</DialogDescription>
+                                    <DialogTitle>{otpSent ? 'Enter Verification Code' : 'Verify Your Email'}</DialogTitle>
+                                    <DialogDescription>
+                                        {otpSent 
+                                            ? `We've sent a verification code to ${auth.user.email}. The code will expire in ${formatCountdown(otpResendCountdown)}.`
+                                            : 'We will send a verification code to your registered email.'}
+                                    </DialogDescription>
                                 </DialogHeader>
                                 <form onSubmit={handleEmailVerificationSubmit} className="space-y-4">
-                                    <p className="text-sm text-gray-500 dark:text-gray-300">
-                                        Click the button below to receive a verification email.
-                                    </p>
+                                    {otpSent ? (
+                                        <>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="otp">Verification Code</Label>
+                                                <Input
+                                                    id="otp"
+                                                    type="text"
+                                                    value={otpData.otp}
+                                                    onChange={(e) => {
+                                                        setOtpData('otp', e.target.value);
+                                                        setOtpValue(e.target.value);
+                                                    }}
+                                                    placeholder="Enter 6-digit code"
+                                                    className="text-center text-lg tracking-wider"
+                                                    maxLength={6}
+                                                    required
+                                                />
+                                                {otpError && <p className="text-sm text-red-500">{otpError}</p>}
+                                            </div>
+                                            
+                                            <div className="text-center">
+                                                {otpResendCountdown > 0 ? (
+                                                    <p className="text-sm text-gray-500">
+                                                        Resend code in {formatCountdown(otpResendCountdown)}
+                                                    </p>
+                                                ) : (
+                                                    <Button 
+                                                        type="button" 
+                                                        variant="link" 
+                                                        onClick={handleResendOtp}
+                                                        className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                    >
+                                                        Resend Code
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <p className="text-sm text-gray-500 dark:text-gray-300">
+                                            Click the button below to receive a verification code at your email address: {auth.user.email}
+                                        </p>
+                                    )}
+                                    
                                     <div className="flex justify-end gap-2">
-                                        <Button type="button" variant="outline" onClick={() => setIsEmailVerificationOpen(false)}>
+                                        <Button 
+                                            type="button" 
+                                            variant="outline" 
+                                            onClick={() => {
+                                                setIsEmailVerificationOpen(false);
+                                                setOtpSent(false);
+                                                setOtpValue('');
+                                                setOtpError(null);
+                                                setOtpResendCountdown(0);
+                                                resetOtp();
+                                            }}
+                                        >
                                             Cancel
                                         </Button>
-                                                <Button type="submit" disabled={processing}>Send Verification Email</Button>
+                                        <Button 
+                                            type="submit" 
+                                            disabled={otpSent ? (processingOtp || otpData.otp.length !== 6) : processing}
+                                        >
+                                            {otpSent 
+                                                ? (processingOtp ? 'Verifying...' : 'Verify') 
+                                                : (processing ? 'Sending...' : 'Send Verification Code')}
+                                        </Button>
                                     </div>
                                 </form>
                             </DialogContent>
@@ -595,7 +739,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         placeholder="What's on your mind?"
                                                 className="min-h-[150px] resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                                     />
-                                            {formErrors.content && <p className="mt-1 text-sm text-red-500">{formErrors.content}</p>}
+                                        {formErrors.content && <p className="mt-1 text-sm text-red-500">{formErrors.content}</p>}
                                 </div>
 
                                         <div className="space-y-4">

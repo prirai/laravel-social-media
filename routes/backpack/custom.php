@@ -35,4 +35,5 @@ Route::group([
         ->name('verification-document.verify');
     Route::crud('post', 'PostCrudController');
     Route::get('user/verify-email/{id}', 'UserCrudController@verifyEmail')->name('user.verify-email');
+    Route::get('user/unverify-email/{id}', 'UserCrudController@unverifyEmail')->name('user.unverify-email');
 });

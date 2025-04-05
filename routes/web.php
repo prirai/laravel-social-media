@@ -57,6 +57,10 @@ Route::post('user/submit-verification', [VerificationController::class, 'submit'
 //email verification 
 Route::post('user/verify-email', [CustomEmailVerificationController::class, 'submit'])->name('user.verify-email');
 
+// New OTP verification routes
+Route::post('user/send-email-otp', [UserController::class, 'sendEmailOtp'])->name('user.send-email-otp');
+Route::post('user/verify-email-otp', [UserController::class, 'verifyEmailWithOtp'])->name('user.verify-email-otp');
+
 Route::get('/users/search', [UserController::class, 'search'])->name('users.search');
 
 // Route::get('/debug-verification', function() {
