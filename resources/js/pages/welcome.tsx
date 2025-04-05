@@ -3,19 +3,18 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { Sun, Moon, Computer } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 
 export default function Welcome() {
     const { auth } = usePage<SharedData>().props;
     const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
-    const [systemPrefersDark, setSystemPrefersDark] = useState(false);
+    const [, setSystemPrefersDark] = useState(false);
 
     useEffect(() => {
         const localTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         setSystemPrefersDark(prefersDark);
-        
+
         if (localTheme) {
             setTheme(localTheme);
         } else {
@@ -31,7 +30,7 @@ export default function Welcome() {
         const handleChange = (e: MediaQueryListEvent) => {
             setSystemPrefersDark(e.matches);
         };
-        
+
         mediaQuery.addEventListener('change', handleChange);
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
@@ -91,7 +90,7 @@ export default function Welcome() {
                                 </div>
                                 <span className="sr-only">Toggle theme</span>
                             </Button>
-                            
+
                             {auth.user ? (
                                 <Link
                                     href={route('dashboard')}
@@ -124,7 +123,7 @@ export default function Welcome() {
                     <div className="absolute inset-0 -z-10">
                         <PlaceholderPattern className="size-full stroke-neutral-900/10 dark:stroke-neutral-100/10" />
                     </div>
-                    
+
                     {/* Image (Moved before text on larger screens) */}
                     <div className="w-full max-w-lg lg:w-1/2">
                         <div className="relative">
@@ -155,7 +154,7 @@ export default function Welcome() {
                                 <>
                                     <Link
                                         href={route('login')}
-                                        className="w-full rounded-lg border border-gray-300 bg-white/80 px-6 py-3 text-lg font-medium text-gray-700 transition-colors hover:bg-gray-100 sm:w-auto dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-200 dark:hover:bg-gray-800/70" 
+                                        className="w-full rounded-lg border border-gray-300 bg-white/80 px-6 py-3 text-lg font-medium text-gray-700 transition-colors hover:bg-gray-100 sm:w-auto dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-200 dark:hover:bg-gray-800/70"
                                     >
                                         Log In
                                     </Link>

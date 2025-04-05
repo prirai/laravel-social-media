@@ -35,7 +35,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { type BreadcrumbItem as TypesBreadcrumbItem } from '@/types';
-import { type SharedData, type Auth, type User as UserType } from '@/types';
+import { type SharedData, type Auth } from '@/types';
 
 dayjs.extend(relativeTime);
 
@@ -65,17 +65,17 @@ interface Notification {
 const mainNavItems: NavItem[] = [
     {
         title: 'Homepage',
-        url: '/dashboard',
+        url: route('dashboard'),
         icon: LayoutGrid,
     },
     {
         title: 'Marketplace',
-        url: '/marketplace',
+        url: route('marketplace.index'),
         icon: ShoppingBag,
     },
     {
         title: 'Messages',
-        url: '/messages',
+        url: route('messages.index'),
         icon: Mail,
     },
 ];
@@ -99,7 +99,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const searchRef = useRef<HTMLDivElement>(null);
 
     const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
-    const [systemPrefersDark, setSystemPrefersDark] = useState(false);
+    const [, setSystemPrefersDark] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const notificationsRef = useRef<HTMLDivElement>(null);
     const mobileNotificationsRef = useRef<HTMLDivElement>(null);
@@ -119,7 +119,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
         const localTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         setSystemPrefersDark(prefersDark);
-        
+
         if (localTheme) {
             setTheme(localTheme);
         } else {
@@ -135,7 +135,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
         const handleChange = (e: MediaQueryListEvent) => {
             setSystemPrefersDark(e.matches);
         };
-        
+
         mediaQuery.addEventListener('change', handleChange);
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
@@ -206,7 +206,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
         if (auth.user) {
             fetchUnreadCount();
         }
-    }, [auth.user]);
+    }, [auth.user, fetchUnreadCount]);
 
     const toggleTheme = () => {
         if (theme === 'dark') {
@@ -231,7 +231,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
 
             return () => clearTimeout(timer);
         }
-    }, [showNotifications, notifications]);
+    }, [showNotifications, notifications, markAllAsRead]);
 
     const handleNotificationClick = (notification: Notification) => {
         // Mark as read if not already read
@@ -263,7 +263,29 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                         {/* Add proper spacing between logo and navigation */}
                         <div className="hidden items-center gap-2 lg:flex">
                             {mainNavItems.map((item) => {
-                                const isActive = page.url === item.url;
+                                // Compare the current route path with the item URL's path, not the raw URL string
+                                const currentPath = window.location.pathname;
+                                // Extract just the path part from the URL (which might be a full URL from route())
+                                let itemPath = typeof item.url === 'string' ? item.url : item.url;
+                                
+                                // If it's a full URL (from route()), extract just the path
+                                if (itemPath.startsWith('http')) {
+                                    try {
+                                        itemPath = new URL(itemPath).pathname;
+                                    } catch (e) {
+                                        console.error('Error parsing URL:', itemPath, e);
+                                    }
+                                }
+                                
+                                // For debugging
+                                console.log(`Item: ${item.title}, Current Path: ${currentPath}, Item Path: ${itemPath}`);
+                                
+                                const isActive = currentPath === itemPath || 
+                                                currentPath.startsWith(itemPath) || 
+                                                (item.title === 'Homepage' && currentPath === '/dashboard') ||
+                                                (item.title === 'Marketplace' && currentPath.includes('marketplace')) ||
+                                                (item.title === 'Messages' && currentPath.includes('messages'));
+                                
                                 return (
                                     <Link
                                         key={item.title}
@@ -378,7 +400,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                 >
                                     <Bell className={cn(
                                         "h-5 w-5",
-                                        page.url === "/notifications" ? activeIconStyles : inactiveIconStyles
+                                        window.location.pathname.startsWith('/notifications') ? activeIconStyles : inactiveIconStyles
                                     )} />
                                     {unreadCount > 0 && (
                                         <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
@@ -525,12 +547,11 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             {/* Mobile bottom navigation - improved styling */}
             <div className="md:hidden">
                 <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-gray-200 bg-white/90 px-2 py-3 backdrop-blur-md dark:border-gray-800 dark:bg-gray-950/90">
-                    {/* Home */}
                     <Link
-                        href="/dashboard"
+                        href={route('dashboard')}
                         className={cn(
                             "flex flex-col items-center gap-0.5 rounded-full p-2",
-                            page.url === "/dashboard"
+                            window.location.pathname === '/dashboard' || window.location.pathname === '/' || window.location.pathname.startsWith('/dashboard')
                                 ? "text-blue-600 dark:text-blue-400"
                                 : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                         )}
@@ -541,10 +562,10 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
 
                     {/* Marketplace */}
                     <Link
-                        href="/marketplace"
+                        href={route('marketplace.index')}
                         className={cn(
                             "flex flex-col items-center gap-0.5 rounded-full p-2",
-                            page.url === "/marketplace"
+                            window.location.pathname.includes('marketplace')
                                 ? "text-blue-600 dark:text-blue-400"
                                 : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                         )}
@@ -555,10 +576,10 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
 
                     {/* Messages */}
                     <Link
-                        href="/messages"
+                        href={route('messages.index')}
                         className={cn(
                             "flex flex-col items-center gap-0.5 rounded-full p-2",
-                            page.url === "/messages"
+                            window.location.pathname.includes('messages')
                                 ? "text-blue-600 dark:text-blue-400"
                                 : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                         )}

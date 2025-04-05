@@ -43,13 +43,6 @@ const isAuthPage = (): boolean => {
     return document.body.classList.contains('auth-page');
 };
 
-// Helper function to check if user is likely authenticated
-const isLikelyAuthenticated = (): boolean => {
-    // This is a rough check and might need adjustment based on your auth implementation
-    return !isAuthPage() && localStorage.getItem('auth_token') !== null; 
-};
-
-// Provider component
 const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -68,7 +61,7 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ children })
                     fetchUnreadCount();
                 }
             }, 30000);
-            
+
             return () => clearInterval(interval);
         }
     }, []);
@@ -87,7 +80,7 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ children })
             if (process.env.NODE_ENV === 'development') {
                 console.error('Error fetching notification count:', error);
             }
-            
+
             // Handle specific error cases
             if (axios.isAxiosError(error) && error.response?.status === 401) {
                 // User is not authenticated, quietly ignore
@@ -112,7 +105,7 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ children })
             if (process.env.NODE_ENV === 'development') {
                 console.error('Error fetching notifications:', error);
             }
-            
+
             // Handle specific error cases
             if (axios.isAxiosError(error) && error.response?.status === 401) {
                 // User is not authenticated, reset state
