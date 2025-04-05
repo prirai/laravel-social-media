@@ -36,6 +36,8 @@ import { Breadcrumbs } from "./breadcrumbs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { type BreadcrumbItem as TypesBreadcrumbItem } from '@/types';
 
 dayjs.extend(relativeTime);
 
@@ -44,12 +46,6 @@ interface NavItem {
     title: string;
     url: string;
     icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-}
-
-interface BreadcrumbItem {
-    title: string;
-    url: string;
-    href: string;
 }
 
 interface SharedData {
@@ -117,7 +113,7 @@ const activeIconStyles = "text-blue-600 dark:text-blue-300";
 const inactiveIconStyles = "text-gray-500 dark:text-gray-400";
 
 interface AppHeaderProps {
-    breadcrumbs?: BreadcrumbItem[];
+    breadcrumbs?: TypesBreadcrumbItem[];
 }
 
 export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
@@ -133,10 +129,16 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const notificationsRef = useRef<HTMLDivElement>(null);
     const mobileNotificationsRef = useRef<HTMLDivElement>(null);
     
-    // Notifications state
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+    // Get notification state and methods from context
+    const { 
+        notifications,
+        unreadCount,
+        fetchNotifications,
+        fetchUnreadCount,
+        markAsRead,
+        markAllAsRead,
+        isLoadingNotifications 
+    } = useNotifications();
 
     useEffect(() => {
         const localTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -214,21 +216,8 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     }, []);
 
     useEffect(() => {
-        const fetchUnreadCount = async () => {
-            try {
-                const response = await axios.get(route('notifications.unread-count'));
-                setUnreadCount(response.data.unread_count);
-            } catch (error) {
-                console.error('Error fetching notification count:', error);
-            }
-        };
-        
         if (auth.user) {
             fetchUnreadCount();
-            
-            // Poll for new notifications every 30 seconds
-            const interval = setInterval(fetchUnreadCount, 30000);
-            return () => clearInterval(interval);
         }
     }, [auth.user]);
 
@@ -242,55 +231,31 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
         }
     };
 
-    const fetchNotifications = async () => {
-        if (isLoadingNotifications) return;
-        
-        setIsLoadingNotifications(true);
-        try {
-            const response = await axios.get(route('notifications.index'));
-            setNotifications(response.data.notifications);
-            setUnreadCount(response.data.unread_count);
-        } catch (error) {
-            console.error('Error fetching notifications:', error);
-        } finally {
-            setIsLoadingNotifications(false);
+    // Add an effect to automatically mark notifications as read when they are displayed
+    useEffect(() => {
+        if (showNotifications && notifications.length > 0) {
+            // After a delay, mark all unread notifications as read when they're visible
+            const timer = setTimeout(() => {
+                const unreadNotifications = notifications.filter(n => !n.read_at);
+                if (unreadNotifications.length > 0) {
+                    markAllAsRead();
+                }
+            }, 3000); // Give users 3 seconds to see which ones are unread
+            
+            return () => clearTimeout(timer);
         }
-    };
-    
-    const handleNotificationClick = async (notification: Notification) => {
+    }, [showNotifications, notifications]);
+
+    const handleNotificationClick = (notification: Notification) => {
         // Mark as read if not already read
         if (!notification.read_at) {
-            try {
-                await axios.post(route('notifications.read', notification.id));
-                // Update the local state to mark as read
-                setNotifications(prevNotifications => 
-                    prevNotifications.map(n => 
-                        n.id === notification.id ? { ...n, read_at: new Date().toISOString() } : n
-                    )
-                );
-                setUnreadCount(prev => Math.max(0, prev - 1));
-            } catch (error) {
-                console.error('Error marking notification as read:', error);
-            }
+            markAsRead(notification.id);
         }
         
         // Navigate to the notification route
         if (notification.route) {
             setShowNotifications(false);
             window.location.href = notification.route;
-        }
-    };
-    
-    const markAllAsRead = async () => {
-        try {
-            await axios.post(route('notifications.mark-all-read'));
-            // Update local state
-            setNotifications(prevNotifications => 
-                prevNotifications.map(n => ({ ...n, read_at: new Date().toISOString() }))
-            );
-            setUnreadCount(0);
-        } catch (error) {
-            console.error('Error marking all notifications as read:', error);
         }
     };
 

@@ -6,14 +6,15 @@ import { Label } from '@/components/ui/label';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Textarea } from '@/components/ui/textarea';
 import UserAvatar from '@/components/user-avatar';
-import { type BreadcrumbItem, type SharedData } from '@/types';
+import { type BreadcrumbItem, type SharedData, type User } from '@/types';
 import { ChatBubbleLeftIcon, DocumentIcon, ExclamationCircleIcon, HeartIcon, PhotoIcon, PlusIcon, TrashIcon, UserGroupIcon, CalendarIcon, BellIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, ReactNode } from 'react';
 import { Dialog as HeadlessDialog, Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import PostItem from '@/components/post-item';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -68,6 +69,11 @@ interface DashboardProps {
     posts: Post[];
 }
 
+interface ExtendedUser extends User {
+    username: string;
+    verification_status?: 'unverified' | 'pending' | 'verified';
+}
+
 export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) {
     const [posts, setPosts] = useState<Post[]>(initialPosts);
     const [isOpen, setIsOpen] = useState(false);
@@ -75,6 +81,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
     const [commentErrors, setCommentErrors] = useState<{ [key: string]: string }>({});
     const { auth } = usePage<SharedData & PageProps>().props;
+    const user = auth.user as ExtendedUser;
     const [isVerificationOpen, setIsVerificationOpen] = useState(false);
     const [isEmailVerificationOpen, setIsEmailVerificationOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -117,6 +124,9 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
 
     const authUserId = auth.user?.id;
 
+    // Get the notification context
+    const { fetchUnreadCount } = useNotifications();
+
     useEffect(() => {
         const timer = setTimeout(() => {
             const postIds = initialPosts.map(post => post.id);
@@ -125,6 +135,12 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
         
         return () => clearTimeout(timer);
     }, [initialPosts]);
+
+    // Add this new useEffect to refetch unread count when the dashboard is loaded
+    useEffect(() => {
+        // Refetch the unread count when the dashboard is loaded
+        fetchUnreadCount();
+    }, []);
 
     const handleLike = (postId: number) => {
         setPosts((prevPosts) =>
@@ -176,11 +192,11 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                 content: commentData.content,
                 created_at: new Date().toISOString(),
                 user: {
-                    id: auth.user.id,
-                    name: auth.user.name,
-                    username: typeof auth.user.username === 'string' ? auth.user.username : undefined,
-                    avatar: auth.user.avatar || null,
-                    verification_status: auth.user.verification_status as 'unverified' | 'pending' | 'verified' | undefined,
+                    id: user.id,
+                    name: user.name,
+                    username: typeof user.username === 'string' ? user.username : undefined,
+                    avatar: user.avatar || null,
+                    verification_status: user.verification_status as 'unverified' | 'pending' | 'verified' | undefined,
                 },
             };
 
@@ -283,7 +299,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
         e.preventDefault();
         setError(null);
 
-        if (!auth.user.email_verified_at) {
+        if (!user.email_verified_at) {
             setError('You must verify your email to create a post.');
             setShowErrorPopup(true);
             setTimeout(() => setShowErrorPopup(false), 5000);
@@ -433,7 +449,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
 
     return (
         <>
-                <Head title="Dashboard" />
+            <Head title="Dashboard" />
             <AppHeader breadcrumbs={breadcrumbs} />
 
             <div className="container mx-auto max-w-5xl px-4 py-8 md:px-6">
@@ -442,30 +458,30 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                         <div className="absolute inset-0 bg-pattern opacity-5"></div>
                         <div className="relative z-10">
                             <div className="flex items-center gap-4">
-                                <UserAvatar user={auth.user} className="size-16 ring-4 ring-white/30 shadow-md" />
+                                <UserAvatar user={user} className="size-16 ring-4 ring-white/30 shadow-md" />
                                 <div>
-                                    <h1 className="text-2xl font-bold md:text-3xl">Welcome back, {auth.user.name}!</h1>
+                                    <h1 className="text-2xl font-bold md:text-3xl">Welcome back, {user.name}!</h1>
                                     <div className="mt-1 flex flex-wrap items-center gap-2">
-                                        <span className="text-gray-600 dark:text-gray-300">@{auth.user.username}</span>
+                                        <span className="text-gray-600 dark:text-gray-300">@{user.username}</span>
                                         
                                         {/* Document Verification Status */}
                                         <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                            auth.user.verification_status === 'verified' 
+                                            user.verification_status === 'verified' 
                                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
-                                                : auth.user.verification_status === 'pending'
+                                                : user.verification_status === 'pending'
                                                 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                                                 : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
                                         }`}>
                                             <span className="mr-1 size-2 rounded-full ${
-                                                auth.user.verification_status === 'verified' 
+                                                user.verification_status === 'verified' 
                                                     ? 'bg-green-500' 
-                                                    : auth.user.verification_status === 'pending'
+                                                    : user.verification_status === 'pending'
                                                     ? 'bg-yellow-500'
                                                     : 'bg-gray-500'
                                             }"></span>
-                                            {auth.user.verification_status === 'verified' 
+                                            {user.verification_status === 'verified' 
                                                 ? 'Verified' 
-                                                : auth.user.verification_status === 'pending'
+                                                : user.verification_status === 'pending'
                                                 ? 'Verification Pending'
                                                 : 'Unverified'
                                             }
@@ -473,16 +489,16 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         
                                         {/* Email Verification Status */}
                                         <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                            auth.user.email_verified_at 
+                                            user.email_verified_at 
                                                 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
                                                 : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                                         }`}>
                                             <span className={`mr-1 size-2 rounded-full ${
-                                                auth.user.email_verified_at 
+                                                user.email_verified_at 
                                                     ? 'bg-blue-500' 
                                                     : 'bg-red-500'
                                             }`}></span>
-                                            {auth.user.email_verified_at ? 'Email Verified' : 'Email Unverified'}
+                                            {user.email_verified_at ? 'Email Verified' : 'Email Unverified'}
                                         </span>
                                     </div>
                                 </div>
@@ -493,7 +509,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                             </p>
                             
                             <div className="mt-6 flex flex-wrap items-center gap-4">
-                                {auth.user.email_verified_at ? (
+                                {user.email_verified_at ? (
                                     <Button 
                                         onClick={() => setIsOpen(true)}
                                         className="bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
@@ -529,7 +545,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                 </div>
 
                 <div className="mb-8 space-y-4">
-                {auth.user.verification_status === 'unverified' && (
+                {user.verification_status === 'unverified' && (
                         <div className="overflow-hidden rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100 shadow-sm dark:border-amber-900 dark:from-amber-900/20 dark:to-amber-800/20">
                             <div className="flex items-center gap-4 p-4">
                                 <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
@@ -591,7 +607,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                         </div>
                     )}
 
-                            {!auth.user.email_verified_at && (
+                            {!user.email_verified_at && (
                         <div className="overflow-hidden rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm dark:border-blue-900 dark:from-blue-900/20 dark:to-blue-800/20">
                             <div className="flex items-center gap-4 p-4">
                                 <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
@@ -618,7 +634,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     <DialogTitle>{otpSent ? 'Enter Verification Code' : 'Verify Your Email'}</DialogTitle>
                                     <DialogDescription>
                                         {otpSent 
-                                            ? `We've sent a verification code to ${auth.user.email}. The code will expire in ${formatCountdown(otpResendCountdown)}.`
+                                            ? `We've sent a verification code to ${user.email}. The code will expire in ${formatCountdown(otpResendCountdown)}.`
                                             : 'We will send a verification code to your registered email.'}
                                     </DialogDescription>
                                 </DialogHeader>
@@ -662,7 +678,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         </>
                                     ) : (
                                         <p className="text-sm text-gray-500 dark:text-gray-300">
-                                            Click the button below to receive a verification code at your email address: {auth.user.email}
+                                            Click the button below to receive a verification code at your email address: {user.email}
                                         </p>
                                     )}
                                     
@@ -725,10 +741,10 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                 <div className="p-6">
                                     <form onSubmit={handleSubmit} className="space-y-6">
                                         <div className="flex items-start gap-3">
-                                            <UserAvatar user={auth.user} className="size-10 ring-2 ring-blue-100 dark:ring-blue-900" />
+                                            <UserAvatar user={user} className="size-10 ring-2 ring-blue-100 dark:ring-blue-900" />
                                             <div className="flex-1">
-                                                <p className="font-medium text-gray-900 dark:text-white">{auth.user.name}</p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">@{auth.user.username}</p>
+                                                <p className="font-medium text-gray-900 dark:text-white">{user.name}</p>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">@{user.username}</p>
                                             </div>
                                             </div>
                                 
@@ -885,14 +901,14 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                             
                             <Button 
                                 onClick={() => {
-                                    if (!auth.user.email_verified_at) {
+                                    if (!user.email_verified_at) {
                                         handleError('You must verify your email before creating posts.');
                                     } else {
                                         setIsOpen(true);
                                     }
                                 }} 
                                 className={`flex items-center gap-2 ${
-                                    auth.user.email_verified_at 
+                                    user.email_verified_at 
                                         ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" 
                                         : "bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600"
                                 } text-white shadow-md`}
@@ -928,10 +944,10 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     <div className="max-h-[250px] space-y-3 overflow-y-auto rounded-lg bg-gray-50 p-4 dark:bg-gray-900/50">
                                         {selectedPost.comments.map((comment) => (
                                             <div key={comment.id} className="flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: `${selectedPost.comments.indexOf(comment) * 50}ms` }}>
-                                                    <UserAvatar user={comment.user} className="size-8" />
+                                                <UserAvatar user={comment.user} className="size-8" />
                                                 <div className="flex-1 rounded-lg bg-white p-3 shadow-sm dark:bg-black">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium">{comment.user.name}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-medium">{comment.user.name}</span>
                                                         <span className="text-xs text-gray-500">@{comment.user.username}</span>
                                                         <span className="text-xs text-gray-400">
                                                             {new Date(comment.created_at).toLocaleDateString('en-US', {
@@ -954,18 +970,18 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                                     <TrashIcon className="h-4 w-4" />
                                                                 </Button>
                                                             )}
-                                                        </div>
+                                                    </div>
                                                     <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
                                                 </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                )}
+                                </div>
+                            )}
                             
                             <form onSubmit={handleCommentSubmit} className="space-y-5">
                                 <div className="flex items-start gap-3">
-                                    <UserAvatar user={auth.user} className="size-8 ring-2 ring-blue-100 dark:ring-blue-900" />
+                                    <UserAvatar user={user} className="size-8 ring-2 ring-blue-100 dark:ring-blue-900" />
                                     <div className="flex-1">
                             <Textarea
                                 value={commentData.content}

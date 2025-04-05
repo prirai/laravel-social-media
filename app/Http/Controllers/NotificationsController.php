@@ -3,8 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notification;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
 class NotificationsController extends Controller
 {
@@ -15,34 +14,17 @@ class NotificationsController extends Controller
     {
         $user = auth()->user();
         
+        // Cleanup any duplicate friend requests before fetching
+        $this->cleanupDuplicateFriendRequests();
+        
         // Get all notifications
         $allNotifications = Notification::where('user_id', $user->id)
             ->with('fromUser')
             ->orderBy('created_at', 'desc')
             ->get();
         
-        // Handle duplicate friend requests by keeping only the most recent one from each user
-        $friendRequestIds = [];
-        $filteredNotifications = collect();
-        
-        foreach ($allNotifications as $notification) {
-            // For friend requests, only keep the most recent from each sender
-            if ($notification->type === 'friend_request' && isset($notification->from_user_id)) {
-                $fromUserId = $notification->from_user_id;
-                
-                // If we haven't seen this sender yet, or this notification is newer
-                if (!isset($friendRequestIds[$fromUserId])) {
-                    $friendRequestIds[$fromUserId] = $notification->id;
-                    $filteredNotifications->push($notification);
-                }
-            } else {
-                // Keep all other notification types
-                $filteredNotifications->push($notification);
-            }
-        }
-        
         // Transform the notifications for the response
-        $transformedNotifications = $filteredNotifications->map(function($notification) {
+        $transformedNotifications = $allNotifications->map(function($notification) {
             return [
                 'id' => $notification->id,
                 'type' => $notification->type,
@@ -62,7 +44,7 @@ class NotificationsController extends Controller
         
         return response()->json([
             'notifications' => $transformedNotifications,
-            'unread_count' => $filteredNotifications->whereNull('read_at')->count(),
+            'unread_count' => $allNotifications->whereNull('read_at')->count(),
         ]);
     }
 
@@ -71,12 +53,18 @@ class NotificationsController extends Controller
      */
     public function getUnreadCount()
     {
-        $count = Notification::where('user_id', auth()->id())
+        $user = auth()->user();
+        
+        // Cleanup any duplicate friend requests before counting
+        $this->cleanupDuplicateFriendRequests();
+        
+        // Get count of unread notifications
+        $unreadCount = Notification::where('user_id', $user->id)
             ->whereNull('read_at')
             ->count();
             
         return response()->json([
-            'unread_count' => $count
+            'unread_count' => $unreadCount
         ]);
     }
 
@@ -110,5 +98,45 @@ class NotificationsController extends Controller
         return response()->json([
             'success' => true
         ]);
+    }
+    
+    /**
+     * Clean up duplicate friend request notifications in the database.
+     * This ensures only the most recent notification from each sender is kept.
+     */
+    private function cleanupDuplicateFriendRequests()
+    {
+        $user = auth()->user();
+        
+        // Get all friend request notifications for this user
+        $friendRequests = DB::table('notifications')
+            ->where('user_id', $user->id)
+            ->where('type', 'friend_request')
+            ->whereNotNull('from_user_id')
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+        // Group by from_user_id
+        $processedSenders = [];
+        $notificationsToKeep = [];
+        
+        foreach ($friendRequests as $notification) {
+            $fromUserId = $notification->from_user_id;
+            
+            if (!in_array($fromUserId, $processedSenders)) {
+                // Keep the first (most recent) notification from this sender
+                $notificationsToKeep[] = $notification->id;
+                $processedSenders[] = $fromUserId;
+            }
+        }
+        
+        // Delete all friend request notifications except the ones to keep
+        if (!empty($friendRequests)) {
+            DB::table('notifications')
+                ->where('user_id', $user->id)
+                ->where('type', 'friend_request')
+                ->whereNotIn('id', $notificationsToKeep)
+                ->delete();
+        }
     }
 }
