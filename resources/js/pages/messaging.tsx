@@ -1143,16 +1143,38 @@ export default function Messaging(props: MessagingProps) {
                     <div className="h-[calc(100%-6rem)] overflow-y-auto">
                         <div className="space-y-1 p-2">
                             <EncryptionNotice className="mb-2" />
-                            {[...users, ...groups]
-                                .sort((a, b) => {
-                                    if ('isCurrentUser' in a && a.isCurrentUser) return -1;
-                                    if ('isCurrentUser' in b && b.isCurrentUser) return 1;
+                            {(() => {
+                                const filteredChats = [...users, ...groups]
+                                    .filter(chat => {
+                                        // Always show the current user (self)
+                                        if ('isCurrentUser' in chat && chat.isCurrentUser) return true;
+                                        // Always show all groups
+                                        if ('isGroup' in chat && chat.isGroup) return true;
+                                        // For regular users, only show if they have lastMessage
+                                        return !!chat.lastMessage;
+                                    })
+                                    .sort((a, b) => {
+                                        if ('isCurrentUser' in a && a.isCurrentUser) return -1;
+                                        if ('isCurrentUser' in b && b.isCurrentUser) return 1;
 
-                                    if (!a.lastMessageTime) return 1;
-                                    if (!b.lastMessageTime) return -1;
-                                    return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
-                                })
-                                .map((chat) => (
+                                        if (!a.lastMessageTime) return 1;
+                                        if (!b.lastMessageTime) return -1;
+                                        return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
+                                    });
+
+                                if (filteredChats.length === 0) {
+                                    return (
+                                        <div className="flex flex-col items-center justify-center p-8 text-center">
+                                            <MessageSquare className="h-10 w-10 mb-3 text-gray-400" />
+                                            <p className="text-gray-600 dark:text-gray-400 font-medium">No conversations yet</p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                                                Start a new conversation using the buttons above
+                                            </p>
+                                        </div>
+                                    );
+                                }
+
+                                return filteredChats.map((chat) => (
                                     <button
                                         key={chat.id}
                                         onClick={() => setSelectedChat(chat)}
@@ -1212,7 +1234,8 @@ export default function Messaging(props: MessagingProps) {
                                             </p>
                                         </div>
                                     </button>
-                                ))}
+                                ));
+                            })()}
                         </div>
                     </div>
                 </div>
