@@ -9,11 +9,12 @@ import UserAvatar from '@/components/user-avatar';
 import { type BreadcrumbItem, type SharedData, type User } from '@/types';
 import { DocumentIcon, ExclamationCircleIcon, PhotoIcon, PlusIcon, TrashIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import PostItem from '@/components/post-item';
 import { useNotifications } from '@/contexts/NotificationContext';
 import OtpKeyboard from '@/components/otp-keyboard';
+import axios from 'axios';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -141,6 +142,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
     }, []);
 
     const handleLike = (postId: number) => {
+        // Optimistically update the UI
         setPosts((prevPosts) =>
             prevPosts.map((post) =>
                 post.id === postId
@@ -154,8 +156,28 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
             )
         );
 
-        post(route('posts.like', { post: postId }), {
-            onError: () => {
+        // Make API call to update the like status
+        axios.post(route('posts.like', { post: postId }))
+            .then(response => {
+                // Update the post with the actual like count from the server
+                if (response.data.success) {
+                    setPosts((prevPosts) =>
+                        prevPosts.map((post) =>
+                            post.id === postId
+                                ? {
+                                      ...post,
+                                      likes: response.data.liked
+                                          ? [...post.likes.filter(like => like.user_id !== authUserId),
+                                              { id: Date.now(), user_id: authUserId, post_id: postId }]
+                                          : post.likes.filter(like => like.user_id !== authUserId),
+                                  }
+                                : post
+                        )
+                    );
+                }
+            })
+            .catch(error => {
+                // Revert the optimistic update on error
                 setPosts((prevPosts) =>
                     prevPosts.map((post) =>
                         post.id === postId
@@ -168,8 +190,8 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                             : post
                     )
                 );
-            },
-        });
+                console.error('Error liking post:', error);
+            });
     };
 
     const {
@@ -631,7 +653,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         <>
                                             <div className="space-y-2">
                                                 <Label htmlFor="otp">Verification Code</Label>
-                                                
+
                                                 {/* Replace the text input with the OTP keyboard */}
                                                 <div className="hidden">
                                                     <Input
@@ -643,7 +665,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                         className="hidden"
                                                     />
                                                 </div>
-                                                
+
                                                 <OtpKeyboard
                                                     value={otpValue}
                                                     onChange={(value) => {
@@ -652,7 +674,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                     }}
                                                     disabled={processingOtp}
                                                 />
-                                                
+
                                                 {otpError && <p className="text-sm text-red-500">{otpError}</p>}
                                             </div>
 
