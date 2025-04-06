@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\DB;
 
 class ProfileController extends Controller
 {
@@ -49,13 +50,84 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        Auth::logout();
-
-        $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return redirect('/');
+        // Begin a database transaction
+        DB::beginTransaction();
+        
+        try {
+            // Handle groups created by this user
+            \App\Models\Group::where('created_by', $user->id)->update([
+                'created_by' => null
+            ]);
+            
+            // Clean up group memberships
+            DB::table('group_user')->where('user_id', $user->id)->delete();
+            
+            // Handle posts (either delete them or set a placeholder user)
+            // Option 1: Delete posts and their associated data
+            $user->posts()->each(function ($post) {
+                // Delete post likes
+                $post->likes()->delete();
+                
+                // Delete post comments
+                $post->comments()->delete();
+                
+                // Delete post attachments
+                $post->attachments()->delete();
+                
+                // Delete the post
+                $post->delete();
+            });
+            
+            // Delete user's likes
+            $user->likes()->delete();
+            
+            // Delete user's comments
+            $user->comments()->delete();
+            
+            // Delete user's messages
+            DB::table('messages')
+                ->where('sender_id', $user->id)
+                ->orWhere('receiver_id', $user->id)
+                ->delete();
+                
+            // Delete user's group messages
+            $user->groupMessages()->delete();
+            
+            // Delete friendships
+            DB::table('friendships')
+                ->where('user_id', $user->id)
+                ->orWhere('friend_id', $user->id)
+                ->delete();
+                
+            // Delete notifications
+            DB::table('notifications')
+                ->where('user_id', $user->id)
+                ->orWhere('from_user_id', $user->id)
+                ->delete();
+                
+            // Delete verification documents
+            $user->verificationDocuments()->delete();
+            
+            // Logout the user
+            Auth::logout();
+            
+            // Delete the user
+            $user->delete();
+            
+            // Commit transaction
+            DB::commit();
+            
+            // Invalidate session
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            
+            return redirect('/');
+            
+        } catch (\Exception $e) {
+            // Roll back transaction on error
+            DB::rollBack();
+            
+            return back()->withErrors(['delete_error' => 'Error deleting account: ' . $e->getMessage()]);
+        }
     }
 }

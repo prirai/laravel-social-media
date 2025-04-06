@@ -14,6 +14,8 @@ The system uses RSA-2048 encryption with the following principles:
 
 4. **Cookie-Based Key Management:** After uploading or generating a private key, it is stored in a cookie for the current session (2 hours), eliminating the need to re-upload the key for each message.
 
+5. **Security on Logout:** Private keys are automatically cleared from cookies when a user logs out or their session expires.
+
 ## Technical Implementation
 
 ### Key Components
@@ -25,6 +27,8 @@ The system uses RSA-2048 encryption with the following principles:
    - `savePrivateKeyToFile()`: Downloads the private key as a text file
    - `savePrivateKeyToCookie()`: Saves the private key in a cookie for the session
    - `getPrivateKeyFromCookie()`: Retrieves the private key from the cookie
+   - `handleLogoutEncryptionCleanup()`: Automatically cleans up encryption keys on logout
+   - `isAuthPage()`: Detects if current page is an authentication page to avoid unauthorized operations
 
 2. **Database:**
    - `users` table has a `public_key` column to store each user's public key
@@ -34,6 +38,11 @@ The system uses RSA-2048 encryption with the following principles:
    - **Encryption Setup Dialog:** Guides users through key generation or uploading an existing key
    - **Encryption Toggle:** Allows users to enable/disable encryption per message
    - **Encryption Indicators:** Shows which messages are encrypted in the chat interface
+
+4. **Security Integration:**
+   - Encryption keys are cleared when sessions expire
+   - Authentication pages automatically skip encryption operations
+   - Notification system avoids unnecessary requests on auth pages
 
 ## User Guide
 
@@ -63,6 +72,17 @@ The system uses RSA-2048 encryption with the following principles:
 - **Key Rotation:** For maximum security, generate new keys periodically
 - **Cookie Expiration:** Your private key cookie expires after 2 hours for security
 - **Attachments:** Note that file attachments are not encrypted in the current implementation
+- **Session Expiration:** If your session expires, you'll need to re-enter your private key
+- **Enhanced OTP Security:** All password reset and verification processes use secure OTP entry
+
+## Technical Improvements
+
+- **Session Awareness:** The system now detects when users are logged out or sessions expire
+- **Enhanced Security:** Automatic key cleanup when sessions end
+- **Auth Page Detection:** The system automatically skips encryption operations on auth pages
+- **Secure OTP Input:** On-screen keyboard for OTP entry prevents keylogging
+- **Error Handling:** Improved error handling for encryption operations
+- **Development Mode Protection:** Detailed errors only shown in development mode
 
 ## Technical Limitations
 
@@ -77,3 +97,4 @@ The system uses RSA-2048 encryption with the following principles:
 - Add signature verification to ensure message authenticity
 - Add key rotation functionality with key history
 - Improve attachment encryption 
+- Consider implementing Web Crypto API for more secure key management 

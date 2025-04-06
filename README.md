@@ -1,6 +1,6 @@
 # Social Media Platform
 
-A modern social media platform built with Laravel 12 and React, featuring user authentication, social interactions, marketplace, and admin panel.
+A modern social media platform built with Laravel 12 and React, featuring user authentication, social interactions, marketplace, admin panel, and end-to-end encrypted messaging.
 
 ## Project Structure
 
@@ -14,6 +14,10 @@ A modern social media platform built with Laravel 12 and React, featuring user a
 - **Models**: 
   - `app/Models/User.php`: User model with relationships and attributes
   - `app/Models/Admin.php`: Admin user model for admin panel
+- **OTP System**:
+  - `app/Http/Controllers/UserController.php`: Handles OTP generation and verification
+  - `app/Mail/PasswordResetOtp.php`: Email template for password reset OTPs
+  - `app/Mail/EmailVerificationOtp.php`: Email template for email verification OTPs
 
 #### Social Features
 - **Controllers**: 
@@ -36,6 +40,8 @@ A modern social media platform built with Laravel 12 and React, featuring user a
   - `GroupMessage.php`: Group message model
   - `MessageAttachment.php`: Message attachments
   - `GroupMessageAttachment.php`: Group message attachments
+- **Encryption**:
+  - `resources/js/utils/crypto.ts`: Handles end-to-end encryption for direct messages
 
 #### Marketplace
 - **Controllers**: 
@@ -46,22 +52,28 @@ A modern social media platform built with Laravel 12 and React, featuring user a
 #### User Verification
 - **Controllers**: 
   - `VerificationController.php`: Manages user verification
+  - `CustomEmailVerificationController.php`: Handles email verification via OTP
 - **Models**:
   - `VerificationDocument.php`: Stores verification documents
   - `UserReport.php`: Handles user reports
 
 ### Frontend Structure
 - **React Components**: `resources/js/pages/`
-  - `auth/`: Authentication pages
-  - `dashboard/`: Main dashboard with posts
+  - `auth/`: Authentication pages with enhanced UI
+  - `dashboard/`: Main dashboard with posts and email verification
   - `profile/`: User profile pages with posts and friends tabs
   - `settings/`: User settings
   - `marketplace/`: Marketplace listings
-  - `messaging/`: Direct and group messaging
+  - `messaging/`: Direct and group messaging with encryption
 - **UI Components**: `resources/js/components/ui/`
   - `tabs.tsx`: Reusable tabs component
   - `dialog.tsx`: Modal dialogs
   - `button.tsx`: Button components
+  - `otp-keyboard.tsx`: On-screen keyboard for OTP input
+- **Layouts**:
+  - `app-sidebar-layout.tsx`: Layout with sidebar and card content
+  - `auth-layout.tsx`: Layout for authentication pages
+  - `auth-split-layout.tsx`: Split-screen layout for auth pages
 
 ### Admin Panel
 - **Theme**: Backpack CRUD with Tabler theme
@@ -82,6 +94,7 @@ A modern social media platform built with Laravel 12 and React, featuring user a
 | `create_users_table` | Base user table with authentication fields |
 | `add_username_and_avatar_to_users_table` | Adds username and avatar fields to users |
 | `add_is_admin_to_users_table` | Adds admin flag to users |
+| `add_public_key_to_users_table` | Adds public key for message encryption |
 | `create_posts_table` | Social posts table |
 | `create_comments_table` | Post comments table |
 | `create_likes_table` | Post likes table |
@@ -98,21 +111,21 @@ A modern social media platform built with Laravel 12 and React, featuring user a
 1. **Install Dependencies**
     ```bash
     composer install
-   npm install
+    npm install
     ```
 
 2. **Environment Setup**
     ```bash
-   cp .env.example .env
+    cp .env.example .env
     php artisan key:generate
     ```
 
 3. **Database Setup**
     ```bash
     php artisan migrate
-   php artisan storage:link
-   php artisan db:seed
-   ```
+    php artisan storage:link
+    php artisan db:seed
+    ```
 
 4. **Admin Panel Setup**
     ```bash
@@ -128,26 +141,36 @@ php artisan tinker
 User::create([
     'name' => 'Admin',
     'email' => 'admin@example.com',
-       'password' => Hash::make('password'),
-       'is_admin' => true,
+    'password' => Hash::make('password'),
+    'is_admin' => true,
 ]);
 ```
 
 6. **Start Development Servers**
 ```bash
-   composer run dev
-   ```
+composer run dev
+```
 
 ## Key Features
 
-- User authentication and authorization
+- User authentication and authorization with OTP verification
 - Social media features (posts, comments, likes)
-- Direct messaging and group chats
+- Direct messaging and group chats with end-to-end encryption
 - Marketplace functionality
 - User verification system
 - Admin panel for content management
 - File upload and attachment handling
 - User reporting system
+- OTP-based email verification and password reset
+- Responsive UI with dark/light mode support
+- On-screen keyboard for secure OTP entry
+
+## Security Features
+
+- End-to-end encrypted direct messaging using RSA-2048
+- Public key infrastructure for secure communication
+- OTP-based verification for email and password reset
+- Secure on-screen keyboard for OTP entry to prevent keylogging
 
 ## Development Guidelines
 
