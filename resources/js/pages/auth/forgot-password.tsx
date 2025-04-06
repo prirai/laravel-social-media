@@ -228,8 +228,8 @@ export default function ForgotPassword({ status }: { status?: string }) {
                 <div className="absolute inset-0 -z-10">
                     <PlaceholderPattern className="size-full stroke-neutral-900/10 dark:stroke-neutral-100/10" />
                 </div>
-                
-                <div className="space-y-6">
+
+            <div className="space-y-6">
                     {status && (
                         <div className="mb-4 rounded-lg bg-green-50 p-3 text-center text-sm font-medium text-green-600 dark:bg-green-900/30 dark:text-green-300">
                             {status}
@@ -239,17 +239,17 @@ export default function ForgotPassword({ status }: { status?: string }) {
                     {!otpSent ? (
                         // Step 1: Email Input Form
                         <form onSubmit={handleEmailSubmit} className="space-y-4">
-                            <div className="grid gap-2">
+                    <div className="grid gap-2">
                                 <Label htmlFor="email" className="text-gray-700 dark:text-gray-300">Email address</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    name="email"
+                        <Input
+                            id="email"
+                            type="email"
+                            name="email"
                                     autoComplete="email"
-                                    value={data.email}
-                                    autoFocus
-                                    onChange={(e) => setData('email', e.target.value)}
-                                    placeholder="email@example.com"
+                            value={data.email}
+                            autoFocus
+                            onChange={(e) => setData('email', e.target.value)}
+                            placeholder="email@example.com"
                                     className={cn(
                                         "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400",
                                         errors.email && 'border-red-500 dark:border-red-500'
@@ -415,15 +415,15 @@ export default function ForgotPassword({ status }: { status?: string }) {
                                 <p className="text-green-700 dark:text-green-400">
                                     Your password has been reset successfully. You can now log in with your new password.
                                 </p>
-                            </div>
-                            
+                    </div>
+
                             <Button 
                                 type="button"
                                 className="mt-4 w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600"
                                 onClick={() => window.location.href = route('login')}
                             >
                                 Go to Login
-                            </Button>
+                        </Button>
                         </div>
                     )}
 

@@ -329,4 +329,30 @@ class MessagingController extends Controller
 
         return back();
     }
+
+    /**
+     * Delete a group message and its attachments.
+     */
+    public function destroyGroupMessage(GroupMessage $groupMessage)
+    {
+        // Check if the authenticated user is the sender of the message
+        if ($groupMessage->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Delete any attachments associated with the message
+        if ($groupMessage->attachments) {
+            foreach ($groupMessage->attachments as $attachment) {
+                // Remove the storage prefix from the file path
+                $filePath = str_replace('storage/', '', $attachment->file_path);
+                Storage::disk('public')->delete($filePath);
+                $attachment->delete();
+            }
+        }
+
+        // Delete the message
+        $groupMessage->delete();
+
+        return back();
+    }
 }

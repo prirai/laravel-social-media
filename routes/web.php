@@ -39,6 +39,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/groups', [MessagingController::class, 'createGroup'])->name('groups.create');
     Route::post('/groups/{group}/messages', [MessagingController::class, 'sendGroupMessage'])->name('groups.message');
     Route::get('/groups/{group}/messages', [MessagingController::class, 'getGroupMessages'])->name('groups.messages');
+    Route::delete('/group-messages/{groupMessage}', [MessagingController::class, 'destroyGroupMessage'])->name('group-messages.destroy');
     Route::get('/profile/{username}', [ProfileController::class, 'show'])->name('profile.show');
     Route::post('/users/{username}/report', [ProfileController::class, 'report'])->name('users.report');
     Route::post('/users/{username}/friend-request', [FriendRequestController::class, 'send'])->name('friend-requests.send');

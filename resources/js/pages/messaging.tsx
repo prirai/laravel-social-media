@@ -127,12 +127,12 @@ interface MessagingProps {
     allUsers: AllUser[];
 }
 
-const isGroupMessage = (message: Message): message is GroupMessage => {
-    return 'user_id' in message && 'user' in message && !('sender_id' in message);
+const isGroupMessage = (message: any): message is GroupMessage => {
+    return message && 'user_id' in message;
 };
 
-const isDirectMessage = (message: Message): message is DirectMessage => {
-    return 'sender_id' in message && !('user_id' in message);
+const isDirectMessage = (message: any): message is DirectMessage => {
+    return message && 'sender_id' in message;
 };
 
 export default function Messaging(props: MessagingProps) {
@@ -575,12 +575,16 @@ export default function Messaging(props: MessagingProps) {
         if (!auth.user) return false;
         return message.user_id === auth.user.id;
     };
-    const handleDeleteMessage = (messageId: number) => {
+    
+    const handleDeleteMessage = (messageId: number, isGroupMsg: boolean = false) => {
         if (!selectedChat) return;
 
         setMessages((prevMessages) => prevMessages.filter((message) => message.id !== messageId));
 
-        router.delete(route('messages.destroy', messageId), {
+        // Use different routes based on message type
+        const route_name = isGroupMsg ? 'group-messages.destroy' : 'messages.destroy';
+        
+        router.delete(route(route_name, messageId), {
             preserveScroll: true,
             onError: () => {
                 setMessages((prevMessages) => [...prevMessages]);
@@ -1320,10 +1324,29 @@ export default function Messaging(props: MessagingProps) {
                                             </div>
                                         )}
 
-                                        {!isGroup(selectedChat) && (
-                                            <div className="flex justify-center">
-                                                <div className="rounded-full bg-gray-100 px-4 py-1 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
-                                                    Messages will expire in {expiresIn} {expiresIn === 1 ? 'hour' : 'hours'}
+                                        {/* Message expiration notice - now shown for both direct and group messages */}
+                                        <div className="flex justify-center">
+                                            <div className="rounded-full bg-gray-100 px-4 py-1 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300">
+                                                Messages will expire in {expiresIn} {expiresIn === 1 ? 'hour' : 'hours'}
+                                            </div>
+                                        </div>
+
+                                        {/* Encryption advisory for direct messages */}
+                                        {!isGroup(selectedChat) && !isEncrypted && selectedChat?.id !== auth.user?.id && (
+                                            <div className="flex justify-center mt-2">
+                                                <div className="rounded-full bg-blue-100 px-4 py-1 text-xs text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">
+                                                    <Lock className="h-3 w-3 inline mr-1" />
+                                                    Enable encryption for added privacy and security
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Self-message encryption advisory */}
+                                        {!isGroup(selectedChat) && !isEncrypted && selectedChat?.id === auth.user?.id && (
+                                            <div className="flex justify-center mt-2">
+                                                <div className="rounded-full bg-blue-100 px-4 py-1 text-xs text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">
+                                                    <Lock className="h-3 w-3 inline mr-1" />
+                                                    Enable encryption for secure private note-taking
                                                 </div>
                                             </div>
                                         )}
@@ -1419,12 +1442,22 @@ export default function Messaging(props: MessagingProps) {
                                                                             return message.content;
                                                                         })()}
                                                                     </p>
-                                                                    {!isGroup(selectedChat) && isCurrentUser && (
+                                                                    {(!isGroup(selectedChat) && isCurrentUser) && (
                                                                         <Button
                                                                             variant="ghost"
                                                                             size="icon"
                                                                             className="h-6 w-6 rounded-lg text-white/80 hover:bg-white/20 hover:text-white transition-all"
-                                                                            onClick={() => handleDeleteMessage(message.id)}
+                                                                            onClick={() => handleDeleteMessage(message.id, false)}
+                                                                        >
+                                                                            <TrashIcon className="h-4 w-4" />
+                                                                        </Button>
+                                                                    )}
+                                                                    {(isGroup(selectedChat) && isGroupMessage(message) && isCurrentUserGroupMessage(message)) && (
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-6 w-6 rounded-lg text-white/80 hover:bg-white/20 hover:text-white transition-all"
+                                                                            onClick={() => handleDeleteMessage(message.id, true)}
                                                                         >
                                                                             <TrashIcon className="h-4 w-4" />
                                                                         </Button>
