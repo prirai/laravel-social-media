@@ -1310,6 +1310,30 @@ export default function Messaging(props: MessagingProps) {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* User buttons for group chat */}
+                                {isGroup(selectedChat) && (
+                                    <div className="flex justify-center -mt-2 mb-2">
+                                        <div className="w-full max-w-3xl px-4">
+                                            <div className="flex flex-wrap gap-2 justify-center">
+                                                {selectedChat.members.map((member) => (
+                                                    <div 
+                                                        key={member.id}
+                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-800/60"
+                                                    >
+                                                        <UserAvatar user={member} className="size-4 mr-1" />
+                                                        {member.name}
+                                                        {member.id === auth.user?.id && (
+                                                            <span className="text-[10px] rounded-full bg-blue-200 dark:bg-blue-700 px-1.5 ml-0.5 text-blue-700 dark:text-blue-200">
+                                                                you
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Messages container - with top padding to accommodate the fixed header and more bottom padding for mobile */}
