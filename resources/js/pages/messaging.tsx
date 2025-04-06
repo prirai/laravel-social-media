@@ -146,6 +146,7 @@ export default function Messaging(props: MessagingProps) {
     const [loading, setLoading] = useState(false);
     const [isNewMessageOpen, setIsNewMessageOpen] = useState(false);
     const [isNewGroupOpen, setIsNewGroupOpen] = useState(false);
+    const [isAddMembersOpen, setIsAddMembersOpen] = useState(false);
     const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
     const [groupName, setGroupName] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -532,6 +533,51 @@ export default function Messaging(props: MessagingProps) {
             console.error('Error creating group:', error);
         }
     };
+
+    const addMembersToGroup = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (selectedUsers.length === 0 || !selectedChat || !isGroup(selectedChat)) return;
+
+        try {
+            const groupId = selectedChat.id.replace('group_', '');
+            const formData = new FormData();
+            selectedUsers.forEach((userId) => {
+                formData.append('users[]', userId.toString());
+            });
+
+            const response = await axios.post(route('groups.add-members', { group: groupId }), formData);
+            const updatedGroup = response.data.group;
+
+            // Update the group in the state
+            setGroups((currentGroups) =>
+                currentGroups.map((group) =>
+                    group.id === selectedChat.id
+                        ? {
+                              ...group,
+                              members: updatedGroup.users,
+                          }
+                        : group
+                )
+            );
+
+            // Update the selected chat
+            setSelectedChat((prevChat) => {
+                if (prevChat && isGroup(prevChat)) {
+                    return {
+                        ...prevChat,
+                        members: updatedGroup.users,
+                    };
+                }
+                return prevChat;
+            });
+
+            setIsAddMembersOpen(false);
+            setSelectedUsers([]);
+        } catch (error) {
+            console.error('Error adding members to group:', error);
+        }
+    };
+
     allUsers.filter(
         (user) => user.name.toLowerCase().includes(searchQuery.toLowerCase()) || user.username.toLowerCase().includes(searchQuery.toLowerCase()),
     );
@@ -1099,7 +1145,7 @@ export default function Messaging(props: MessagingProps) {
                                                         {allUsers.map((user) => (
                                                             <label
                                                                 key={user.id}
-                                                                className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-950"
+                                                                className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                                                             >
                                                                 <Checkbox
                                                                     checked={selectedUsers.includes(user.id)}
@@ -1297,6 +1343,28 @@ export default function Messaging(props: MessagingProps) {
                                         </div>
 
                                         <div className="flex items-center">
+                                            {isGroup(selectedChat) && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setIsAddMembersOpen(true)}
+                                                    className="h-10 w-10 rounded-xl border border-gray-100 bg-blue-500 text-white hover:bg-blue-600 dark:border-gray-700 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700 transition-all shadow-sm mr-2"
+                                                    title="Add members to group"
+                                                >
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        className="h-5 w-5"
+                                                        viewBox="0 0 20 20"
+                                                        fill="currentColor"
+                                                    >
+                                                        <path
+                                                            fillRule="evenodd"
+                                                            d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                                                            clipRule="evenodd"
+                                                        />
+                                                    </svg>
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
@@ -1712,6 +1780,111 @@ export default function Messaging(props: MessagingProps) {
                     )}
                 </div>
             </div>
+
+            {/* Add Members Dialog */}
+            <Dialog
+                open={isAddMembersOpen}
+                onOpenChange={setIsAddMembersOpen}
+            >
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Add Members to Group</DialogTitle>
+                        <DialogDescription>
+                            Select users to add to the group chat.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-4">
+                        <div className="max-h-60 overflow-y-auto">
+                            {allUsers
+                                .filter(
+                                    (user) =>
+                                        !(isGroup(selectedChat) && selectedChat.members.some(
+                                            (member) => member.id === user.id
+                                        ))
+                                )
+                                .map((user) => (
+                                    <div
+                                        key={user.id}
+                                        className="flex items-center justify-between p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                                    >
+                                        <div className="flex items-center space-x-3">
+                                            {user.avatar ? (
+                                                <img
+                                                    src={`/storage/${user.avatar}`}
+                                                    alt={user.name}
+                                                    className="w-8 h-8 rounded-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                                    <span className="text-gray-500">
+                                                        {user.name.charAt(0).toUpperCase()}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div>
+                                                <p className="font-medium">{user.name}</p>
+                                                <p className="text-sm text-gray-500">@{user.username}</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                if (selectedUsers.includes(user.id)) {
+                                                    setSelectedUsers(
+                                                        selectedUsers.filter(
+                                                            (id) => id !== user.id
+                                                        )
+                                                    );
+                                                } else {
+                                                    setSelectedUsers([
+                                                        ...selectedUsers,
+                                                        user.id,
+                                                    ]);
+                                                }
+                                            }}
+                                            className={`p-1 rounded-full ${
+                                                selectedUsers.includes(user.id)
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-gray-200 text-gray-500'
+                                            }`}
+                                        >
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                className="h-5 w-5"
+                                                viewBox="0 0 20 20"
+                                                fill="currentColor"
+                                            >
+                                                <path
+                                                    fillRule="evenodd"
+                                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                    clipRule="evenodd"
+                                                />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                ))}
+                        </div>
+                    </div>
+                    <div className="mt-6 flex justify-end gap-2">
+                        <Button
+                            type="button"
+                            onClick={() => {
+                                setIsAddMembersOpen(false);
+                                setSelectedUsers([]);
+                            }}
+                            variant="outline"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={addMembersToGroup}
+                            disabled={selectedUsers.length === 0}
+                        >
+                            Add Members
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

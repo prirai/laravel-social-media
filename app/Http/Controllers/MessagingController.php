@@ -355,4 +355,41 @@ class MessagingController extends Controller
 
         return back();
     }
+
+    /**
+     * Add members to an existing group.
+     */
+    public function addGroupMembers(Request $request, Group $group)
+    {
+        // Verify user is in group and is the creator
+        if (!$group->users->contains(auth()->id()) || $group->created_by !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'users' => 'required|array|min:1',
+            'users.*' => 'exists:users,id',
+        ]);
+
+        // Get existing members to avoid duplicates
+        $existingMembers = $group->users->pluck('id')->toArray();
+        
+        // Filter out users who are already members
+        $newMembers = array_diff($validated['users'], $existingMembers);
+        
+        if (empty($newMembers)) {
+            return response()->json([
+                'message' => 'All selected users are already members of this group.',
+                'group' => $group->load('users'),
+            ]);
+        }
+
+        // Add new members to the group
+        $group->users()->attach($newMembers);
+
+        return response()->json([
+            'message' => 'Members added successfully.',
+            'group' => $group->load('users'),
+        ]);
+    }
 }
