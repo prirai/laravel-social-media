@@ -12,7 +12,7 @@ import { EncryptionNotice } from '@/components/encryption-notice';
 import UserAvatar from '@/components/user-avatar';
 import { getPrivateKeyFromCookie, encryptMessage, decryptMessage, generateKeyPair, savePrivateKeyToFile, savePrivateKeyToCookie, isValidPrivateKey } from '@/utils/crypto';
 import axios from 'axios';
-import { Loader2, Lock, File, FileText, X, MessageSquare, Shield, Key, Info, AlertCircle } from 'lucide-react';
+import { Loader2, Lock, File, FileText, X, MessageSquare, Shield, Key, Info, AlertCircle, ExclamationCircleIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
     ArrowPathIcon, 
@@ -27,6 +27,7 @@ import {
 import { type SharedData } from '@/types';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { FileSizeWarningDialog } from '@/components/file-size-warning-dialog';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -167,6 +168,8 @@ export default function Messaging(props: MessagingProps) {
     const [allUsers, setAllUsers] = useState<AllUser[]>(initialAllUsers);
     // Add a new state for toggling member display on mobile
     const [showMembersOnMobile, setShowMembersOnMobile] = useState(false);
+    const [showSizeError, setShowSizeError] = useState(false);
+    const [sizeErrorFiles, setSizeErrorFiles] = useState<string[]>([]);
 
     const { reset } = useForm({
         content: '',
@@ -968,6 +971,32 @@ export default function Messaging(props: MessagingProps) {
         setIsEncryptionSetupOpen(true);
         setShowEncryptionSetup(true);
         console.log('Dialog state updated:', { isEncryptionSetupOpen: true, showEncryptionSetup: true });
+    };
+
+    const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const newFiles = Array.from(e.target.files);
+            const maxSize = 5 * 1024 * 1024; // 5MB
+
+            const oversizedFiles: string[] = [];
+            const validFiles: File[] = [];
+
+            newFiles.forEach((file) => {
+                if (file.size > maxSize) {
+                    oversizedFiles.push(file.name);
+                } else {
+                    validFiles.push(file);
+                }
+            });
+
+            if (oversizedFiles.length > 0) {
+                setSizeErrorFiles(oversizedFiles);
+                setShowSizeError(true);
+                setSelectedFiles([...selectedFiles, ...validFiles]);
+            } else {
+                setSelectedFiles([...selectedFiles, ...newFiles]);
+            }
+        }
     };
 
     return (
@@ -1826,14 +1855,7 @@ export default function Messaging(props: MessagingProps) {
                                             type="file"
                                             multiple
                                             accept="image/*,video/*,audio/*,.pdf"
-                                            onChange={(e) => {
-                                                const files = Array.from(e.target.files || []);
-                                                if (files.length > 5) {
-                                                    alert('You can only upload up to 5 files at once');
-                                                    return;
-                                                }
-                                                setSelectedFiles(files);
-                                            }}
+                                            onChange={handleAttachmentChange}
                                             className="hidden"
                                             id="file-upload"
                                         />
@@ -2032,6 +2054,13 @@ export default function Messaging(props: MessagingProps) {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* File Size Error Dialog */}
+            <FileSizeWarningDialog
+                open={showSizeError}
+                onOpenChange={setShowSizeError}
+                files={sizeErrorFiles}
+            />
         </AppLayout>
     );
 }

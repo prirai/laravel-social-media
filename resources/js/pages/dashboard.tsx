@@ -15,6 +15,7 @@ import PostItem from '@/components/post-item';
 import { useNotifications } from '@/contexts/NotificationContext';
 import OtpKeyboard from '@/components/otp-keyboard';
 import axios from 'axios';
+import { FileSizeWarningDialog } from '@/components/file-size-warning-dialog';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -1076,32 +1077,11 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
             )}
 
             {/* File Size Error Dialog */}
-            <Dialog open={showSizeError} onOpenChange={setShowSizeError}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>File Size Limit Exceeded</DialogTitle>
-                        <DialogDescription>
-                            The following files exceed the 5MB size limit and will not be uploaded:
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="mt-4 space-y-2">
-                        {sizeErrorFiles.map((fileName, index) => (
-                            <div key={index} className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                                <ExclamationCircleIcon className="h-4 w-4" />
-                                <span>{fileName}</span>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="mt-6 flex justify-end">
-                        <Button
-                            onClick={() => setShowSizeError(false)}
-                            className="bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
-                        >
-                            OK
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <FileSizeWarningDialog
+                open={showSizeError}
+                onOpenChange={setShowSizeError}
+                files={sizeErrorFiles}
+            />
         </>
     );
 }

@@ -10,6 +10,7 @@ import { CurrencyRupeeIcon, PhotoIcon, PlusIcon, TagIcon, ExclamationCircleIcon,
 import { Head, useForm, router, usePage } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 import UserAvatar from '@/components/user-avatar';
+import { FileSizeWarningDialog } from '@/components/file-size-warning-dialog';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -81,6 +82,8 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
     const [showErrorPopup, setShowErrorPopup] = useState(false);
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
     const [isVerificationOpen, setIsVerificationOpen] = useState(false);
+    const [showSizeError, setShowSizeError] = useState(false);
+    const [sizeErrorFiles, setSizeErrorFiles] = useState<string[]>([]);
 
     // Add this function to filter listings
     const filteredListings = useMemo(() => {
@@ -237,6 +240,32 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
     // Inside the Marketplace component, add a new function to handle clicking on a listing
     const handleListingClick = (listingId: number) => {
         router.get(route('marketplace.payment', listingId));
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const newFiles = Array.from(e.target.files);
+            const maxSize = 5 * 1024 * 1024; // 5MB
+
+            const oversizedFiles: string[] = [];
+            const validFiles: File[] = [];
+
+            newFiles.forEach((file) => {
+                if (file.size > maxSize) {
+                    oversizedFiles.push(file.name);
+                } else {
+                    validFiles.push(file);
+                }
+            });
+
+            if (oversizedFiles.length > 0) {
+                setSizeErrorFiles(oversizedFiles);
+                setShowSizeError(true);
+                setData('images', [...data.images, ...validFiles]);
+            } else {
+                setData('images', [...data.images, ...newFiles]);
+            }
+        }
     };
 
     return (
@@ -406,11 +435,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                                         <Input
                                             id="image-upload"
                                             type="file"
-                                            onChange={(e) => {
-                                                if (e.target.files) {
-                                                    setData('images', Array.from(e.target.files));
-                                                }
-                                            }}
+                                            onChange={handleImageChange}
                                             accept="image/*"
                                             multiple
                                             className="hidden"
@@ -672,6 +697,13 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                     </div>
                 </div>
             )}
+
+            {/* File Size Error Dialog */}
+            <FileSizeWarningDialog
+                open={showSizeError}
+                onOpenChange={setShowSizeError}
+                files={sizeErrorFiles}
+            />
         </AppLayout>
     );
 }
