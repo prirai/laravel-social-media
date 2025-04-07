@@ -610,7 +610,7 @@ export default function Messaging(props: MessagingProps) {
             selectedUsers.forEach((userId) => {
                 formData.append('users[]', userId.toString());
             });
-            
+
             const response = await axios.post(route('groups.add-members', { group: groupId }), formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
@@ -1090,7 +1090,7 @@ export default function Messaging(props: MessagingProps) {
                                                 } else if (error.response?.data?.message) {
                                                     alert(`Error: ${error.response.data.message}`);
                                                 } else {
-                                                    alert('Failed to complete encryption setup. Please try again.');
+                                            alert('Failed to complete encryption setup. Please try again.');
                                                 }
                                             } else {
                                                 alert('An unexpected error occurred during encryption setup. Please try again.');
@@ -1648,15 +1648,15 @@ export default function Messaging(props: MessagingProps) {
                                                                 <div className={`flex-shrink-0 w-8 ${isConsecutiveMessage ? 'opacity-0' : 'flex flex-col items-center gap-1'}`}>
                                                                     {!isConsecutiveMessage && (
                                                                         <>
-                                                                            <UserAvatar user={message.user} className="size-8" />
-                                                                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                                                {message.user.name.split(' ')[0]}
-                                                                            </span>
+                                                                    <UserAvatar user={message.user} className="size-8" />
+                                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                                        {message.user.name.split(' ')[0]}
+                                                                    </span>
                                                                         </>
                                                                     )}
                                                                 </div>
                                                             )}
-                                                            
+
                                                             <div
                                                                 className={`max-w-[70%] rounded-lg px-3.5 py-2.5 ${
                                                                     shouldAlignRight

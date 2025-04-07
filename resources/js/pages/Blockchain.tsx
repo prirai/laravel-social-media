@@ -58,6 +58,14 @@ export default function Blockchain({ blocks: initialBlocks = [], userVerificatio
         }
     };
 
+    const formatBlockDetails = (details: Record<string, any>) => {
+        const formattedDetails = { ...details };
+        if ('verified_by' in formattedDetails && formattedDetails.verified_by === null) {
+            formattedDetails.verified_by = 0;
+        }
+        return formattedDetails;
+    };
+
     const refreshBlockchain = async () => {
         setIsLoading(true);
         try {
@@ -175,7 +183,7 @@ export default function Blockchain({ blocks: initialBlocks = [], userVerificatio
                                         </p>
                                         {block.data.details && (
                                             <pre className="mt-2 overflow-auto rounded bg-gray-50 p-2 text-xs dark:bg-gray-800">
-                                                {JSON.stringify(block.data.details, null, 2)}
+                                                {JSON.stringify(formatBlockDetails(block.data.details), null, 2)}
                                             </pre>
                                         )}
                                     </div>

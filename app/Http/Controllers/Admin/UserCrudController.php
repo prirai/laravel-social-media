@@ -6,6 +6,7 @@ use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\BlockchainController;
+use App\Models\Group;
 
 /**
  * Class UserCrudController
@@ -284,5 +285,54 @@ class UserCrudController extends CrudController
         
         \Alert::success('Email unverified successfully.')->flash();
         return redirect()->back();
+    }
+
+    /**
+     * Define what happens when the Delete operation is loaded.
+     * 
+     * @see https://backpackforlaravel.com/docs/crud-operation-delete
+     * @return void
+     */
+    protected function setupDeleteOperation()
+    {
+        $this->crud->set('showDeleteButton', true);
+        
+        // Override the delete operation to handle group admin deletion
+        $this->crud->setOperationSetting('delete', function ($entry) {
+            // Start a transaction to ensure data consistency
+            DB::beginTransaction();
+            
+            try {
+                // Get all groups where the user is the creator
+                $groups = Group::where('created_by', $entry->id)->get();
+                
+                foreach ($groups as $group) {
+                    // Get all members of the group
+                    $members = $group->users()->where('users.id', '!=', $entry->id)->get();
+                    
+                    if ($members->isNotEmpty()) {
+                        // Transfer admin rights to the first other member
+                        $newAdmin = $members->first();
+                        $group->created_by = $newAdmin->id;
+                        $group->save();
+                    } else {
+                        // If no other members, delete the group
+                        $group->delete();
+                    }
+                    
+                    // Remove the user from the group
+                    $group->users()->detach($entry->id);
+                }
+                
+                // Now delete the user
+                $entry->delete();
+                
+                DB::commit();
+                return true;
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        });
     }
 }
