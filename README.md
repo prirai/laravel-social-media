@@ -1,6 +1,6 @@
 # Social Media Platform
 
-A modern social media platform built with Laravel 12 and React, featuring user authentication, social interactions, marketplace, admin panel, and end-to-end encrypted messaging.
+A modern social media platform built with Laravel 12 and React, featuring user authentication, social interactions, marketplace, admin panel, end-to-end encrypted messaging, and blockchain-based verification system.
 
 ## Project Structure
 
@@ -18,6 +18,18 @@ A modern social media platform built with Laravel 12 and React, featuring user a
   - `app/Http/Controllers/UserController.php`: Handles OTP generation and verification
   - `app/Mail/PasswordResetOtp.php`: Email template for password reset OTPs
   - `app/Mail/EmailVerificationOtp.php`: Email template for email verification OTPs
+
+#### Blockchain System
+- **Controllers**: 
+  - `BlockchainController.php`: Manages blockchain operations and verification
+- **Components**:
+  - `Blockchain.tsx`: Blockchain explorer interface
+- **Features**:
+  - Immutable record of user verifications
+  - Moderation action tracking
+  - Marketplace listing history
+  - Real-time blockchain updates
+  - Mobile-responsive explorer
 
 #### Social Features
 - **Controllers**: 
@@ -65,11 +77,13 @@ A modern social media platform built with Laravel 12 and React, featuring user a
   - `settings/`: User settings
   - `marketplace/`: Marketplace listings
   - `messaging/`: Direct and group messaging with encryption
+  - `blockchain/`: Blockchain explorer and verification status
 - **UI Components**: `resources/js/components/ui/`
   - `tabs.tsx`: Reusable tabs component
   - `dialog.tsx`: Modal dialogs
   - `button.tsx`: Button components
   - `otp-keyboard.tsx`: On-screen keyboard for OTP input
+  - `file-size-warning-dialog.tsx`: Reusable file size warning component
 - **Layouts**:
   - `app-sidebar-layout.tsx`: Layout with sidebar and card content
   - `auth-layout.tsx`: Layout for authentication pages
@@ -78,10 +92,11 @@ A modern social media platform built with Laravel 12 and React, featuring user a
 ### Admin Panel
 - **Theme**: Backpack CRUD with Tabler theme
 - **Controllers**: `app/Http/Controllers/Admin/`
-  - `UserCrudController.php`: User management
+  - `UserCrudController.php`: User management with blockchain integration
   - `PostCrudController.php`: Post and attachment management
   - `ListingCrudController.php`: Marketplace management
   - `VerificationCrudController.php`: User verification management
+  - `UserReportCrudController.php`: User report management
 - **Views**: `resources/views/vendor/backpack/`
   - `ui/inc/menu_items.blade.php`: Admin menu configuration
 
@@ -105,6 +120,7 @@ A modern social media platform built with Laravel 12 and React, featuring user a
 | `create_verification_documents_table` | User verification documents |
 | `add_verification_status_to_users_table` | User verification status |
 | `create_user_reports_table` | User reporting system |
+| `create_blockchain_table` | Blockchain records for verifications and actions |
 
 ## Setup Instructions
 
@@ -157,13 +173,14 @@ composer run dev
 - Social media features (posts, comments, likes)
 - Direct messaging and group chats with end-to-end encryption
 - Marketplace functionality
-- User verification system
+- User verification system with blockchain integration
 - Admin panel for content management
 - File upload and attachment handling
 - User reporting system
 - OTP-based email verification and password reset
 - Responsive UI with dark/light mode support
 - On-screen keyboard for secure OTP entry
+- Blockchain-based verification and action tracking
 
 ## Security Features
 
@@ -171,6 +188,8 @@ composer run dev
 - Public key infrastructure for secure communication
 - OTP-based verification for email and password reset
 - Secure on-screen keyboard for OTP entry to prevent keylogging
+- Blockchain-based immutable record of verifications and actions
+- File size validation and warnings
 
 ## Development Guidelines
 
@@ -191,6 +210,7 @@ composer run dev
    - Follow component structure in `resources/js/pages/`
    - Use Inertia.js for page transitions
    - Implement responsive design using Tailwind CSS
+   - Use reusable components for common functionality
 
 ## Testing
 
