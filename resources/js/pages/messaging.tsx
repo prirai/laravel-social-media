@@ -1311,7 +1311,7 @@ export default function Messaging(props: MessagingProps) {
                                 )}
 
                                 <div className="flex justify-center p-4">
-                                    <div className="flex w-full max-w-3xl items-center justify-between rounded-full border px-6 py-3">
+                                    <div className="flex w-full max-w-3xl items-center justify-between rounded-full border px-6 py-3 bg-white/90 dark:bg-gray-950/90 backdrop-blur-md">
                                         <div className="flex items-center gap-4">
                                         {isMobileView && (
                                                 <Button variant="ghost" size="icon" onClick={() => setSelectedChat(null)} className="h-9 w-9 rounded-full p-0">
