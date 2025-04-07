@@ -165,6 +165,8 @@ export default function Messaging(props: MessagingProps) {
     const [showRefreshNotice, setShowRefreshNotice] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [allUsers, setAllUsers] = useState<AllUser[]>(initialAllUsers);
+    // Add a new state for toggling member display on mobile
+    const [showMembersOnMobile, setShowMembersOnMobile] = useState(false);
 
     const { reset } = useForm({
         content: '',
@@ -1351,7 +1353,11 @@ export default function Messaging(props: MessagingProps) {
                                         )}
                                         <div className="flex-1 overflow-hidden">
                                             <div className="flex items-center gap-2">
-                                                <p className="font-medium text-gray-900 dark:text-white">{chat.name}</p>
+                                                <p className="font-medium text-gray-900 dark:text-white">
+                                                    <span className="inline-block max-w-[150px] truncate" title={chat.name}>
+                                                        {chat.name}
+                                                    </span>
+                                                </p>
                                                 {'isCurrentUser' in chat && chat.isCurrentUser && (
                                                     <span className="text-xs text-gray-500 dark:text-gray-400">(You)</span>
                                                 )}
@@ -1413,7 +1419,11 @@ export default function Messaging(props: MessagingProps) {
                                             <UserAvatar user={selectedChat} className="size-10" />
                                         )}
                                             <div>
-                                            <h2 className="text-base font-medium text-gray-900 dark:text-white">{selectedChat.name}</h2>
+                                            <h2 className="text-base font-medium text-gray-900 dark:text-white">
+                                                <span className="inline-block max-w-[200px] truncate" title={selectedChat.name}>
+                                                    {selectedChat.name}
+                                                </span>
+                                            </h2>
                                             {isGroup(selectedChat) ? (
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">
                                                     {selectedChat.members.length} members
@@ -1463,13 +1473,54 @@ export default function Messaging(props: MessagingProps) {
 
                                 {/* User buttons for group chat */}
                                 {isGroup(selectedChat) && (
-                                    <div className="flex justify-center -mt-2 mb-2">
-                                        <div className="w-full max-w-3xl px-4">
-                                            <div className="flex flex-wrap gap-2 justify-center">
+                                    <div className="flex flex-col justify-center -mt-2 mb-4">
+                                        {/* Mobile info button to toggle member display */}
+                                        <div className="md:hidden flex justify-center mb-3">
+                                            <div className="flex items-center gap-3">
+                                                <Button
+                                                    variant="outline"
+                                                    className={`rounded-full h-9 w-9 p-0 border transition-all ${
+                                                        showMembersOnMobile 
+                                                            ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/40 dark:border-blue-800 dark:text-blue-400' 
+                                                            : 'border-gray-200 bg-white text-gray-600 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                                                    } flex items-center justify-center`}
+                                                    onClick={() => setShowMembersOnMobile(!showMembersOnMobile)}
+                                                    title={showMembersOnMobile ? "Hide members" : "Show group members"}
+                                                >
+                                                    <div className="relative">
+                                                        <Info className="h-5 w-5 p-0.5" />
+                                                        {/* <div className={`absolute -right-1 -bottom-1 p-0.5 transition-transform duration-200 ${showMembersOnMobile ? 'rotate-180' : 'rotate-0'}`}>
+                                                            <svg 
+                                                                xmlns="http://www.w3.org/2000/svg" 
+                                                                width="10" 
+                                                                height="10" 
+                                                                viewBox="0 0 24 24" 
+                                                                fill="none" 
+                                                                stroke="currentColor" 
+                                                                strokeWidth="2.5" 
+                                                                strokeLinecap="round" 
+                                                                strokeLinejoin="round"
+                                                            >
+                                                                <path d="m6 9 6 6 6-6"/>
+                                                            </svg>
+                                                        </div> */}
+                                                    </div>
+                                                </Button>
+                                                {/* {showMembersOnMobile ? (
+                                                    <span className="text-xs text-blue-600 dark:text-blue-400 animate-in fade-in slide-in-from-left-2 duration-300 font-medium">
+                                                        Group Members ({selectedChat.members.length})
+                                                    </span>
+                                                ) : null} */}
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Member pills - always visible on md+ screens, toggleable on mobile */}
+                                        <div className={`w-full px-4 flex justify-center ${showMembersOnMobile ? 'block' : 'hidden md:flex'}`}>
+                                            <div className={`flex flex-wrap max-w-3xl gap-2 justify-center mx-auto ${showMembersOnMobile ? 'animate-in fade-in slide-in-from-top-2 duration-300' : ''}`}>
                                                 {selectedChat.members.map((member) => (
                                                     <div 
                                                         key={member.id}
-                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-800/60"
+                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors dark:bg-blue-900 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-800"
                                                     >
                                                         <UserAvatar user={member} className="size-4 mr-1" />
                                                         {member.name}
@@ -1542,33 +1593,44 @@ export default function Messaging(props: MessagingProps) {
                                                     const isCurrentUser = isGroup(selectedChat)
                                                         ? isGroupMessage(message) && isCurrentUserGroupMessage(message)
                                                         : isDirectMessage(message) && isCurrentUserMessage(message);
+                                                    
                                                     const showAvatar = isGroup(selectedChat) && !isCurrentUser;
                                                     const prevMessage = messages[index - 1];
+                                                    
+                                                    // Fixed logic for consecutive messages - only considers consecutive if from same user
+                                                    // We don't include isCurrentUser in this check anymore
                                                     const isConsecutiveMessage =
                                                         prevMessage &&
                                                         isGroup(selectedChat) &&
-                                                        !isCurrentUser &&
                                                         isGroupMessage(prevMessage) &&
                                                         isGroupMessage(message) &&
                                                         prevMessage.user_id === message.user_id;
+                                                    
+                                                    // Only align right if it's sent by the current user
+                                                    // Consecutive messages follow the alignment of their sender
+                                                    const shouldAlignRight = isCurrentUser;
 
                                                     return (
                                                         <div
                                                             key={message.id}
-                                                            className={`mb-4 flex ${isCurrentUser || isConsecutiveMessage ? 'justify-end' : 'justify-start'}`}
+                                                            className={`mb-4 flex ${shouldAlignRight ? 'justify-end' : 'justify-start'} items-start gap-3`}
                                                         >
-                                                            {showAvatar && !isConsecutiveMessage && isGroupMessage(message) && (
-                                                                <div className="flex flex-col items-center gap-1">
-                                                                    <UserAvatar user={message.user} className="size-8" />
-                                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                                        {message.user.name.split(' ')[0]}
-                                                                    </span>
+                                                            {!shouldAlignRight && isGroupMessage(message) && (
+                                                                <div className={`flex-shrink-0 w-8 ${isConsecutiveMessage ? 'opacity-0' : 'flex flex-col items-center gap-1'}`}>
+                                                                    {!isConsecutiveMessage && (
+                                                                        <>
+                                                                            <UserAvatar user={message.user} className="size-8" />
+                                                                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                                                {message.user.name.split(' ')[0]}
+                                                                            </span>
+                                                                        </>
+                                                                    )}
                                                                 </div>
                                                             )}
-
+                                                            
                                                             <div
-                                                                className={`max-w-[70%] rounded-lg p-3 ${
-                                                                    isCurrentUser || isConsecutiveMessage
+                                                                className={`max-w-[70%] rounded-lg px-3.5 py-2.5 ${
+                                                                    shouldAlignRight
                                                                         ? 'bg-blue-500 text-white'
                                                                         : 'bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-white'
                                                                 }`}
