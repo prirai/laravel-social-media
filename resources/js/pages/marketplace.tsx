@@ -242,7 +242,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Marketplace" />
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 pb-20 md:pb-6">
                 {/* Flash message section */}
                 {flash.success && (
                     <div className="rounded-md bg-green-50 p-4 text-green-700 dark:bg-green-900/50 dark:text-green-300">
