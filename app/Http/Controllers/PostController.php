@@ -66,14 +66,21 @@ class PostController extends Controller
 
         if ($existingLike) {
             $existingLike->delete();
+            $liked = false;
         } else {
             Like::create([
                 'user_id' => auth()->id(),
                 'post_id' => $post->id,
             ]);
+            $liked = true;
         }
 
-        return redirect()->back();
+        // Return JSON response with updated like count
+        return response()->json([
+            'success' => true,
+            'liked' => $liked,
+            'likes_count' => $post->likes()->count(),
+        ]);
     }
 
 

@@ -545,7 +545,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             </header>
 
             {/* Mobile bottom navigation - improved styling */}
-            <div className="md:hidden">
+            <div className="lg:hidden">
                 <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-gray-200 bg-white/90 px-2 py-3 backdrop-blur-md dark:border-gray-800 dark:bg-gray-950/90">
                     <Link
                         href={route('dashboard')}

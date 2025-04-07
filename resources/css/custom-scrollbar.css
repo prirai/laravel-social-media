@@ -1,0 +1,74 @@
+/* Custom Scrollbar Styling for the entire application */
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* WebKit (Chrome, Safari, Edge) scrollbar */
+::-webkit-scrollbar {
+  width: 8px; /* width of the entire scrollbar */
+  height: 8px; /* height for horizontal scrollbars */
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track); /* color of the track */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb); /* color of the thumb */
+  border-radius: 10px;
+  transition: background-color 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover); /* color of the thumb on hover */
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
+}
+
+/* Add scrollbar colors to the theme */
+:root {
+  --scrollbar-track: rgb(243 244 246); /* Light mode track color - gray-100 */
+  --scrollbar-thumb: rgb(209 213 219); /* Light mode thumb color - gray-300 */
+  --scrollbar-thumb-hover: rgb(156 163 175); /* Light mode hover color - gray-400 */
+}
+
+.dark {
+  --scrollbar-track: rgb(31 41 55); /* Dark mode track color - gray-800 */
+  --scrollbar-thumb: rgb(75 85 99); /* Dark mode thumb color - gray-600 */
+  --scrollbar-thumb-hover: rgb(107 114 128); /* Dark mode hover color - gray-500 */
+}
+
+/* Add a smooth transition effect when scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* For elements with large amounts of content that should scroll smoothly */
+.overflow-y-auto,
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Style for scrollable containers with fixed heights */
+.scrollable {
+  scrollbar-gutter: stable; /* Prevent layout shift when scrollbar appears */
+  overflow-y: auto;
+}
+
+/* Mobile optimization - use native scrollbars on small screens */
+@media (max-width: 640px) {
+  * {
+    scrollbar-width: auto;
+  }
+  
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+} 
