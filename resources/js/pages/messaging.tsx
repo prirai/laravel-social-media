@@ -1281,7 +1281,7 @@ export default function Messaging(props: MessagingProps) {
                     </div>
 
                     {/* Scrollable chat list container */}
-                    <div className="h-[calc(100%-6rem)] overflow-y-auto scrollbar-elegant">
+                    <div className="h-[calc(100%-6rem)] overflow-y-auto pb-24 md:pb-4 scrollbar-elegant">
                         <div className="space-y-1 p-2">
                             <EncryptionNotice className="mb-2" />
                             {(() => {
@@ -1543,7 +1543,7 @@ export default function Messaging(props: MessagingProps) {
                             </div>
 
                             {/* Messages container - with top padding to accommodate the fixed header and more bottom padding for mobile */}
-                            <div className="flex-1 overflow-y-auto scrollbar-elegant pt-[130px] pb-[150px] md:pb-[100px]">
+                            <div className="flex-1 overflow-y-auto scrollbar-elegant pt-[130px] pb-[180px] md:pb-[100px]">
                                 <div className="flex min-h-full flex-col justify-end p-4">
                                             <div className="space-y-4">
                                                 {showRefreshNotice && (
@@ -1782,7 +1782,7 @@ export default function Messaging(props: MessagingProps) {
                             </div>
                             
                             {/* Fixed message input at bottom - adjusted to account for sidebar and mobile bottom nav */}
-                            <div className="fixed bottom-0 right-0 z-50 border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-black mb-[70px] md:mb-0 w-full md:w-[calc(100%-320px)]">
+                            <div className="fixed bottom-0 right-0 z-50 border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-black mb-[80px] md:mb-0 w-full md:w-[calc(100%-320px)]">
                                 <form onSubmit={sendMessage} className="flex flex-col">
                                     {selectedFiles.length > 0 && (
                                         <div className="border-t border-gray-200 bg-white px-4 py-2 dark:border-gray-800 dark:bg-black">

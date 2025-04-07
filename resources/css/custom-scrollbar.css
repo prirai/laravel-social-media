@@ -72,3 +72,33 @@ html {
     height: 4px;
   }
 } 
+
+/* Mobile navigation padding - ensure content is not hidden behind the mobile nav bar */
+@media (max-width: 1023px) {
+  /* Add padding to root element to ensure all content has room for mobile nav */
+  html, body {
+    padding-bottom: 80px !important;
+  }
+  
+  /* Add padding to scrollable areas */
+  .overflow-y-auto,
+  .overflow-x-auto,
+  .scrollable {
+    padding-bottom: 80px !important; /* Important to override any other padding */
+  }
+  
+  /* For fixed height containers that scroll internally */
+  .h-screen {
+    padding-bottom: 80px;
+  }
+  
+  /* General mobile bottom padding helper class */
+  .pb-mobile-nav {
+    padding-bottom: 80px !important;
+  }
+  
+  /* Ensure app container has proper spacing */
+  main, [role="main"], #app, #root {
+    margin-bottom: 80px;
+  }
+} 

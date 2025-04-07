@@ -410,72 +410,80 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                     <span className="sr-only">Notifications</span>
                                 </Button>
                                 {showNotifications && (
-                                    <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="font-semibold">Notifications</h3>
-                                            <div className="flex gap-2">
-                                                {unreadCount > 0 && (
+                                    <>
+                                        {/* Mobile backdrop - ensure it covers the entire screen */}
+                                        <div 
+                                            className="fixed top-0 left-0 right-0 bottom-0 w-full h-full bg-black/30 z-[95] md:hidden"
+                                            onClick={() => setShowNotifications(false)}
+                                        ></div>
+                                        {/* Notification panel */}
+                                        <div className="fixed md:absolute top-[80px] md:top-full left-1/2 -translate-x-1/2 md:translate-y-0 md:left-auto md:right-0 md:translate-x-0 z-[100] w-[90%] md:w-80 max-w-[400px] max-h-[70vh] overflow-auto rounded-xl border bg-white p-4 shadow-xl dark:border-gray-700 dark:bg-gray-800">
+                                            <div className="flex items-center justify-between border-b pb-2 mb-2">
+                                                <h3 className="font-semibold">Notifications</h3>
+                                                <div className="flex gap-2">
+                                                    {unreadCount > 0 && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="rounded-lg text-xs"
+                                                            onClick={markAllAsRead}
+                                                        >
+                                                            Mark all as read
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        className="rounded-lg text-xs"
-                                                        onClick={markAllAsRead}
+                                                        className="rounded-lg"
+                                                        onClick={() => setShowNotifications(false)}
                                                     >
-                                                        Mark all as read
+                                                        <X className="h-5 w-5" />
                                                     </Button>
-                                                )}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="rounded-lg"
-                                                    onClick={() => setShowNotifications(false)}
-                                                >
-                                                    <X className="h-5 w-5" />
-                                                </Button>
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        {isLoadingNotifications ? (
-                                            <div className="mt-4 flex items-center justify-center py-4">
-                                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary"></div>
-                                            </div>
-                                        ) : notifications.length > 0 ? (
-                                            <div className="mt-2 max-h-80 overflow-y-auto">
-                                                {notifications.map((notification) => (
-                                                    <div
-                                                        key={notification.id}
-                                                        onClick={() => handleNotificationClick(notification)}
-                                                        className={cn(
-                                                            "cursor-pointer rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700",
-                                                            !notification.read_at && "bg-blue-50 dark:bg-blue-900/20"
-                                                        )}
-                                                    >
-                                                        <div className="flex items-start gap-3">
-                                                            {notification.from_user && (
-                                                                <UserAvatar user={notification.from_user} className="size-10" />
+                                            {isLoadingNotifications ? (
+                                                <div className="mt-4 flex items-center justify-center py-4">
+                                                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-primary"></div>
+                                                </div>
+                                            ) : notifications.length > 0 ? (
+                                                <div className="mt-2 max-h-80 overflow-y-auto">
+                                                    {notifications.map((notification) => (
+                                                        <div
+                                                            key={notification.id}
+                                                            onClick={() => handleNotificationClick(notification)}
+                                                            className={cn(
+                                                                "cursor-pointer rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700",
+                                                                !notification.read_at && "bg-blue-50 dark:bg-blue-900/20"
                                                             )}
-                                                            <div className="flex-1">
-                                                                <div className="text-sm">
-                                                                    {notification.type === 'friend_request' && (
-                                                                        <span>
-                                                                            <span className="font-medium">{notification.from_user?.name}</span> sent you a friend request
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="mt-1 text-xs text-gray-500">
-                                                                    {dayjs(notification.created_at).fromNow()}
+                                                        >
+                                                            <div className="flex items-start gap-3">
+                                                                {notification.from_user && (
+                                                                    <UserAvatar user={notification.from_user} className="size-10" />
+                                                                )}
+                                                                <div className="flex-1">
+                                                                    <div className="text-sm">
+                                                                        {notification.type === 'friend_request' && (
+                                                                            <span>
+                                                                                <span className="font-medium">{notification.from_user?.name}</span> sent you a friend request
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="mt-1 text-xs text-gray-500">
+                                                                        {dayjs(notification.created_at).fromNow()}
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="mt-4 text-center text-sm text-gray-500 py-8">
-                                                No notifications yet
-                                            </div>
-                                        )}
-                                    </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="mt-4 text-center text-sm text-gray-500 py-8">
+                                                    No notifications yet
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
                                 )}
                             </div>
 
@@ -546,7 +554,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
 
             {/* Mobile bottom navigation - improved styling */}
             <div className="lg:hidden">
-                <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-gray-200 bg-white/90 px-2 py-3 backdrop-blur-md dark:border-gray-800 dark:bg-gray-950/90">
+                <div className="fixed bottom-0 left-0 right-0 z-[100] flex h-[60px] items-center justify-around border-t border-gray-200 bg-white/95 px-2 py-2 backdrop-blur-md shadow-lg dark:border-gray-800 dark:bg-gray-950/95">
                     <Link
                         href={route('dashboard')}
                         className={cn(

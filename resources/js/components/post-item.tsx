@@ -4,8 +4,9 @@ import { HeartIcon, ChatBubbleLeftIcon, DocumentIcon, CalendarIcon, TrashIcon, X
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import UserAvatar from '@/components/user-avatar';
 import { Button } from '@/components/ui/button';
-import { usePage } from '@inertiajs/react';
+import { usePage, router } from '@inertiajs/react';
 import { type SharedData } from '@/types';
+import axios from 'axios';
 
 interface Comment {
     id: number;
@@ -179,6 +180,29 @@ export default function PostItem({ post, onLike, onComment, onDelete }: PostItem
                                             <span className="text-sm text-gray-500">@{comment.user.username}</span>
                                             {comment.user.verification_status && (
                                                 <span className="text-sm text-gray-500">({comment.user.verification_status})</span>
+                                            )}
+                                            {comment.user.id === authUserId && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="ml-auto h-6 w-6 text-gray-400 hover:text-red-500"
+                                                    onClick={() => {
+                                                        if (confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
+                                                            // Use Inertia's router to delete the comment
+                                                            router.delete(`/comments/${comment.id}`, {
+                                                                onSuccess: () => {
+                                                                    // Update the post comments locally
+                                                                    const updatedComments = post.comments.filter(c => c.id !== comment.id);
+                                                                    post.comments = updatedComments;
+                                                                    // Force a re-render
+                                                                    setIsImageModalOpen(!isImageModalOpen);
+                                                                }
+                                                            });
+                                                        }
+                                                    }}
+                                                >
+                                                    <TrashIcon className="h-4 w-4" />
+                                                </Button>
                                             )}
                                         </div>
                                         <p className="text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
