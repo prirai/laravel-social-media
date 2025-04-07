@@ -252,7 +252,9 @@ class UserCrudController extends CrudController
             $blockchainController->verifyUser($user);
         }
         
-        return redirect()->back();
+        // return redirect()->back();
+        return redirect(backpack_url('user'));
+
     }
     
     /**
