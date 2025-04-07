@@ -1177,7 +1177,7 @@ export default function Messaging(props: MessagingProps) {
                                                             className="mt-1"
                                                         />
                                                     </div>
-                                                    <div className="max-h-[60vh] space-y-1 overflow-y-auto">
+                                                    <div className="max-h-[60vh] space-y-1 overflow-y-auto scrollbar-elegant">
                                                         {allUsers
                                                             .filter((user) => {
                                                                 const normalizedQuery = searchQuery.toLowerCase();
@@ -1231,7 +1231,7 @@ export default function Messaging(props: MessagingProps) {
                                                     </div>
                                                     <div>
                                                         <Label>Select Members</Label>
-                                                        <div className="mt-2 max-h-[40vh] space-y-2 overflow-y-auto rounded-md border p-2">
+                                                        <div className="mt-2 max-h-[40vh] space-y-2 overflow-y-auto scrollbar-elegant rounded-md border p-2">
                                                             {allUsers.map((user) => (
                                                                 <label
                                                                     key={user.id}
@@ -1279,7 +1279,7 @@ export default function Messaging(props: MessagingProps) {
                     </div>
 
                     {/* Scrollable chat list container */}
-                    <div className="h-[calc(100%-6rem)] overflow-y-auto">
+                    <div className="h-[calc(100%-6rem)] overflow-y-auto scrollbar-elegant">
                         <div className="space-y-1 p-2">
                             <EncryptionNotice className="mb-2" />
                             {(() => {
@@ -1492,7 +1492,7 @@ export default function Messaging(props: MessagingProps) {
                             </div>
 
                             {/* Messages container - with top padding to accommodate the fixed header and more bottom padding for mobile */}
-                            <div className="flex-1 overflow-y-auto pt-[130px] pb-[150px] md:pb-[100px]">
+                            <div className="flex-1 overflow-y-auto scrollbar-elegant pt-[130px] pb-[150px] md:pb-[100px]">
                                 <div className="flex min-h-full flex-col justify-end p-4">
                                             <div className="space-y-4">
                                                 {showRefreshNotice && (
@@ -1879,7 +1879,7 @@ export default function Messaging(props: MessagingProps) {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="mt-4">
-                        <div className="max-h-60 overflow-y-auto">
+                        <div className="max-h-60 overflow-y-auto scrollbar-elegant">
                             {allUsers
                                 .filter(
                                     (user) =>
