@@ -22,4 +22,30 @@ export default defineConfig({
             'ziggy-js': resolve(__dirname, 'vendor/tightenco/ziggy'),
         },
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    // Group React and related packages
+                    'vendor-react': ['react', 'react-dom', '@inertiajs/react'],
+                    
+                    // Group UI components
+                    'vendor-ui': [
+                        '@headlessui/react',
+                        '@heroicons/react',
+                        'lucide-react',
+                        '@radix-ui/react-alert-dialog',
+                        '@radix-ui/react-avatar',
+                        '@radix-ui/react-dialog',
+                        '@radix-ui/react-label',
+                        '@radix-ui/react-slot',
+                    ],
+                    
+                    // Group utilities
+                    'vendor-utils': ['axios', 'clsx', 'class-variance-authority', 'tailwind-merge'],
+                },
+            },
+        },
+        chunkSizeWarningLimit: 1000,
+    },
 });
