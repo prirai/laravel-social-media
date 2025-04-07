@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { HeartIcon, ChatBubbleLeftIcon, DocumentIcon, CalendarIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
@@ -58,6 +58,12 @@ export default function PostItem({ post, onLike, onComment, onDelete }: PostItem
     const authUserId = auth.user?.id;
     const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+    const [localComments, setLocalComments] = useState<Comment[]>(post.comments || []);
+    const [isDeletingComment, setIsDeletingComment] = useState<number | null>(null);
+
+    useEffect(() => {
+        setLocalComments(post.comments || []);
+    }, [post.comments]);
 
     const handleImageClick = (imagePath: string, e: React.MouseEvent) => {
         e.preventDefault();
@@ -66,6 +72,27 @@ export default function PostItem({ post, onLike, onComment, onDelete }: PostItem
         console.log("Opening image:", imagePath);
         setEnlargedImage(imagePath);
         setIsImageModalOpen(true);
+    };
+
+    const handleDeleteComment = async (commentId: number) => {
+        if (confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
+            // Remove the comment from the UI immediately
+            setLocalComments(prevComments => prevComments.filter(comment => comment.id !== commentId));
+
+            // Make the API call without updating the UI
+            try {
+                await axios.delete(`/comments/${commentId}`, {
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    }
+                });
+            } catch (error) {
+                console.error('Error deleting comment:', error);
+                // Don't revert the UI on error
+            }
+        }
     };
 
     return (
@@ -162,17 +189,22 @@ export default function PostItem({ post, onLike, onComment, onDelete }: PostItem
                         >
                             <ChatBubbleLeftIcon className="h-7 w-7 text-gray-500 transition-transform hover:scale-110 hover:text-blue-500" />
                             <span className="text-sm font-medium">
-                                {post.comments?.length || 0}
+                                {localComments.length || 0}
                             </span>
                         </button>
                     </div>
                 </div>
 
-                {post.comments?.length > 0 && (
+                {localComments.length > 0 && (
                     <div className="border-t bg-gray-50 px-4 py-3 dark:bg-gray-900/50">
                         <div className="space-y-3">
-                            {post.comments.map((comment) => (
-                                <div key={comment.id} className="flex items-start gap-3">
+                            {localComments.map((comment) => (
+                                <div 
+                                    key={comment.id} 
+                                    className={`flex items-start gap-3 transition-opacity duration-200 ${
+                                        isDeletingComment === comment.id ? 'opacity-50' : ''
+                                    }`}
+                                >
                                     <UserAvatar user={comment.user} className="size-8" />
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2">
@@ -183,22 +215,14 @@ export default function PostItem({ post, onLike, onComment, onDelete }: PostItem
                                                     variant="ghost"
                                                     size="icon"
                                                     className="ml-auto h-6 w-6 text-gray-400 hover:text-red-500"
-                                                    onClick={() => {
-                                                        if (confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
-                                                            // Use Inertia's router to delete the comment
-                                                            router.delete(`/comments/${comment.id}`, {
-                                                                onSuccess: () => {
-                                                                    // Update the post comments locally
-                                                                    const updatedComments = post.comments.filter(c => c.id !== comment.id);
-                                                                    post.comments = updatedComments;
-                                                                    // Force a re-render
-                                                                    setIsImageModalOpen(!isImageModalOpen);
-                                                                }
-                                                            });
-                                                        }
-                                                    }}
+                                                    onClick={() => handleDeleteComment(comment.id)}
+                                                    disabled={isDeletingComment === comment.id}
                                                 >
-                                                    <TrashIcon className="h-4 w-4" />
+                                                    {isDeletingComment === comment.id ? (
+                                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent"></div>
+                                                    ) : (
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    )}
                                                 </Button>
                                             )}
                                         </div>

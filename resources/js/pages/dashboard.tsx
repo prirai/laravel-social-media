@@ -211,7 +211,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
         e.preventDefault();
         if (selectedPost) {
             const optimisticComment: Comment = {
-                id: Date.now(),
+                id: Date.now(), // Temporary ID
                 content: commentData.content,
                 created_at: new Date().toISOString(),
                 user: {
@@ -223,6 +223,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                 },
             };
 
+            // Update the UI immediately
             setPosts((prevPosts) =>
                 prevPosts.map((post) =>
                     post.id === selectedPost.id
@@ -234,46 +235,51 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                 )
             );
 
+            // Clear the form and close the dialog
             setCommentData('content', '');
             setCommentOpen(false);
             setSelectedPost(null);
 
-            postComment(route('posts.comment', { post: selectedPost.id }), {
-                onSuccess: (page) => {
-                    const newComment = page.props.comment as Comment;
-                    if (newComment) {
-                        setPosts((prevPosts) =>
-                            prevPosts.map((post) =>
-                                post.id === selectedPost.id
-                                    ? {
-                                          ...post,
-                                          comments: post.comments.map((comment) =>
-                                              comment.id === optimisticComment.id ? newComment : comment
-                                          ),
-                                      }
-                                    : post
-                            )
-                        );
-                    }
-                },
-                onError: (errors) => {
-                    setPosts((prevPosts) =>
-                        prevPosts.map((post) =>
-                            post.id === selectedPost.id
-                                ? {
-                                      ...post,
-                                      comments: post.comments.filter((comment) => comment.id !== optimisticComment.id),
-                                  }
-                                : post
-                        )
-                    );
-                    setCommentErrors(errors);
-                    setCommentData('content', commentData.content);
-                    setCommentOpen(true);
-                    setSelectedPost(selectedPost);
-                },
+            // Make the API call without updating the UI
+            const formData = new FormData();
+            formData.append('content', commentData.content);
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '');
+
+            axios.post(route('posts.comment', { post: selectedPost.id }), formData, {
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'Content-Type': 'multipart/form-data',
+                }
+            })
+            .catch(error => {
+                console.error('Error adding comment:', error);
+                // Show error message but don't revert the UI
+                setCommentErrors({ content: error.response?.data?.message || 'Failed to add comment. Please try again.' });
+                setCommentData('content', commentData.content);
+                setCommentOpen(true);
+                setSelectedPost(selectedPost);
             });
         }
+    };
+
+    const handleCommentButtonClick = (post: Post) => {
+        setSelectedPost(post);
+        setCommentOpen(true);
+    };
+
+    const handlePostCommentUpdate = (updatedPost: Post) => {
+        setPosts((prevPosts) =>
+            prevPosts.map((post) =>
+                post.id === updatedPost.id
+                    ? {
+                          ...post,
+                          comments: updatedPost.comments,
+                      }
+                    : post
+            )
+        );
     };
 
     const handleVerificationSubmit = (e: React.FormEvent) => {
@@ -884,10 +890,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         <PostItem
                                             post={post}
                                             onLike={handleLike}
-                                            onComment={(post) => {
-                                                setSelectedPost(post);
-                                                setCommentOpen(true);
-                                            }}
+                                            onComment={handleCommentButtonClick}
                                             onDelete={post.user.id === authUserId ? handleDeletePost : undefined}
                                         />
                                     </div>
