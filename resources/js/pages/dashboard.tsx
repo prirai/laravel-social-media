@@ -94,6 +94,8 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
     const [otpError, setOtpError] = useState<string | null>(null);
     const [otpResendCountdown, setOtpResendCountdown] = useState(0);
     const [, setVerifyingOtp] = useState(false);
+    const [showSizeError, setShowSizeError] = useState(false);
+    const [sizeErrorFiles, setSizeErrorFiles] = useState<string[]>([]);
 
     const {
         data,
@@ -345,7 +347,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
     const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const newFiles = Array.from(e.target.files);
-            const maxSize = 5 * 1024 * 1024;
+            const maxSize = 5 * 1024 * 1024; // 5MB
 
             const oversizedFiles: string[] = [];
             const validFiles: File[] = [];
@@ -359,14 +361,11 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
             });
 
             if (oversizedFiles.length > 0) {
-                const errorMessage = `The following files exceed the 5MB limit: ${oversizedFiles.join(', ')}`;
+                setSizeErrorFiles(oversizedFiles);
+                setShowSizeError(true);
                 setData('attachments', [...data.attachments, ...validFiles]);
-                setCommentErrors((prevErrors) => ({
-                    ...prevErrors,
-                    attachments: errorMessage,
-                }));
             } else {
-                setData('attachments', [...data.attachments, ...validFiles]);
+                setData('attachments', [...data.attachments, ...newFiles]);
             }
         }
     };
@@ -1075,6 +1074,34 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                     </div>
                 </div>
             )}
+
+            {/* File Size Error Dialog */}
+            <Dialog open={showSizeError} onOpenChange={setShowSizeError}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>File Size Limit Exceeded</DialogTitle>
+                        <DialogDescription>
+                            The following files exceed the 5MB size limit and will not be uploaded:
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-4 space-y-2">
+                        {sizeErrorFiles.map((fileName, index) => (
+                            <div key={index} className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                                <ExclamationCircleIcon className="h-4 w-4" />
+                                <span>{fileName}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-6 flex justify-end">
+                        <Button
+                            onClick={() => setShowSizeError(false)}
+                            className="bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+                        >
+                            OK
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
