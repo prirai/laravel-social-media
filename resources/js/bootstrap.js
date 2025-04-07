@@ -12,6 +12,14 @@ window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 // Make sure Axios sends the CSRF token in the header with every request
 window.axios.defaults.withCredentials = true;
 
+// Get CSRF token from meta tag and set as default header for all requests
+const token = document.querySelector('meta[name="csrf-token"]');
+if (token) {
+    window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token.getAttribute('content');
+} else {
+    console.error('CSRF token not found: https://laravel.com/docs/csrf#csrf-x-csrf-token');
+}
+
 // Import the handleLogoutEncryptionCleanup function for logout handling
 import { handleLogoutEncryptionCleanup } from './utils/crypto';
 

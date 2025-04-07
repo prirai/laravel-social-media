@@ -70,6 +70,7 @@ class MessagingController extends Controller
                 'lastMessage' => $lastMessage ? $lastMessage->content : null,
                 'lastMessageTime' => $lastMessage ? $lastMessage->created_at->diffForHumans() : null,
                 'unreadCount' => 0,
+                'created_by' => $group->created_by,
             ];
         });
 
@@ -300,7 +301,14 @@ class MessagingController extends Controller
             });
 
         return response()->json([
-            'messages' => $messages
+            'messages' => $messages,
+            'group' => [
+                'id' => $group->id,
+                'name' => $group->name,
+                'avatar' => $group->avatar,
+                'created_by' => $group->created_by,
+                'users' => $group->users,
+            ]
         ]);
     }
 
