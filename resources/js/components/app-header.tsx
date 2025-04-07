@@ -24,6 +24,7 @@ import {
     Mail,
     Home,
     Computer,
+    Link as Chain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -77,6 +78,11 @@ const mainNavItems: NavItem[] = [
         title: 'Messages',
         url: route('messages.index'),
         icon: Mail,
+    },
+    {
+        title: 'Blockchain',
+        url: route('blockchain.index'),
+        icon: Chain,
     },
 ];
 // Navigation and UI elements
@@ -594,6 +600,20 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                     >
                         <Mail className="h-6 w-6" />
                         <span className="text-[10px]">Messages</span>
+                    </Link>
+
+                    {/* Blockchain */}
+                    <Link
+                        href={route('blockchain.index')}
+                        className={cn(
+                            "flex flex-col items-center gap-0.5 rounded-full p-2",
+                            window.location.pathname.includes('blockchain')
+                                ? "text-blue-600 dark:text-blue-400"
+                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        )}
+                    >
+                        <Chain className="h-6 w-6" />
+                        <span className="text-[10px]">Chain</span>
                     </Link>
                 </div>
             </div>

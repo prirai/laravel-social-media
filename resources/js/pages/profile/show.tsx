@@ -188,7 +188,7 @@ export default function ShowProfile({ user, isOwnProfile = false }: { user: User
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`${user.name}'s Profile`} />
 
-            <div className="mx-auto max-w-4xl px-4 py-8 md:px-0">
+            <div className="mx-auto max-w-4xl px-4 py-8 md:px-0 pb-20 md:pb-8">
                 {/* Profile Header - Enhanced */}
                 <div className="relative mb-8 overflow-hidden rounded-xl border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-blue-950">
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/80 dark:to-black/80"></div>

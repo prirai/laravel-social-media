@@ -974,21 +974,16 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                                 day: 'numeric',
                                                             })}
                                                         </span>
-                                                        {comment.user.verification_status === 'verified' && (
-                                                            <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                                                Verified
-                                                            </span>
-                                                            )}
-                                                            {comment.user.id === authUserId && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
+                                                        {comment.user.id === authUserId && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
                                                                 className="ml-auto h-6 w-6 text-gray-400 hover:text-red-500"
-                                                                    onClick={() => handleDeleteComment(comment.id)}
-                                                                >
-                                                                    <TrashIcon className="h-4 w-4" />
-                                                                </Button>
-                                                            )}
+                                                                onClick={() => handleDeleteComment(comment.id)}
+                                                            >
+                                                                <TrashIcon className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                     <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
                                                 </div>

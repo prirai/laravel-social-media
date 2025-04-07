@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\BlockchainController;
 
 /**
  * Class UserCrudController
@@ -241,7 +242,14 @@ class UserCrudController extends CrudController
         
         // Update the user
         $user = CRUD::getCurrentEntry();
+        $oldStatus = $user->verification_status;
         $user->update($data);
+        
+        // If verification status changed to verified, create a blockchain block
+        if ($oldStatus !== 'verified' && $data['verification_status'] === 'verified') {
+            $blockchainController = app(BlockchainController::class);
+            $blockchainController->verifyUser($user);
+        }
         
         return redirect()->back();
     }

@@ -10,6 +10,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\FriendRequestController;
 use App\Http\Controllers\CustomEmailVerificationController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use App\Http\Controllers\BlockchainController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -53,6 +54,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/notifications/unread-count', [App\Http\Controllers\NotificationsController::class, 'getUnreadCount'])->name('notifications.unread-count');
     Route::post('/notifications/{notification}/read', [App\Http\Controllers\NotificationsController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/mark-all-read', [App\Http\Controllers\NotificationsController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+
+    // Blockchain routes
+    Route::get('/blockchain', [BlockchainController::class, 'index'])->name('blockchain.index');
+    Route::post('/blockchain/verify/{user}', [BlockchainController::class, 'verifyUser'])->name('blockchain.verify');
+    Route::get('/blockchain/validate', [BlockchainController::class, 'validateChain'])->name('blockchain.validate');
 });
 
 Route::post('user/submit-verification', [VerificationController::class, 'submit'])->name('user.submit-verification');

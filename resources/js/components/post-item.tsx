@@ -178,9 +178,6 @@ export default function PostItem({ post, onLike, onComment, onDelete }: PostItem
                                         <div className="flex items-center gap-2">
                                             <span className="font-medium">{comment.user.name}</span>
                                             <span className="text-sm text-gray-500">@{comment.user.username}</span>
-                                            {comment.user.verification_status && (
-                                                <span className="text-sm text-gray-500">({comment.user.verification_status})</span>
-                                            )}
                                             {comment.user.id === authUserId && (
                                                 <Button
                                                     variant="ghost"
