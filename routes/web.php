@@ -9,22 +9,17 @@ use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\FriendRequestController;
 use App\Http\Controllers\CustomEmailVerificationController;
-// use Illuminate\Foundation\Auth\EmailVerificationRequest; // Removed unused import
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use App\Http\Controllers\BlockchainController;
-use App\Http\Middleware\LogAccessMiddleware; // Keep this if used selectively
+use App\Http\Middleware\LogAccessMiddleware;
 
-// BlockAccessMiddleware runs globally via Kernel.php (assuming Kernel.php is corrected as per previous steps)
-// LogAccessMiddleware is now applied selectively where needed, or globally if intended via Kernel.php
-
-// If LogAccessMiddleware is NOT global in Kernel.php and you want '/' logged:
-// Route::middleware(LogAccessMiddleware::class)->get('/', function () {
+// Route::get('/', function () {
 //     return Inertia::render('welcome');
 // })->name('home');
-// If LogAccessMiddleware IS global in Kernel.php, this simpler route is sufficient:
-Route::get('/', function () {
-     return Inertia::render('welcome');
- })->name('home');
 
+Route::middleware(LogAccessMiddleware::class)->get('/', function () {
+    return Inertia::render('welcome');
+})->name('home');
 
 Route::middleware(['auth'])->group(function () {
         Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
@@ -58,7 +53,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/friend-requests/{friendRequest}/accept', [FriendRequestController::class, 'accept'])->name('friend-requests.accept');
     Route::post('/friend-requests/{friendRequest}/reject', [FriendRequestController::class, 'reject'])->name('friend-requests.reject');
     Route::delete('/friend-requests/{friendRequest}', [FriendRequestController::class, 'cancel'])->name('friend-requests.cancel');
-
+    
     // Notification routes
     Route::get('/notifications', [App\Http\Controllers\NotificationsController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/unread-count', [App\Http\Controllers\NotificationsController::class, 'getUnreadCount'])->name('notifications.unread-count');
@@ -72,7 +67,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::post('user/submit-verification', [VerificationController::class, 'submit'])->name('user.submit-verification');
-//email verification
+//email verification 
 Route::post('user/verify-email', [CustomEmailVerificationController::class, 'submit'])->name('user.verify-email');
 
 // Password reset OTP routes (not requiring authentication)
@@ -101,12 +96,15 @@ Route::post('user/update-public-key', [UserController::class, 'updatePublicKey']
 //     ]);
 // });
 
-// Dummy admin route - apply LogAccessMiddleware specifically here if it's NOT global
-// Ensure 'web' middleware group is applied (usually automatic via RouteServiceProvider)
-Route::middleware(['web', LogAccessMiddleware::class]) // Apply LogAccessMiddleware specifically here
+// Dummy admin route to deter unauthorized access attempts
+// Route::get('/admin', function () {
+//     return view('dummy-admin');
+// })->name('dummy-admin');
+
+Route::middleware(['web', \App\Http\Middleware\LogAccessMiddleware::class])
     ->get('/admin', function () {
         return view('dummy-admin');
-    }); // Removed name('dummy-admin') as it wasn't present before
+    });
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
