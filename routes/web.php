@@ -9,19 +9,19 @@ use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\FriendRequestController;
 use App\Http\Controllers\CustomEmailVerificationController;
-// use Illuminate\Foundation\Auth\EmailVerificationRequest; // Removed as unused
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use App\Http\Controllers\BlockchainController;
-// --- Remove this use statement if LogAccessMiddleware is not used explicitly below ---
-// use App\Http\Middleware\LogAccessMiddleware;
+use App\Http\Middleware\LogAccessMiddleware;
 
-// --- REMOVE explicit middleware here --- rely on global Kernel.php registration
-// Route::middleware(LogAccessMiddleware::class)->get('/', function () {
-Route::get('/', function () {
+// Route::get('/', function () {
+//     return Inertia::render('welcome');
+// })->name('home');
+
+Route::middleware(LogAccessMiddleware::class)->get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
 Route::middleware(['auth'])->group(function () {
-        // --- These routes will now be covered by the GLOBAL LogAccessMiddleware ---
         Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
         Route::post('/posts', [App\Http\Controllers\PostController::class, 'store'])->name('posts.store');
         Route::delete('/posts/{post}', [App\Http\Controllers\PostController::class, 'destroy'])->name('posts.destroy');
@@ -38,7 +38,6 @@ Route::middleware(['auth'])->group(function () {
     });
 
 Route::middleware(['auth'])->group(function () {
-    // --- These routes will now be covered by the GLOBAL LogAccessMiddleware ---
     Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace.index');
     Route::post('/marketplace', [MarketplaceController::class, 'store'])->name('marketplace.store');
     Route::delete('/marketplace/{listing}', [MarketplaceController::class, 'destroy'])->name('marketplace.destroy');
@@ -54,7 +53,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/friend-requests/{friendRequest}/accept', [FriendRequestController::class, 'accept'])->name('friend-requests.accept');
     Route::post('/friend-requests/{friendRequest}/reject', [FriendRequestController::class, 'reject'])->name('friend-requests.reject');
     Route::delete('/friend-requests/{friendRequest}', [FriendRequestController::class, 'cancel'])->name('friend-requests.cancel');
-
+    
     // Notification routes
     Route::get('/notifications', [App\Http\Controllers\NotificationsController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/unread-count', [App\Http\Controllers\NotificationsController::class, 'getUnreadCount'])->name('notifications.unread-count');
@@ -67,9 +66,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/blockchain/validate', [BlockchainController::class, 'validateChain'])->name('blockchain.validate');
 });
 
-// --- These routes will now be covered by the GLOBAL LogAccessMiddleware ---
 Route::post('user/submit-verification', [VerificationController::class, 'submit'])->name('user.submit-verification');
-//email verification
+//email verification 
 Route::post('user/verify-email', [CustomEmailVerificationController::class, 'submit'])->name('user.verify-email');
 
 // Password reset OTP routes (not requiring authentication)
@@ -103,14 +101,9 @@ Route::post('user/update-public-key', [UserController::class, 'updatePublicKey']
 //     return view('dummy-admin');
 // })->name('dummy-admin');
 
-// --- REMOVE explicit LogAccessMiddleware here --- rely on global Kernel.php registration
-// Route::middleware(['web', \App\Http\Middleware\LogAccessMiddleware::class])
-// Use only 'web' group if needed, global covers LogAccessMiddleware
-Route::middleware(['web'])
+Route::middleware(['web', \App\Http\Middleware\LogAccessMiddleware::class])
     ->get('/admin', function () {
-        // Maybe redirect or show a less obvious page than 'dummy-admin'
-        // return redirect('/');
-        abort(404); // Or just a 404 for obscurity
+        return view('dummy-admin');
     });
 
 require __DIR__.'/settings.php';
