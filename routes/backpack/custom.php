@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ListingCrudController;
 use App\Http\Controllers\Admin\VerificationCrudController;
 use App\Http\Controllers\Admin\VerificationDocumentCrudController;
 use App\Http\Controllers\Admin\PostCrudController;
+use App\Http\Controllers\Admin\AccessLogCrudController;
 
 // --------------------------
 // Custom Backpack Routes
@@ -34,6 +35,7 @@ Route::group([
     Route::post('verification-document/{id}/verify', 'VerificationCrudController@verify')
         ->name('verification-document.verify');
     Route::crud('post', 'PostCrudController');
+    Route::crud('access-log', 'AccessLogCrudController');
     Route::get('user/verify-email/{id}', 'UserCrudController@verifyEmail')->name('user.verify-email');
     Route::get('user/unverify-email/{id}', 'UserCrudController@unverifyEmail')->name('user.unverify-email');
 });

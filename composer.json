@@ -14,12 +14,14 @@
         "backpack/crud": "^6.8",
         "backpack/theme-tabler": "^1.2",
         "inertiajs/inertia-laravel": "^2.0",
+        "jenssegers/agent": "^2.6",
         "laravel/framework": "^12.0",
         "laravel/octane": "^2.8",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "spiral/roadrunner-cli": "^2.6.0",
         "spiral/roadrunner-http": "^3.3.0",
+        "stevebauman/location": "^7.5",
         "tightenco/ziggy": "^2.4"
     },
     "require-dev": {

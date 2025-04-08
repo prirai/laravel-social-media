@@ -25,6 +25,14 @@
     badge-class="bg-warning"
 />
 
+<x-backpack::menu-item
+    title="Access Logs"
+    icon="la la-shield-alt"
+    :link="backpack_url('access-log')"
+    badge="{{ \App\Models\AccessLog::where('is_admin_attempt', true)->where('created_at', '>=', now()->subDay())->count() ?: '' }}"
+    badge-class="bg-danger"
+/>
+
 {{--<x-backpack::menu-item --}}
 {{--    title="Verifications" --}}
 {{--    icon="la la-id-card" --}}
