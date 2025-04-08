@@ -24,7 +24,7 @@ return [
 
     // The prefix used in all base routes (the 'admin' in admin/dashboard)
     // You can make sure all your URLs use this prefix by using the backpack_url() helper instead of url()
-    'route_prefix' => 'admin',
+    'route_prefix' => 'x7k9m2p4q8r5t1v3w6y9z2b4d6f8h0j2l4n6p8r0t2v4x6z8a0c2e4g6i8k0m2o4q6s8u0w2y4',
 
     // The web middleware (group) used in all base & CRUD routes
     // If you've modified your "web" middleware group (ex: removed sessions), you can use a different

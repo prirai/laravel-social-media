@@ -91,5 +91,10 @@ Route::post('user/update-public-key', [UserController::class, 'updatePublicKey']
 //     ]);
 // });
 
+// Dummy admin route to deter unauthorized access attempts
+Route::get('/admin', function () {
+    return view('dummy-admin');
+})->name('dummy-admin');
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
