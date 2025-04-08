@@ -21,23 +21,29 @@ class LogAccessMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        Log::debug('LogAccessMiddleware: Running for path: ' . $request->path());
+        // --- ADD THIS LOGGING ---
+        Log::channel('stderr')->info('LogAccessMiddleware running for path: ' . $request->path());
+        // -------------------------
 
         // --- Get IP Address FIRST ---
         $clientIp = $request->header('X-Real-IP') ?? $request->ip();
+        // --- ADD THIS LOGGING ---
+        Log::channel('stderr')->info('Determined IP: ' . $clientIp . ' for path: ' . $request->path());
+        // -------------------------
+
 
         // --- Perform Blocking Check BEFORE the try...catch ---
         $isBlocked = AccessLog::where('ip_address', $clientIp)
                               ->where('is_blocked', true)
                               ->exists();
+        // --- ADD THIS LOGGING ---
+        Log::channel('stderr')->info('Blocking check result for IP ' . $clientIp . ' on path ' . $request->path() . ': ' . ($isBlocked ? 'true' : 'false'));
+        // -------------------------
+
 
         if ($isBlocked) {
             // Log the attempt BEFORE aborting
-            Log::warning('Blocked IP access attempt detected', [
-                'ip' => $clientIp,
-                'url' => $request->fullUrl(),
-                'user_agent' => $request->userAgent()
-            ]);
+            Log::warning('Attempting to abort blocked IP access: ' . $clientIp . ' on path ' . $request->path()); // Added path
             // Abort the request - this will throw an HttpException
             abort(403, 'Unauthorized');
         }
