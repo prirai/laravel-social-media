@@ -17,7 +17,7 @@
             --text-secondary: #4b5563;
             --border: #e5e7eb;
         }
-        
+
         @media (prefers-color-scheme: dark) {
             :root {
                 --primary: #60a5fa;
@@ -30,13 +30,13 @@
                 --border: #374151;
             }
         }
-        
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
-        
+
         body {
             font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: var(--background);
@@ -46,33 +46,33 @@
             display: flex;
             flex-direction: column;
         }
-        
+
         .container {
             width: 100%;
             max-width: 1280px;
             margin: 0 auto;
             padding: 0 1rem;
         }
-        
+
         .header {
             border-bottom: 1px solid var(--border);
             background-color: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(8px);
             padding: 1rem 0;
         }
-        
+
         @media (prefers-color-scheme: dark) {
             .header {
                 background-color: rgba(17, 24, 39, 0.8);
             }
         }
-        
+
         .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .logo {
             font-size: 1.5rem;
             font-weight: 600;
@@ -82,7 +82,7 @@
             color: transparent;
             text-decoration: none;
         }
-        
+
         .main {
             flex: 1;
             display: flex;
@@ -90,13 +90,13 @@
             justify-content: center;
             padding: 2rem 0;
         }
-        
+
         .error-content {
             text-align: center;
             max-width: 600px;
             padding: 2rem;
         }
-        
+
         .error-code {
             font-size: 8rem;
             font-weight: 700;
@@ -107,19 +107,19 @@
             background-clip: text;
             color: transparent;
         }
-        
+
         .error-title {
             font-size: 2rem;
             font-weight: 600;
             margin-bottom: 1rem;
         }
-        
+
         .error-message {
             font-size: 1.125rem;
             color: var(--text-secondary);
             margin-bottom: 2rem;
         }
-        
+
         .btn {
             display: inline-block;
             padding: 0.75rem 1.5rem;
@@ -130,46 +130,46 @@
             border-radius: 0.5rem;
             transition: all 0.2s;
         }
-        
+
         .btn-primary {
             background: linear-gradient(to right, var(--primary), var(--secondary));
             color: white;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        
+
         .btn-primary:hover {
             background: linear-gradient(to right, var(--primary-dark), var(--secondary-dark));
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
-        
+
         .btn-secondary {
             background-color: rgba(255, 255, 255, 0.8);
             color: var(--text);
             border: 1px solid var(--border);
         }
-        
+
         @media (prefers-color-scheme: dark) {
             .btn-secondary {
                 background-color: rgba(17, 24, 39, 0.5);
             }
         }
-        
+
         .btn-secondary:hover {
             background-color: rgba(255, 255, 255, 0.9);
         }
-        
+
         @media (prefers-color-scheme: dark) {
             .btn-secondary:hover {
                 background-color: rgba(17, 24, 39, 0.7);
             }
         }
-        
+
         .btn-group {
             display: flex;
             gap: 1rem;
             justify-content: center;
         }
-        
+
         .footer {
             border-top: 1px solid var(--border);
             padding: 1.5rem 0;
@@ -177,20 +177,20 @@
             color: var(--text-secondary);
             font-size: 0.875rem;
         }
-        
+
         @media (max-width: 640px) {
             .error-code {
                 font-size: 6rem;
             }
-            
+
             .error-title {
                 font-size: 1.5rem;
             }
-            
+
             .btn-group {
                 flex-direction: column;
             }
-            
+
             .btn {
                 width: 100%;
             }
@@ -203,13 +203,13 @@
             <a href="/" class="logo">SimpleSocial</a>
         </div>
     </header>
-    
+
     <main class="main">
         <div class="container">
             <div class="error-content">
                 <div class="error-code">403</div>
                 <h1 class="error-title">Forbidden</h1>
-                <p class="error-message">{{ $exception->getMessage() ?: 'You do not have permission to access this resource.' }}</p>
+                <p class="error-message">You do not have permission to access this resource.</p>
                 <div class="btn-group">
                     <a href="/" class="btn btn-primary">Go to Homepage</a>
                     <a href="javascript:history.back()" class="btn btn-secondary">Go Back</a>
@@ -217,7 +217,7 @@
             </div>
         </div>
     </main>
-    
+
     <footer class="footer">
         <div class="container">
             &copy; {{ date('Y') }} SimpleSocial. All rights reserved.
