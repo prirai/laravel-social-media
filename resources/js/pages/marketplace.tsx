@@ -84,6 +84,8 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
     const [isVerificationOpen, setIsVerificationOpen] = useState(false);
     const [showSizeError, setShowSizeError] = useState(false);
     const [sizeErrorFiles, setSizeErrorFiles] = useState<string[]>([]);
+    const [priceError, setPriceError] = useState<string | null>(null);
+    const [selectedImages, setSelectedImages] = useState<{ file: File; preview: string }[]>([]);
 
     // Add this function to filter listings
     const filteredListings = useMemo(() => {
@@ -216,6 +218,18 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
             return;
         }
 
+        // Validate price before submission
+        const priceValue = parseFloat(data.price);
+        if (isNaN(priceValue) || priceValue <= 0) {
+            setPriceError('Price must be a positive number');
+            return;
+        }
+        
+        if (priceValue > 1000000) {
+            setPriceError('Price cannot exceed ₹1,000,000');
+            return;
+        }
+
         // Create FormData object to properly handle file uploads
         const formData = new FormData();
         formData.append('title', data.title);
@@ -233,6 +247,7 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
             onSuccess: () => {
                 reset();
                 setIsOpen(false);
+                setSelectedImages([]); // Clear selected images
             },
         });
     };
@@ -262,10 +277,39 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                 setSizeErrorFiles(oversizedFiles);
                 setShowSizeError(true);
                 setData('images', [...data.images, ...validFiles]);
+                
+                // Create preview URLs for valid files
+                validFiles.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setSelectedImages(prev => [...prev, { file, preview: reader.result as string }]);
+                    };
+                    reader.readAsDataURL(file);
+                });
             } else {
                 setData('images', [...data.images, ...newFiles]);
+                
+                // Create preview URLs for all files
+                newFiles.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setSelectedImages(prev => [...prev, { file, preview: reader.result as string }]);
+                    };
+                    reader.readAsDataURL(file);
+                });
             }
         }
+    };
+
+    // Add function to remove selected image
+    const removeSelectedImage = (index: number) => {
+        const updatedImages = [...data.images];
+        updatedImages.splice(index, 1);
+        setData('images', updatedImages);
+        
+        const updatedPreviews = [...selectedImages];
+        updatedPreviews.splice(index, 1);
+        setSelectedImages(updatedPreviews);
     };
 
     return (
@@ -381,11 +425,17 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                                                 id="price"
                                                 type="number"
                                                 value={data.price}
-                                                onChange={(e) => setData('price', e.target.value)}
+                                                onChange={(e) => {
+                                                    setData('price', e.target.value);
+                                                    setPriceError(null); // Clear error when user types
+                                                }}
                                                 className="pl-10"
                                                 placeholder="0.00"
+                                                min="0"
+                                                step="0.01"
                                             />
                                         </div>
+                                        {priceError && <p className="text-sm text-red-500">{priceError}</p>}
                                         {errors.price && <p className="text-sm text-red-500">{errors.price}</p>}
                                     </div>
 
@@ -441,6 +491,29 @@ export default function Marketplace({ listings: initialListings = [], flash = {}
                                             className="hidden"
                                         />
                                     </div>
+                                    
+                                    {/* Display selected images */}
+                                    {selectedImages.length > 0 && (
+                                        <div className="mt-2 grid grid-cols-3 gap-2">
+                                            {selectedImages.map((image, index) => (
+                                                <div key={index} className="relative group">
+                                                    <img 
+                                                        src={image.preview} 
+                                                        alt={`Preview ${index + 1}`} 
+                                                        className="h-24 w-full object-cover rounded-md"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeSelectedImage(index)}
+                                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <XMarkIcon className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    
                                     {errors.images && <p className="text-sm text-red-500">{errors.images}</p>}
                                 </div>
 
