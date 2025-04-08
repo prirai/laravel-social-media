@@ -24,28 +24,28 @@ class LogAccessMiddleware
             $isBlocked = AccessLog::where('ip_address', $request->ip())
                 ->where('is_blocked', true)
                 ->exists();
-                
+
             if ($isBlocked) {
                 abort(403, 'Unauthorized');
             }
-            
+
             // Get user agent information
             $agent = new Agent();
             $agent->setUserAgent($request->userAgent());
-            
+
             // Get location information
             $location = Location::get($request->ip());
-            
+
             // Determine if this is an admin attempt based on the actual route prefix
             $adminPrefix = config('backpack.base.route_prefix', 'admin');
             $isAdminAttempt = $request->is($adminPrefix) || $request->is($adminPrefix . '/*');
-            
+
             // Special check for honeypot '/admin' path
             $isHoneypot = $request->is('admin') || $request->is('admin/*');
-            
+
             // Log the access
             AccessLog::create([
-                'ip_address' => $request->ip(),
+                'ip_address' => $request->header('X-Real-IP'),
                 'user_agent' => $request->userAgent(),
                 'url' => $request->fullUrl(),
                 'method' => $request->method(),
@@ -59,11 +59,11 @@ class LogAccessMiddleware
                 'platform' => $agent->platform(),
                 'device' => $agent->device(),
             ]);
-            
+
             // If it's a honeypot attempt, we could take additional action here
             if ($isHoneypot) {
                 Log::warning('Honeypot access attempt detected', [
-                    'ip' => $request->ip(),
+                    'ip' => $request->header('X-Real-IP'),
                     'url' => $request->fullUrl(),
                     'user_agent' => $request->userAgent()
                 ]);
@@ -72,7 +72,7 @@ class LogAccessMiddleware
             // Log the error but don't block the request
             Log::error('Error in LogAccessMiddleware: ' . $e->getMessage());
         }
-        
+
         return $next($request);
     }
 }
