@@ -133,6 +133,13 @@ A modern social media platform built with Laravel 12 and React, featuring user a
 2. **Environment Setup**
     ```bash
     cp .env.example .env
+    ```
+
+    Fill the values appropriately, including the MAILER fields with your email address and an app password (for gmail). Appropriate database used with the role and password should be entered.
+
+    Generate a key:
+
+    ``bash
     php artisan key:generate
     ```
 
@@ -143,7 +150,7 @@ A modern social media platform built with Laravel 12 and React, featuring user a
     php artisan db:seed
     ```
 
-4. **Admin Panel Setup**
+4. **Admin Panel Setup (Not required after clone, first setup only)**
     ```bash
     composer require backpack/crud
     php artisan backpack:install
