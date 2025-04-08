@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -37,7 +38,15 @@ class RegisteredUserController extends Controller
             'name' => 'required|string|max:255',
             'username' => 'required|string|alpha_dash|max:255|unique:users,username',
             'email' => 'required|string|lowercase|email|max:255|unique:users,email',
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => [
+                'required',
+                'confirmed', // Make sure 'password_confirmation' field exists in the request
+                Password::min(10)      // Minimum 10 characters
+                    ->mixedCase()    // Requires both uppercase and lowercase letters
+                    ->numbers()      // Requires at least one number
+                    ->symbols()      // Requires at least one special character (symbol)
+                // ->uncompromised(), // Optional: Check if password has been pwned (requires internet)
+            ],
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 

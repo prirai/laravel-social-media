@@ -7,9 +7,10 @@ use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
+// use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -37,7 +38,15 @@ class NewPasswordController extends Controller
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => [
+                'required',
+                'confirmed', // Make sure 'password_confirmation' field exists in the request
+                Password::min(10)      // Minimum 10 characters
+                    ->mixedCase()    // Requires both uppercase and lowercase letters
+                    ->numbers()      // Requires at least one number
+                    ->symbols()      // Requires at least one special character (symbol)
+                // ->uncompromised(), // Optional: Check if password has been pwned (requires internet)
+            ],
         ]);
 
         // Here we will attempt to reset the user's password. If it is successful we
