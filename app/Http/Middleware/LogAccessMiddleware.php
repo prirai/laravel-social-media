@@ -9,13 +9,13 @@ use App\Models\AccessLog;
 use Jenssegers\Agent\Agent;
 use Stevebauman\Location\Facades\Location;
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\HttpKernel\Exception\HttpException; // Optional, but good practice
-
+// No longer need HttpException here unless specifically catching other HTTP exceptions
 
 class LogAccessMiddleware
 {
     /**
      * Handle an incoming request.
+     * Logs access details after the BlockAccessMiddleware has passed.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
@@ -23,43 +23,37 @@ class LogAccessMiddleware
     {
         Log::debug('LogAccessMiddleware: Running for path: ' . $request->path());
 
-        // --- Get IP Address FIRST ---
+        // --- Get IP Address (still needed for logging) ---
         $clientIp = $request->header('X-Real-IP') ?? $request->ip();
 
-        // --- Perform Blocking Check BEFORE the try...catch ---
-        $isBlocked = AccessLog::where('ip_address', $clientIp)
-                              ->where('is_blocked', true)
-                              ->exists();
-
-        if ($isBlocked) {
-            // Log the attempt BEFORE aborting
-            Log::warning('Blocked IP access attempt detected', [
-                'ip' => $clientIp,
-                'url' => $request->fullUrl(),
-                'user_agent' => $request->userAgent()
-            ]);
-            // Abort the request - this will throw an HttpException
-            abort(403, 'Unauthorized');
-        }
-
-        // --- Now, try to log details, but catch specific errors if needed ---
+        // --- Try to log details ---
+        // The blocking check is now handled by BlockAccessMiddleware
         try {
             // Get user agent information
             $agent = new Agent();
             $agent->setUserAgent($request->userAgent());
 
             // Get location information
-            // Add basic check to prevent error if IP is invalid for lookup
             $location = null;
-            if (filter_var($clientIp, FILTER_VALIDATE_IP)) {
-                 $location = Location::get($clientIp);
+            // Add basic check to prevent error if IP is invalid for lookup (e.g., '::1' locally might fail)
+            if (filter_var($clientIp, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                 try {
+                    $location = Location::get($clientIp);
+                 } catch (\Exception $e) {
+                    Log::warning('LogAccessMiddleware: Could not get location for IP: ' . $clientIp . ' - ' . $e->getMessage());
+                    $location = null; // Ensure location is null if lookup fails
+                 }
+            } else {
+                 Log::debug('LogAccessMiddleware: Skipping location lookup for private/reserved IP: ' . $clientIp);
             }
 
 
             // Determine if this is an admin attempt
-            $adminPrefix = config('backpack.base.route_prefix', 'admin');
+            // Using config ensures flexibility if the admin prefix changes
+            $adminPrefix = config('backpack.base.route_prefix', 'admin'); // Default to 'admin' if not set
             $isAdminAttempt = $request->is($adminPrefix) || $request->is($adminPrefix . '/*');
-            $isHoneypot = $request->is('admin') || $request->is('admin/*');
+            // Check specifically for the honeypot path '/admin' IF it's different from the actual admin prefix
+            $isHoneypot = $request->is('admin') && $adminPrefix !== 'admin'; // More specific honeypot check
 
             // Log the access
             AccessLog::create([
@@ -68,29 +62,30 @@ class LogAccessMiddleware
                 'url' => $request->fullUrl(),
                 'method' => $request->method(),
                 'referer' => $request->header('referer'),
-                'is_admin_attempt' => $isAdminAttempt || $isHoneypot,
-                'is_blocked' => false, // We already know it's not blocked if we reach here
-                'request_data' => $request->all(), // Consider redacting sensitive data
-                'country' => $location ? $location->countryName : null,
-                'city' => $location ? $location->cityName : null,
+                // is_blocked is now handled by BlockAccessMiddleware.
+                // We know if we reach here, it wasn't blocked *by that middleware*.
+                // We might still want to log honeypot attempts separately.
+                'is_admin_attempt' => $isAdminAttempt || $isHoneypot, // Combine flags for simplicity in DB
+                'is_blocked' => false, // Explicitly set to false as BlockAccessMiddleware allowed it
+                'request_data' => $request->all() ? json_encode($request->except(['password', 'password_confirmation', '_token'])) : null, // Redact sensitive data & handle empty requests
+                'country' => $location?->countryName, // Use null safe operator
+                'city' => $location?->cityName,
                 'browser' => $agent->browser(),
                 'platform' => $agent->platform(),
                 'device' => $agent->device(),
             ]);
 
-            // If it's a honeypot attempt, log it (optional, might be redundant with is_admin_attempt)
-            // Only log honeypot if it's NOT the real admin path to avoid double logging for real admin access
-            if ($isHoneypot && !$isAdminAttempt) {
-                Log::warning('Honeypot access attempt detected', [
-                    'ip' => $clientIp, // Use $clientIp
+            // Log honeypot access specifically if needed (might be redundant with is_admin_attempt=true)
+            if ($isHoneypot) {
+                Log::warning('Honeypot access attempt detected (and logged)', [
+                    'ip' => $clientIp,
                     'url' => $request->fullUrl(),
                     'user_agent' => $request->userAgent()
                 ]);
             }
         } catch (\Exception $e) {
-            // Log unexpected errors during detail gathering, but DON'T catch HttpExceptions here
-            // (unless you specifically want to handle a different HttpException from detail gathering)
-            Log::error('Error gathering details in LogAccessMiddleware (IP: '.$clientIp.'): ' . $e->getMessage(), ['exception' => $e]);
+            // Log unexpected errors during detail gathering
+            Log::error('Error logging details in LogAccessMiddleware (IP: '.$clientIp.'): ' . $e->getMessage(), ['exception' => $e]);
             // Allow the request to proceed even if detail logging fails
         }
 
