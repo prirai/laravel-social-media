@@ -209,10 +209,20 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
 
     const handleCommentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Trim the comment content to remove whitespace
+        const trimmedContent = commentData.content.trim();
+        
+        // Check if the comment is empty after trimming
+        if (!trimmedContent) {
+            setCommentErrors({ content: 'Comment cannot be empty' });
+            return;
+        }
+        
         if (selectedPost) {
             const optimisticComment: Comment = {
                 id: Date.now(), // Temporary ID
-                content: commentData.content,
+                content: trimmedContent,
                 created_at: new Date().toISOString(),
                 user: {
                     id: user.id,
@@ -223,7 +233,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                 },
             };
 
-            // Update the UI immediately
+            // Update the UI immediately with the optimistic comment
             setPosts((prevPosts) =>
                 prevPosts.map((post) =>
                     post.id === selectedPost.id
@@ -240,9 +250,9 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
             setCommentOpen(false);
             setSelectedPost(null);
 
-            // Make the API call without updating the UI
+            // Make the API call
             const formData = new FormData();
-            formData.append('content', commentData.content);
+            formData.append('content', trimmedContent);
             formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '');
 
             axios.post(route('posts.comment', { post: selectedPost.id }), formData, {
@@ -253,11 +263,32 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                     'Content-Type': 'multipart/form-data',
                 }
             })
+            .then(response => {
+                console.log('Comment response:', response.data);
+                // Update the comment with the real ID from the server
+                if (response.data && response.data.success && response.data.comment) {
+                    const realComment = response.data.comment;
+                    
+                    // Update the posts state to replace the optimistic comment with the real one
+                    setPosts((prevPosts) =>
+                        prevPosts.map((post) =>
+                            post.id === selectedPost.id
+                                ? {
+                                      ...post,
+                                      comments: post.comments.map(comment => 
+                                          comment.id === optimisticComment.id ? realComment : comment
+                                      ),
+                                  }
+                                : post
+                        )
+                    );
+                }
+            })
             .catch(error => {
                 console.error('Error adding comment:', error);
                 // Show error message but don't revert the UI
                 setCommentErrors({ content: error.response?.data?.message || 'Failed to add comment. Please try again.' });
-                setCommentData('content', commentData.content);
+                setCommentData('content', trimmedContent);
                 setCommentOpen(true);
                 setSelectedPost(selectedPost);
             });
@@ -304,21 +335,38 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
 
     const handleDeleteComment = (commentId: number) => {
         if (confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
+            // Optimistically update the UI for both the posts list and the selected post
             setPosts((prevPosts) =>
                 prevPosts.map((post) => ({
                     ...post,
                     comments: post.comments.filter((comment) => comment.id !== commentId),
                 }))
             );
+            
+            // Also update the selected post if it exists
+            if (selectedPost) {
+                setSelectedPost({
+                    ...selectedPost,
+                    comments: selectedPost.comments.filter((comment) => comment.id !== commentId),
+                });
+            }
 
             router.delete(route('comments.destroy', commentId), {
                 onError: () => {
+                    // Revert the optimistic update on error
                     setPosts((prevPosts) =>
                         prevPosts.map((post) => ({
                             ...post,
                             comments: post.comments.filter((comment) => comment.id !== commentId),
                         }))
                     );
+                    
+                    if (selectedPost) {
+                        setSelectedPost({
+                            ...selectedPost,
+                            comments: selectedPost.comments.filter((comment) => comment.id !== commentId),
+                        });
+                    }
                 },
             });
         }
@@ -1004,10 +1052,10 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                 value={commentData.content}
                                 onChange={(e) => setCommentData('content', e.target.value)}
                                 placeholder="Write your comment..."
-                                            className="min-h-[100px] resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:focus:border-blue-400 dark:focus:ring-blue-400"
-                                        />
-                                        {commentErrors.content && <p className="mt-1 text-sm text-red-500">{commentErrors.content}</p>}
-                                    </div>
+                                className="min-h-[100px] resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+                            />
+                                {commentErrors.content && <p className="mt-1 text-sm text-red-500">{commentErrors.content}</p>}
+                            </div>
                                 </div>
 
                                 <div className="flex justify-end gap-3 pt-2">
@@ -1024,7 +1072,7 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     </Button>
                                     <Button
                                         type="submit"
-                                        disabled={commentProcessing}
+                                        disabled={commentProcessing || !commentData.content.trim()}
                                         className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600"
                                     >
                                     {commentProcessing ? 'Posting...' : 'Comment'}

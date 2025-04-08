@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { usePage, router } from '@inertiajs/react';
 import { type SharedData } from '@/types';
 import axios from 'axios';
+import { Textarea } from '@/components/ui/textarea';
 
 interface Comment {
     id: number;
@@ -76,21 +77,47 @@ export default function PostItem({ post, onLike, onComment, onDelete }: PostItem
 
     const handleDeleteComment = async (commentId: number) => {
         if (confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
-            // Remove the comment from the UI immediately
-            setLocalComments(prevComments => prevComments.filter(comment => comment.id !== commentId));
+            // Set deleting state to show loading indicator
+            setIsDeletingComment(commentId);
+            
+            // Optimistically update the UI
+            setLocalComments(prevComments => 
+                prevComments.filter(comment => comment.id !== commentId)
+            );
 
-            // Make the API call without updating the UI
             try {
-                await axios.delete(`/comments/${commentId}`, {
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json',
+                // Check if this is a temporary ID (from Date.now())
+                if (commentId > 1000000000000) { // Date.now() generates timestamps in milliseconds
+                    console.log('Skipping server request for temporary comment ID');
+                    setIsDeletingComment(null);
+                    return;
+                }
+                
+                // Use Inertia router for proper navigation
+                router.delete(route('comments.destroy', commentId), {
+                    preserveScroll: true,
+                    onFinish: () => {
+                        setIsDeletingComment(null);
+                    },
+                    onError: () => {
+                        // Revert the optimistic update on error
+                        setLocalComments(prevComments => {
+                            // Find the comment in the original post comments
+                            const originalComment = post.comments.find(c => c.id === commentId);
+                            if (originalComment) {
+                                // Add it back to the local comments
+                                return [...prevComments, originalComment].sort((a, b) => 
+                                    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                                );
+                            }
+                            return prevComments;
+                        });
+                        setIsDeletingComment(null);
                     }
                 });
             } catch (error) {
                 console.error('Error deleting comment:', error);
-                // Don't revert the UI on error
+                setIsDeletingComment(null);
             }
         }
     };

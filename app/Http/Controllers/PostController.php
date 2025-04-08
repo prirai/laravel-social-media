@@ -101,7 +101,15 @@ class PostController extends Controller
             $query->select('id', 'name', 'username', 'avatar', 'verification_status');
         }]);
 
-        // Return an Inertia response
+        // Check if this is an AJAX request
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'comment' => $comment
+            ]);
+        }
+
+        // Return an Inertia response for non-AJAX requests
         return back()->with('comment', $comment);
     }
 
@@ -141,6 +149,8 @@ class PostController extends Controller
         }
 
         $comment->delete();
-        return back();
+        
+        // Always return a redirect response for Inertia
+        return redirect()->back();
     }
 }
