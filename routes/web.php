@@ -11,8 +11,13 @@ use App\Http\Controllers\FriendRequestController;
 use App\Http\Controllers\CustomEmailVerificationController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use App\Http\Controllers\BlockchainController;
+use App\Http\Middleware\LogAccessMiddleware;
 
-Route::get('/', function () {
+// Route::get('/', function () {
+//     return Inertia::render('welcome');
+// })->name('home');
+
+Route::middleware(LogAccessMiddleware::class)->get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
