@@ -10,6 +10,10 @@ use Jenssegers\Agent\Agent;
 use Stevebauman\Location\Facades\Location;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpKernel\Exception\HttpException; // Optional, but good practice
+use Illuminate\Support\Facades\Cookie;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
 
 
 class LogAccessMiddleware
@@ -38,8 +42,29 @@ class LogAccessMiddleware
                 'url' => $request->fullUrl(),
                 'user_agent' => $request->userAgent()
             ]);
-            // Abort the request - this will throw an HttpException
-            abort(403, 'Unauthorized');
+            
+            // Create an exception for the view
+            $exception = new AccessDeniedHttpException('Your IP address has been blocked from accessing this site.');
+            
+            // If user is authenticated, log them out
+            if (Auth::check()) {
+                $authController = new AuthenticatedSessionController();
+                $authController->destroy($request);
+            }
+            
+            // Create a response with the 403 view
+            $response = response()->view('errors.403', [
+                'exception' => $exception,
+                'message' => 'Access Denied',
+                'ip' => $clientIp
+            ], 403);
+            
+            // Add security headers to prevent caching
+            $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', 'Sat, 01 Jan 1990 00:00:00 GMT');
+            
+            return $response;
         }
 
         // --- Now, try to log details, but catch specific errors if needed ---
