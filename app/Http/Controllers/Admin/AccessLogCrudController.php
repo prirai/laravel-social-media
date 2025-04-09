@@ -8,6 +8,9 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Illuminate\Support\Facades\Route;
 use Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
 use Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+use Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
+// Remove BulkDeleteOperation as it's a PRO feature
+// use Backpack\CRUD\app\Http\Controllers\Operations\BulkDeleteOperation;
 // Remove unused Request import if not directly used elsewhere after modification
 // use Illuminate\Http\Request;
 // Use the standard Session facade for flashing messages
@@ -20,6 +23,9 @@ class AccessLogCrudController extends CrudController
 {
     use ListOperation;
     use ShowOperation;
+    use DeleteOperation;
+    // Remove BulkDeleteOperation as it's a PRO feature
+    // use BulkDeleteOperation;
 
     public function setup()
     {
@@ -30,6 +36,16 @@ class AccessLogCrudController extends CrudController
         // Add custom button for blocking/unblocking IP
         // Ensure the 'blockIpButton' model function generates the correct POST link to the blockIp route
         $this->crud->addButtonFromModelFunction('line', 'block_ip', 'blockIpButton', 'beginning');
+        
+        // Add custom button for deleting all logs for a specific IP
+        $this->crud->addButtonFromModelFunction('line', 'delete_ip_logs', 'deleteIpLogsButton', 'end');
+        
+        // Add button to delete all logs (top of the page)
+        $this->crud->addButton('top', 'delete_all_logs', 'view', 'vendor.backpack.crud.buttons.delete_all_logs');
+        
+        // Add buttons to delete logs older than certain periods
+        $this->crud->addButton('top', 'delete_old_logs_30', 'view', 'vendor.backpack.crud.buttons.delete_old_logs', ['days' => 30]);
+        $this->crud->addButton('top', 'delete_old_logs_90', 'view', 'vendor.backpack.crud.buttons.delete_old_logs', ['days' => 90]);
     }
 
     protected function setupListOperation()
@@ -74,24 +90,31 @@ class AccessLogCrudController extends CrudController
                 'type' => 'text',
             ],
             [
-                'name' => 'country',
-                'label' => 'Country',
-                'type' => 'text',
-            ],
-            [
-                'name' => 'city',
-                'label' => 'City',
-                'type' => 'text',
+                'name' => 'visit_count',
+                'label' => 'Visit Count',
+                'type' => 'number',
             ],
             [
                 'name' => 'created_at',
-                'label' => 'Time',
+                'label' => 'First Visit',
+                'type' => 'datetime',
+            ],
+            [
+                'name' => 'updated_at',
+                'label' => 'Last Visit',
                 'type' => 'datetime',
             ],
         ]);
 
-        // Filters are a Backpack PRO feature, keep commented/removed if not using PRO
-        // $this->crud->addFilter(...)
+        // Add a filter for blocked status (non-PRO version)
+        // We can create a simple GET parameter filter
+        if (request()->has('blocked')) {
+            $this->crud->addClause('where', 'is_blocked', '=', 1);
+        }
+        
+        // Add links to view blocked/all logs
+        $this->crud->addButton('top', 'view_blocked', 'view', 'vendor.backpack.crud.buttons.view_blocked');
+        $this->crud->addButton('top', 'view_all', 'view', 'vendor.backpack.crud.buttons.view_all');
     }
 
     protected function setupShowOperation()
@@ -153,14 +176,9 @@ class AccessLogCrudController extends CrudController
                 'type' => 'text',
             ],
             [
-                'name' => 'country',
-                'label' => 'Country',
-                'type' => 'text',
-            ],
-            [
-                'name' => 'city',
-                'label' => 'City',
-                'type' => 'text',
+                'name' => 'visit_count',
+                'label' => 'Visit Count',
+                'type' => 'number',
             ],
             [
                 'name' => 'request_data',
@@ -169,12 +187,12 @@ class AccessLogCrudController extends CrudController
             ],
             [
                 'name' => 'created_at',
-                'label' => 'Time',
+                'label' => 'First Visit',
                 'type' => 'datetime',
             ],
              [
-                'name' => 'updated_at', // Show when the record (including blocked status) was last updated
-                'label' => 'Last Updated',
+                'name' => 'updated_at', 
+                'label' => 'Last Visit',
                 'type' => 'datetime',
             ],
         ]);
@@ -214,6 +232,54 @@ class AccessLogCrudController extends CrudController
         return redirect()->back();
     }
 
+    /**
+     * Delete all access logs for a specific IP address.
+     */
+    public function deleteIpLogs($id)
+    {
+        $entry = $this->crud->getEntry($id);
+
+        if (!$entry || !$entry->ip_address) {
+             Session::flash('error', 'Could not find the selected log entry or it has no IP address.');
+             return redirect()->back();
+        }
+
+        $ipToDelete = $entry->ip_address;
+        $deletedCount = AccessLog::where('ip_address', $ipToDelete)->delete();
+
+        Session::flash('success', 'All access logs for IP address ' . $ipToDelete . ' have been deleted. (' . $deletedCount . ' records removed)');
+        
+        return redirect()->back();
+    }
+    
+    /**
+     * Delete all access logs.
+     */
+    public function deleteAllLogs()
+    {
+        $deletedCount = AccessLog::truncate();
+        
+        Session::flash('success', 'All access logs have been deleted.');
+        
+        return redirect()->back();
+    }
+    
+    /**
+     * Delete access logs older than a specific period.
+     * 
+     * @param int $days Number of days to keep logs for
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function deleteOldLogs($days)
+    {
+        $date = now()->subDays($days);
+        $deletedCount = AccessLog::where('created_at', '<', $date)->delete();
+        
+        Session::flash('success', 'Deleted ' . $deletedCount . ' access logs older than ' . $days . ' days.');
+        
+        return redirect()->back();
+    }
+
     public function setupRoutes($segment, $routeName, $controller)
     {
         parent::setupRoutes($segment, $routeName, $controller);
@@ -223,6 +289,27 @@ class AccessLogCrudController extends CrudController
             'as'        => $routeName.'.blockIp', // Used for route() helper: route('crud.access-log.blockIp', ['id'=>1])
             'uses'      => $controller.'@blockIp',
             'operation' => 'blockIp', // For Backpack internal operation checks/permissions (optional)
+        ]);
+        
+        // Add route for deleting all logs for a specific IP
+        Route::post($segment.'/{id}/delete-ip-logs', [
+            'as'        => $routeName.'.deleteIpLogs',
+            'uses'      => $controller.'@deleteIpLogs',
+            'operation' => 'deleteIpLogs',
+        ]);
+        
+        // Add route for deleting all logs
+        Route::post($segment.'/delete-all-logs', [
+            'as'        => $routeName.'.deleteAllLogs',
+            'uses'      => $controller.'@deleteAllLogs',
+            'operation' => 'deleteAllLogs',
+        ]);
+        
+        // Add route for deleting old logs
+        Route::post($segment.'/delete-old-logs/{days}', [
+            'as'        => $routeName.'.deleteOldLogs',
+            'uses'      => $controller.'@deleteOldLogs',
+            'operation' => 'deleteOldLogs',
         ]);
     }
 }

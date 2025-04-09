@@ -72,42 +72,67 @@ class LogAccessMiddleware
             $agent = new Agent();
             $agent->setUserAgent($request->userAgent());
 
-            // Removed location lookup for better performance
-
             // Determine if this is an admin attempt
             $adminPrefix = config('backpack.base.route_prefix', 'admin');
             $isAdminAttempt = $request->is($adminPrefix) || $request->is($adminPrefix . '/*');
             $isHoneypot = $request->is('admin') || $request->is('admin/*');
 
-            // Log the access
-            AccessLog::create([
-                'ip_address' => $clientIp,
-                'user_agent' => $request->userAgent(),
-                'url' => $request->fullUrl(),
-                'method' => $request->method(),
-                'referer' => $request->header('referer'),
-                'is_admin_attempt' => $isAdminAttempt || $isHoneypot,
-                'is_blocked' => false, // We already know it's not blocked if we reach here
-                'request_data' => $request->all(), // Consider redacting sensitive data
-                'country' => null, // Removed location lookup
-                'city' => null, // Removed location lookup
-                'browser' => $agent->browser(),
-                'platform' => $agent->platform(),
-                'device' => $agent->device(),
-            ]);
-
-            // If it's a honeypot attempt, log it (optional, might be redundant with is_admin_attempt)
-            // Only log honeypot if it's NOT the real admin path to avoid double logging for real admin access
-            if ($isHoneypot && !$isAdminAttempt) {
-                Log::warning('Honeypot access attempt detected', [
-                    'ip' => $clientIp, 
-                    'url' => $request->fullUrl(),
-                    'user_agent' => $request->userAgent()
+            // Prepare log data
+            $browser = $agent->browser();
+            $platform = $agent->platform();
+            $url = $request->fullUrl();
+            
+            // Check if a matching record already exists
+            $existingLog = AccessLog::where('ip_address', $clientIp)
+                ->where('url', $url)
+                ->where('browser', $browser)
+                ->where('platform', $platform)
+                ->first();
+                
+            if ($existingLog) {
+                // Increment the visit count for an existing record
+                $existingLog->increment('visit_count');
+                
+                // Update the timestamp
+                $existingLog->touch();
+                
+                // If this is a honeypot access, log it
+                if ($isHoneypot && !$isAdminAttempt) {
+                    Log::warning('Honeypot access attempt detected (repeat visit)', [
+                        'ip' => $clientIp, 
+                        'url' => $url,
+                        'user_agent' => $request->userAgent(),
+                        'visit_count' => $existingLog->visit_count
+                    ]);
+                }
+            } else {
+                // Create new log entry for a unique combination
+                AccessLog::create([
+                    'ip_address' => $clientIp,
+                    'user_agent' => $request->userAgent(),
+                    'url' => $url,
+                    'method' => $request->method(),
+                    'referer' => $request->header('referer'),
+                    'is_admin_attempt' => $isAdminAttempt || $isHoneypot,
+                    'is_blocked' => false, // We already know it's not blocked if we reach here
+                    'request_data' => $request->all(), // Consider redacting sensitive data
+                    'browser' => $browser,
+                    'platform' => $platform,
+                    'device' => $agent->device(),
+                    'visit_count' => 1,
                 ]);
+                
+                // If it's a honeypot attempt, log it
+                if ($isHoneypot && !$isAdminAttempt) {
+                    Log::warning('Honeypot access attempt detected (first visit)', [
+                        'ip' => $clientIp, 
+                        'url' => $url,
+                        'user_agent' => $request->userAgent()
+                    ]);
+                }
             }
         } catch (\Exception $e) {
             // Log unexpected errors during detail gathering, but DON'T catch HttpExceptions here
-            // (unless you specifically want to handle a different HttpException from detail gathering)
             Log::error('Error gathering details in LogAccessMiddleware (IP: '.$clientIp.'): ' . $e->getMessage(), ['exception' => $e]);
             // Allow the request to proceed even if detail logging fails
         }

@@ -25,11 +25,10 @@ class AccessLog extends Model
         'is_admin_attempt',
         'is_blocked',
         'request_data',
-        'country',
-        'city',
         'browser',
         'platform',
         'device',
+        'visit_count',
     ];
 
     /**
@@ -105,6 +104,28 @@ class AccessLog extends Model
                   <i class="la la-' . ($this->is_blocked ? 'unlock' : 'ban') . '"></i> ' . $label . '
               </a>
               <form id="block-form-' . $this->id . '" action="' . $route . '" method="POST" style="display: none;">
+                  ' . csrf_field() . '
+              </form>';
+    }
+
+    /**
+     * Get the delete IP logs button HTML.
+     *
+     * @return string
+     */
+    public function deleteIpLogsButton()
+    {
+        $route = backpack_url('access-log/'.$this->id.'/delete-ip-logs');
+        
+        return '<a href="javascript:void(0)" 
+                  onclick="if(confirm(\'Are you sure you want to delete ALL logs for this IP address?\')) { 
+                      event.preventDefault(); 
+                      document.getElementById(\'delete-ip-logs-form-' . $this->id . '\').submit(); 
+                  }" 
+                  class="btn btn-sm btn-warning">
+                  <i class="la la-trash"></i> Delete IP Logs
+              </a>
+              <form id="delete-ip-logs-form-' . $this->id . '" action="' . $route . '" method="POST" style="display: none;">
                   ' . csrf_field() . '
               </form>';
     }
