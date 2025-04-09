@@ -1,6 +1,7 @@
 import { Head, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler, useEffect } from 'react';
+import axios from 'axios';
 
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
@@ -10,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout'; // Fixed import path
 import { cn } from '@/lib/utils';
-import { handleLogoutEncryptionCleanup } from '@/utils/crypto';
+import { handleLogoutEncryptionCleanup, clearPrivateKey } from '@/utils/crypto';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 
 type LoginForm = {
@@ -33,20 +34,44 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
     // Check if we were redirected here due to session expiration
     useEffect(() => {
-        // Look for session expiration message
-        if (status && (
+        // Look for session expiration message or query parameter
+        const expired = new URLSearchParams(window.location.search).get('expired');
+        
+        if ((expired === '1') || (status && (
             status.includes('session has expired') || 
             status.includes('Session expired')
-        )) {
+        ))) {
             // Clean up encryption keys if session expired
-            handleLogoutEncryptionCleanup();
+            clearPrivateKey();
         }
+        
+        // Pre-fetch a fresh CSRF token when the login page loads
+        const refreshCsrfToken = async () => {
+            try {
+                const response = await axios.get('/csrf-token');
+                if (response.data && response.data.csrf_token) {
+                    // Update the meta tag
+                    const metaTag = document.querySelector('meta[name="csrf-token"]');
+                    if (metaTag) {
+                        metaTag.setAttribute('content', response.data.csrf_token);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to refresh CSRF token on login page:', error);
+            }
+        };
+        
+        refreshCsrfToken();
     }, [status]);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+        
         post(route('login'), {
             onFinish: () => reset('password'),
+            onSuccess: () => {
+                // Login successful, no need for console logging
+            }
         });
     };
 
@@ -61,6 +86,13 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 <div className="rounded-2xl border border-gray-200 bg-white/80 p-6 shadow-lg backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/80">
                     
                     <form className="flex flex-col gap-4" onSubmit={submit}>
+                        {/* Hidden CSRF token field */}
+                        <input 
+                            type="hidden" 
+                            name="_token" 
+                            value={document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''} 
+                        />
+                        
                         <div className="grid gap-4">
                             <div className="grid gap-1">
                                 <Label htmlFor="email" className="text-gray-700 dark:text-gray-300">Email address</Label>

@@ -10,9 +10,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { EncryptionNotice } from '@/components/encryption-notice';
 import UserAvatar from '@/components/user-avatar';
-import { getPrivateKeyFromCookie, encryptMessage, decryptMessage, generateKeyPair, savePrivateKeyToFile, savePrivateKeyToCookie, isValidPrivateKey } from '@/utils/crypto';
+import { getPrivateKey, encryptMessage, decryptMessage, generateKeyPair, savePrivateKeyToFile, savePrivateKey, isValidPrivateKey, hasPrivateKey } from '@/utils/crypto';
 import axios from 'axios';
-import { Loader2, Lock, File, FileText, X, MessageSquare, Shield, Key, Info, AlertCircle, ExclamationCircleIcon } from 'lucide-react';
+import { Loader2, Lock, File, FileText, X, MessageSquare, Shield, Key, Info, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
     ArrowPathIcon, 
@@ -28,6 +28,7 @@ import { type SharedData } from '@/types';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { FileSizeWarningDialog } from '@/components/file-size-warning-dialog';
+import { EncryptionSetupDialog } from '@/components/encryption-setup-dialog';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -159,7 +160,7 @@ export default function Messaging(props: MessagingProps) {
     const [isEncrypted, setIsEncrypted] = useState(false);
     const [isEncryptionSetupOpen, setIsEncryptionSetupOpen] = useState(false);
     const [hasEncryptionKeys, setHasEncryptionKeys] = useState(false);
-    const [, setShowEncryptionSetup] = useState(false);
+    const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
     const [isEncryptionToggled, setIsEncryptionToggled] = useState(false);
     const [showEncryptionWarning] = useState(false);
     const [isSending, setIsSending] = useState(false);
@@ -170,6 +171,8 @@ export default function Messaging(props: MessagingProps) {
     const [showMembersOnMobile, setShowMembersOnMobile] = useState(false);
     const [showSizeError, setShowSizeError] = useState(false);
     const [sizeErrorFiles, setSizeErrorFiles] = useState<string[]>([]);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [encryptionError, setEncryptionError] = useState<string | null>(null);
 
     const { reset } = useForm({
         content: '',
@@ -177,7 +180,7 @@ export default function Messaging(props: MessagingProps) {
     });
 
     useEffect(() => {
-        const privateKey = getPrivateKeyFromCookie();
+        const privateKey = getPrivateKey();
         const hasKeys = !!privateKey;
         setHasEncryptionKeys(hasKeys);
         
@@ -218,7 +221,7 @@ export default function Messaging(props: MessagingProps) {
                 const loadedMessages = response.data.messages || [];
                 
                 if (!isGroup(selectedChat)) {
-                    const privateKey = getPrivateKeyFromCookie();
+                    const privateKey = getPrivateKey();
                     
                     const processedMessages = loadedMessages.map((message: DirectMessage) => {
                         // If this is an encrypted message sent by the current user
@@ -228,6 +231,7 @@ export default function Messaging(props: MessagingProps) {
                             
                             // For self-messages, attempt to decrypt
                             if (isSelfMessage) {
+                                const privateKey = getPrivateKey();
                                 if (privateKey) {
                                     try {
                                         const decryptedContent = decryptMessage(message.content, privateKey);
@@ -254,6 +258,7 @@ export default function Messaging(props: MessagingProps) {
                         
                         // If message is encrypted and we have a private key, try to decrypt
                         if (message.is_encrypted && message.sender_id !== auth.user?.id) {
+                            const privateKey = getPrivateKey();
                             if (privateKey) {
                                 try {
                                     const decryptedContent = decryptMessage(message.content, privateKey);
@@ -466,7 +471,7 @@ export default function Messaging(props: MessagingProps) {
                 
                 if (isSelfMessage) {
                     // Try to decrypt the content for self-messages
-                    const privateKey = getPrivateKeyFromCookie();
+                    const privateKey = getPrivateKey();
                     if (privateKey) {
                         try {
                             const decryptedContent = decryptMessage(messageData.content, privateKey);
@@ -805,7 +810,7 @@ export default function Messaging(props: MessagingProps) {
         }
         
         // Ensure we have our own private key
-        const privateKey = getPrivateKeyFromCookie();
+        const privateKey = getPrivateKey();
         if (!privateKey) {
             setIsEncryptionSetupOpen(true);
             return;
@@ -859,7 +864,7 @@ export default function Messaging(props: MessagingProps) {
                             
                             // For self-messages, attempt to decrypt
                             if (isSelfMessage) {
-                                const privateKey = getPrivateKeyFromCookie();
+                                const privateKey = getPrivateKey();
                                 if (privateKey) {
                                     try {
                                         const decryptedContent = decryptMessage(message.content, privateKey);
@@ -886,7 +891,7 @@ export default function Messaging(props: MessagingProps) {
                         
                         // If message is encrypted and we have a private key, try to decrypt
                         if (message.is_encrypted && message.sender_id !== auth.user?.id) {
-                            const privateKey = getPrivateKeyFromCookie();
+                            const privateKey = getPrivateKey();
                             if (privateKey) {
                                 try {
                                     const decryptedContent = decryptMessage(message.content, privateKey);
@@ -966,11 +971,8 @@ export default function Messaging(props: MessagingProps) {
     };
 
     const handleEncryptionSetup = () => {
-        console.log('Encryption setup button clicked');
-        // Force both state variables to true
         setIsEncryptionSetupOpen(true);
         setShowEncryptionSetup(true);
-        console.log('Dialog state updated:', { isEncryptionSetupOpen: true, showEncryptionSetup: true });
     };
 
     const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -997,6 +999,16 @@ export default function Messaging(props: MessagingProps) {
                 setSelectedFiles([...selectedFiles, ...newFiles]);
             }
         }
+    };
+
+    const handleEncryptionSetupComplete = () => {
+        setHasEncryptionKeys(true);
+        setIsEncryptionSetupOpen(false);
+        setShowEncryptionSetup(false);
+        setEncryptionError(null);
+        
+        // Immediately refresh messages to show decrypted content
+        refreshMessages();
     };
 
     return (
@@ -1067,8 +1079,8 @@ export default function Messaging(props: MessagingProps) {
                                             // Save private key as a file for the user to backup
                                             savePrivateKeyToFile(privateKey, username);
                                             
-                                            // Temporarily store in cookie for encryption operations
-                                            savePrivateKeyToCookie(privateKey);
+                                            // Store in session storage for encryption operations
+                                            savePrivateKey(privateKey);
                                             
                                             // Submit public key to server
                                             await axios.post(route('user.update-public-key'), {
@@ -1081,25 +1093,14 @@ export default function Messaging(props: MessagingProps) {
                                             setShowEncryptionSetup(false);
                                             
                                         } catch (error) {
-                                            console.error('Error generating keys:', error);
-                                            
-                                            // Show better error messaging to the user
-                                            if (axios.isAxiosError(error)) {
-                                                if (error.response?.status === 403) {
-                                                    alert('You do not have permission to update your encryption keys');
-                                                } else if (error.response?.data?.message) {
-                                                    alert(`Error: ${error.response.data.message}`);
-                                                } else {
-                                            alert('Failed to complete encryption setup. Please try again.');
-                                                }
-                                            } else {
-                                                alert('An unexpected error occurred during encryption setup. Please try again.');
-                                            }
+                                            // Keep this error log for troubleshooting critical encryption errors
+                                            setHasEncryptionKeys(false);
                                         }
                                     }}
-                                    className="w-full"
+                                    disabled={isGenerating}
+                                    className="w-full mb-4"
                                 >
-                                    Generate and Download Keys
+                                    {isGenerating ? 'Generating Keys...' : 'Generate New Keys'}
                                 </Button>
                             </TabsContent>
                             
@@ -1142,8 +1143,8 @@ export default function Messaging(props: MessagingProps) {
                                                 return;
                                             }
                                             
-                                            // Store the private key in a cookie
-                                            savePrivateKeyToCookie(privateKey);
+                                            // Store the private key in session storage
+                                            savePrivateKey(privateKey);
                                             
                                             // Update state
                                             setHasEncryptionKeys(true);
@@ -1690,7 +1691,7 @@ export default function Messaging(props: MessagingProps) {
                                                                                         const isSelfMessage = selectedChat && selectedChat.id === auth.user?.id;
                                                                                         if (isSelfMessage) {
                                                                                             // For self-messages, we'll try to decrypt if needed
-                                                                                            const privateKey = getPrivateKeyFromCookie();
+                                                                                            const privateKey = getPrivateKey();
                                                                                             if (privateKey && !message.decrypted_content) {
                                                                                                 try {
                                                                                                     return decryptMessage(message.content, privateKey);
@@ -2061,6 +2062,14 @@ export default function Messaging(props: MessagingProps) {
                 onOpenChange={setShowSizeError}
                 files={sizeErrorFiles}
             />
+
+            {showEncryptionSetup && (
+                <EncryptionSetupDialog
+                    open={isEncryptionSetupOpen}
+                    onOpenChange={setIsEncryptionSetupOpen}
+                    onSetupComplete={handleEncryptionSetupComplete}
+                />
+            )}
         </AppLayout>
     );
 }

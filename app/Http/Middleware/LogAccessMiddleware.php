@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\AccessLog;
 use Jenssegers\Agent\Agent;
-use Stevebauman\Location\Facades\Location;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpKernel\Exception\HttpException; // Optional, but good practice
 use Illuminate\Support\Facades\Cookie;
@@ -73,13 +72,7 @@ class LogAccessMiddleware
             $agent = new Agent();
             $agent->setUserAgent($request->userAgent());
 
-            // Get location information
-            // Add basic check to prevent error if IP is invalid for lookup
-            $location = null;
-            if (filter_var($clientIp, FILTER_VALIDATE_IP)) {
-                 $location = Location::get($clientIp);
-            }
-
+            // Removed location lookup for better performance
 
             // Determine if this is an admin attempt
             $adminPrefix = config('backpack.base.route_prefix', 'admin');
@@ -96,8 +89,8 @@ class LogAccessMiddleware
                 'is_admin_attempt' => $isAdminAttempt || $isHoneypot,
                 'is_blocked' => false, // We already know it's not blocked if we reach here
                 'request_data' => $request->all(), // Consider redacting sensitive data
-                'country' => $location ? $location->countryName : null,
-                'city' => $location ? $location->cityName : null,
+                'country' => null, // Removed location lookup
+                'city' => null, // Removed location lookup
                 'browser' => $agent->browser(),
                 'platform' => $agent->platform(),
                 'device' => $agent->device(),
@@ -107,7 +100,7 @@ class LogAccessMiddleware
             // Only log honeypot if it's NOT the real admin path to avoid double logging for real admin access
             if ($isHoneypot && !$isAdminAttempt) {
                 Log::warning('Honeypot access attempt detected', [
-                    'ip' => $clientIp, // Use $clientIp
+                    'ip' => $clientIp, 
                     'url' => $request->fullUrl(),
                     'user_agent' => $request->userAgent()
                 ]);

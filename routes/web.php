@@ -12,6 +12,8 @@ use App\Http\Controllers\CustomEmailVerificationController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use App\Http\Controllers\BlockchainController;
 use App\Http\Middleware\LogAccessMiddleware;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 // Route::get('/', function () {
 //     return Inertia::render('welcome');
@@ -105,6 +107,22 @@ Route::middleware(['web', \App\Http\Middleware\LogAccessMiddleware::class])
     ->get('/admin', function () {
         return view('dummy-admin');
     });
+
+// CSRF token refresh endpoint with debugging logs
+Route::get('/csrf-token', function (Request $request) {
+    $token = csrf_token();
+    Log::debug('CSRF token refreshed via endpoint', [
+        'session_id' => $request->session()->getId(),
+        'token_partial' => substr($token, 0, 8) . '...',
+        'token_length' => strlen($token),
+        'url' => $request->fullUrl(),
+        'referer' => $request->header('referer')
+    ]);
+    
+    return response()->json([
+        'csrf_token' => $token,
+    ]);
+});
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

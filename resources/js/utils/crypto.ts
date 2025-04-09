@@ -1,5 +1,6 @@
 import forge from 'node-forge';
 import { saveAs } from 'file-saver';
+import axios from 'axios';
 
 // Add TypeScript declaration for Inertia page
 declare global {
@@ -17,10 +18,12 @@ declare global {
         }
       }
     }
+    __authStateListenerSetup?: boolean;
   }
 }
 
-const COOKIE_NAME = 'pki_private_key';
+// Session storage key
+const SESSION_STORAGE_KEY = 'pki_private_key';
 
 interface KeyPair {
   publicKey: string;
@@ -85,18 +88,13 @@ export const savePrivateKeyToFile = (privateKey: string, username?: string) => {
     // Try to get username from provided parameter
     if (username && username.trim() !== '') {
       filename = `${username}_secure_msg_privkey_${timestamp}.txt`;
-      console.log(`Creating file with username: ${username}`);
     }
     // If no username provided, try to get from window.__page
     else if (isAuthenticated() && window.__page?.props?.auth?.user?.username) {
       const authUsername = window.__page.props.auth.user.username;
       filename = `${authUsername}_secure_msg_privkey_${timestamp}.txt`;
-      console.log(`Creating file with auth username: ${authUsername}`);
-    } else {
-      console.log('No username provided for private key file');
     }
   } catch (error) {
-    console.error('Error creating filename for private key:', error);
     // Fall back to default filename with timestamp
   }
 
@@ -105,52 +103,56 @@ export const savePrivateKeyToFile = (privateKey: string, username?: string) => {
 };
 
 /**
- * Save the private key to a cookie temporarily
+ * Save the private key in session storage, tied to the authenticated session
+ * Session storage is cleared when the browser is closed, providing better
+ * security than persistent cookies while maintaining session availability
  */
-export const savePrivateKeyToCookie = (privateKey: string) => {
+export const savePrivateKey = (privateKey: string): boolean => {
   try {
-    // Set cookie to expire after 2 hours (in seconds)
-    const expiryTime = 7200;
-    document.cookie = `${COOKIE_NAME}=${encodeURIComponent(privateKey)};max-age=${expiryTime};path=/;secure;samesite=strict`;
-    return true;
-  } catch (error) {
-    console.error('Error saving private key to cookie:', error);
-    return false;
-  }
-};
-
-/**
- * Get the private key from the cookie
- */
-export const getPrivateKeyFromCookie = (): string | null => {
-  try {
-    const name = `${COOKIE_NAME}=`;
-    const decodedCookie = decodeURIComponent(document.cookie);
-    const cookieArray = decodedCookie.split(';');
-
-    for (let i = 0; i < cookieArray.length; i++) {
-      const cookie = cookieArray[i].trim();
-      if (cookie.indexOf(name) === 0) {
-        return cookie.substring(name.length, cookie.length);
-      }
+    if (!privateKey) {
+      return false;
     }
+    
+    // Store in session storage - this will be automatically cleared when browser is closed
+    sessionStorage.setItem(SESSION_STORAGE_KEY, privateKey);
+    
+    // Also set a flag to track that we've saved a key
+    sessionStorage.setItem('has_private_key', 'true');
+    
+    return true;
   } catch (error) {
-    console.error('Error reading private key from cookie:', error);
+    return false;
   }
-  return null;
 };
 
 /**
- * Remove the private key from the cookie
+ * Get the private key from session storage
  */
-export const clearPrivateKeyFromCookie = (): boolean => {
+export const getPrivateKey = (): string | null => {
   try {
-    document.cookie = `${COOKIE_NAME}=;max-age=0;path=/;`;
+    return sessionStorage.getItem(SESSION_STORAGE_KEY);
+  } catch (error) {
+    return null;
+  }
+};
+
+/**
+ * Remove the private key from session storage
+ */
+export const clearPrivateKey = (): boolean => {
+  try {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
     return true;
   } catch (error) {
-    console.error('Error clearing private key from cookie:', error);
     return false;
   }
+};
+
+/**
+ * Check if a private key is currently available
+ */
+export const hasPrivateKey = (): boolean => {
+  return sessionStorage.getItem('has_private_key') === 'true' && !!getPrivateKey();
 };
 
 /**
@@ -169,7 +171,6 @@ export const encryptMessage = (message: string, publicKeyPem: string): string =>
     // Return base64 encoded string
     return forge.util.encode64(encrypted);
   } catch (error) {
-    console.error('Encryption error:', error);
     throw new Error('Failed to encrypt message');
   }
 };
@@ -193,7 +194,6 @@ export const decryptMessage = (encryptedMessage: string, privateKeyPem: string):
     // Return decoded UTF-8 string
     return forge.util.decodeUtf8(decrypted);
   } catch (error) {
-    console.error('Decryption error:', error);
     throw new Error('Failed to decrypt message');
   }
 };
@@ -205,38 +205,48 @@ export const isValidPrivateKey = (key: string): boolean => {
   try {
     forge.pki.privateKeyFromPem(key);
     return true;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     return false;
   }
 };
 
 /**
- * Handle encryption cleanup during user logout
- * This should be called whenever a user logs out to ensure
- * encryption keys don't persist in the browser
+ * Setup listener for auth state changes
+ * This automatically cleans up encryption keys when the user logs out
  */
-export const handleLogoutEncryptionCleanup = (): void => {
-  // Skip on auth pages to prevent unnecessary console messages
-  if (isAuthPage()) {
-    return;
-  }
-  
-  try {
-    // Clear the private key cookie
-    clearPrivateKeyFromCookie();
-
-    // Only log in development mode
-    if (process.env.NODE_ENV === 'development') {
-      console.info('Encryption keys cleared during logout');
-    }
-
-    // Could add additional cleanup here in the future if needed
-    // Such as clearing localStorage items or resetting other encryption state
-  } catch (error) {
-    // Only log error in development mode
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Error cleaning up encryption state during logout:', error);
-    }
+export const setupAuthStateListener = (): void => {
+  // Only set up listener once
+  if (typeof window !== 'undefined' && !window.__authStateListenerSetup) {
+    window.__authStateListenerSetup = true;
+    
+    // Listen for auth state changes by periodically checking auth status
+    const authCheckInterval = setInterval(() => {
+      const wasAuthenticated = sessionStorage.getItem('was_authenticated') === 'true';
+      const isCurrentlyAuthenticated = isAuthenticated();
+      
+      if (wasAuthenticated && !isCurrentlyAuthenticated) {
+        // User was authenticated but now isn't - clear private key
+        clearPrivateKey();
+        sessionStorage.removeItem('was_authenticated');
+      } else if (isCurrentlyAuthenticated) {
+        sessionStorage.setItem('was_authenticated', 'true');
+      }
+    }, 5000); // Check every 5 seconds
+    
+    // Also clean up on page unload as a safety measure
+    window.addEventListener('beforeunload', () => {
+      clearInterval(authCheckInterval);
+    });
   }
 };
+
+// For backward compatibility with existing code
+export const savePrivateKeyToCookie = savePrivateKey;
+export const getPrivateKeyFromCookie = getPrivateKey;
+export const clearPrivateKeyFromCookie = clearPrivateKey;
+export const handleLogoutEncryptionCleanup = clearPrivateKey;
+
+// Initialize auth state listener when this module is loaded
+if (typeof window !== 'undefined') {
+  setupAuthStateListener();
+}

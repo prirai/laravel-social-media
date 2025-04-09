@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { generateKeyPair, savePrivateKeyToFile, savePrivateKeyToCookie, getPrivateKeyFromCookie, isValidPrivateKey } from '@/utils/crypto';
+import { generateKeyPair, savePrivateKeyToFile, savePrivateKey, hasPrivateKey, isValidPrivateKey } from '@/utils/crypto';
 import { AlertCircle, ArrowDownCircle, Info, Key, Shield } from 'lucide-react';
 import axios from 'axios';
 
@@ -23,28 +23,21 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
   const [privateKeyError, setPrivateKeyError] = useState('');
   const [setupComplete, setSetupComplete] = useState(false);
   const [showKeyDownloadInfo, setShowKeyDownloadInfo] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Debug the open state
+  // Check if private key is already in session storage
   useEffect(() => {
-    console.log('EncryptionSetupDialog - open state changed:', open);
-  }, [open]);
-
-  // Check if private key is already in cookies
-  useEffect(() => {
-    const storedKey = getPrivateKeyFromCookie();
-    if (storedKey) {
-      console.log('EncryptionSetupDialog - existing key found in cookie');
+    if (hasPrivateKey()) {
       setSetupComplete(true);
       onSetupComplete();
-    } else {
-      console.log('EncryptionSetupDialog - no key found in cookie');
     }
   }, [onSetupComplete]);
 
   const handleGenerateKeys = async () => {
     try {
-      console.log('EncryptionSetupDialog - generating keys');
       setIsGenerating(true);
+      setErrorMessage(null);
+      
       // Generate new key pair
       const { publicKey, privateKey } = await generateKeyPair();
 
@@ -55,48 +48,36 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
       }
 
       // Save private key as a file for the user to backup
-      savePrivateKeyToFile(privateKey, username);
+      await savePrivateKeyToFile(privateKey, username);
       setShowKeyDownloadInfo(true);
 
-      // Temporarily store in cookie for encryption operations
-      savePrivateKeyToCookie(privateKey);
-
-      // Submit public key to server with retry logic
-      let success = false;
-      let attempts = 0;
-      const maxAttempts = 3;
-
-      while (!success && attempts < maxAttempts) {
-        try {
-          attempts++;
-          const response = await axios.post(route('user.update-public-key'), {
-            public_key: publicKey
-          });
-
-          if (response.data.success) {
-            success = true;
-            console.log('Public key successfully uploaded', response.data);
-          } else {
-            console.warn(`Attempt ${attempts}: Public key update failed:`, response.data);
-            // Wait before retrying
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        } catch (err) {
-          console.error(`Attempt ${attempts}: Error uploading public key:`, err);
-          // Wait longer before retrying
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        }
+      // Store in session storage for encryption operations
+      const saveResult = savePrivateKey(privateKey);
+      
+      if (!saveResult) {
+        throw new Error('Failed to save private key to session storage');
       }
 
-      // Small delay to let the user see the download info
-      setTimeout(() => {
-        console.log('EncryptionSetupDialog - setup complete after key generation');
-        setSetupComplete(true);
-        onSetupComplete();
-      }, 3000);
-    } catch (error) {
-      console.error('Error generating keys:', error);
-      alert('Failed to complete encryption setup. Please try again.');
+      // Submit public key to server
+      try {
+        const response = await axios.post(route('user.update-public-key'), {
+          public_key: publicKey
+        });
+
+        if (response.data.success) {
+          // Small delay to let the user see the download info
+          setTimeout(() => {
+            setSetupComplete(true);
+            onSetupComplete();
+          }, 2000);
+        } else {
+          throw new Error('Server rejected public key upload');
+        }
+      } catch (err: any) {
+        setErrorMessage(`Failed to upload public key: ${err.message || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      setErrorMessage(`An unexpected error occurred during encryption setup: ${error.message || 'Unknown error'}`);
     } finally {
       setIsGenerating(false);
     }
@@ -109,8 +90,8 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
     }
 
     try {
-      console.log('EncryptionSetupDialog - processing uploaded key');
       setIsUploading(true);
+      setErrorMessage(null);
 
       // Validate if the entered key is a valid RSA private key
       if (!isValidPrivateKey(privateKey)) {
@@ -118,15 +99,17 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
         return;
       }
 
-      // Store the private key in a cookie
-      savePrivateKeyToCookie(privateKey);
+      // Store the private key in session storage
+      const saveResult = savePrivateKey(privateKey);
+      
+      if (!saveResult) {
+        throw new Error('Failed to save private key to session storage');
+      }
 
-      console.log('EncryptionSetupDialog - setup complete after key upload');
       setSetupComplete(true);
       onSetupComplete();
-    } catch (error) {
-      console.error('Error processing private key:', error);
-      setPrivateKeyError('Error processing private key');
+    } catch (error: any) {
+      setPrivateKeyError(`Error processing private key: ${error.message || 'Unknown error'}`);
     } finally {
       setIsUploading(false);
     }
@@ -134,18 +117,13 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
 
   // If setup is already complete, don't show the dialog but notify parent
   if (setupComplete) {
-    console.log('EncryptionSetupDialog - setup is complete, returning null');
     return null;
   }
 
   // If not open, return null
   if (!open) {
-    console.log('EncryptionSetupDialog - dialog is not open, returning null');
     return null;
   }
-
-  // Force the dialog to be open if open prop is true
-  console.log('EncryptionSetupDialog - rendering dialog with open =', open);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal={true} defaultOpen={open}>
@@ -174,6 +152,15 @@ export function EncryptionSetupDialog({ open, onOpenChange, onSetupComplete }: E
               <ArrowDownCircle className="h-4 w-4" />
               <AlertDescription>
                 <strong>Private key downloaded!</strong> Please save this file securely - you'll need it to decrypt messages and it cannot be recovered if lost.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {errorMessage && (
+            <Alert className="mb-4 bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-300">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Error:</strong> {errorMessage}
               </AlertDescription>
             </Alert>
           )}
