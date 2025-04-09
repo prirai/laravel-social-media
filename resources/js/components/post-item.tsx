@@ -164,7 +164,12 @@ export default function PostItem({ post, onLike, onComment, onDelete }: PostItem
                         )}
                     </div>
 
-                    <div className="mt-3 whitespace-pre-wrap text-gray-700 dark:text-gray-300">{post.content}</div>
+                    <div className="mt-3 whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+                        {post.content.length > 250 
+                            ? post.content.substring(0, 250) + '...'
+                            : post.content
+                        }
+                    </div>
 
                     {post.attachments.length > 0 && (
                         <div className={`mt-3 grid gap-2 ${post.attachments.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>

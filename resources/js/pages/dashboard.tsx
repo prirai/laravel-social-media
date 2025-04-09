@@ -388,6 +388,10 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
             return;
         }
 
+        // Limit post content to 250 characters
+        if (data.content.length > 250) {
+            setData('content', data.content.substring(0, 250));
+        }
 
         post(route('posts.store'), {
             onSuccess: (page) => {
@@ -829,11 +833,22 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                         <div>
                                     <Textarea
                                         value={data.content}
-                                        onChange={(e) => setData('content', e.target.value)}
+                                        onChange={(e) => {
+                                            // Limit input to 250 characters
+                                            if (e.target.value.length <= 250) {
+                                                setData('content', e.target.value);
+                                            }
+                                        }}
                                         placeholder="What's on your mind?"
-                                                className="min-h-[150px] resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:focus:border-blue-400 dark:focus:ring-blue-400"
+                                        maxLength={250}
+                                        className="min-h-[150px] resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                                     />
                                         {formErrors.content && <p className="mt-1 text-sm text-red-500">{formErrors.content}</p>}
+                                        {data.content.length > 200 && (
+                                            <p className="mt-1 text-xs text-amber-500">
+                                                {250 - data.content.length} characters remaining (max 250)
+                                            </p>
+                                        )}
                                 </div>
 
                                         <div className="space-y-4">
@@ -1043,8 +1058,8 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                     </div>
                                                     <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{
                                                         comment.content.length > 100 
-                                                            ? comment.content.substring(0, 100).match(/.{1,20}/g)?.join('\n') + '...'
-                                                            : comment.content.match(/.{1,20}/g)?.join('\n')
+                                                            ? comment.content.substring(0, 100) + '...'
+                                                            : comment.content
                                                     }</p>
                                                 </div>
                                             </div>
