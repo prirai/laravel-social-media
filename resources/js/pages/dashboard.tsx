@@ -211,12 +211,17 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
         e.preventDefault();
         
         // Trim the comment content to remove whitespace
-        const trimmedContent = commentData.content.trim();
+        let trimmedContent = commentData.content.trim();
         
         // Check if the comment is empty after trimming
         if (!trimmedContent) {
             setCommentErrors({ content: 'Comment cannot be empty' });
             return;
+        }
+        
+        // Limit comment to 100 characters
+        if (trimmedContent.length > 100) {
+            trimmedContent = trimmedContent.substring(0, 100);
         }
         
         if (selectedPost) {
@@ -1036,7 +1041,11 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                                             </Button>
                                                         )}
                                                     </div>
-                                                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
+                                                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{
+                                                        comment.content.length > 100 
+                                                            ? comment.content.substring(0, 100).match(/.{1,20}/g)?.join('\n') + '...'
+                                                            : comment.content.match(/.{1,20}/g)?.join('\n')
+                                                    }</p>
                                                 </div>
                                             </div>
                                         ))}
@@ -1050,11 +1059,22 @@ export default function Dashboard({ posts: initialPosts = [] }: DashboardProps) 
                                     <div className="flex-1">
                             <Textarea
                                 value={commentData.content}
-                                onChange={(e) => setCommentData('content', e.target.value)}
+                                onChange={(e) => {
+                                    // Limit input to 100 characters
+                                    if (e.target.value.length <= 100) {
+                                        setCommentData('content', e.target.value);
+                                    }
+                                }}
                                 placeholder="Write your comment..."
+                                maxLength={100}
                                 className="min-h-[100px] resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                             />
                                 {commentErrors.content && <p className="mt-1 text-sm text-red-500">{commentErrors.content}</p>}
+                                {commentData.content.length > 80 && (
+                                    <p className="mt-1 text-xs text-amber-500">
+                                        {100 - commentData.content.length} characters remaining (max 100)
+                                    </p>
+                                )}
                             </div>
                                 </div>
 

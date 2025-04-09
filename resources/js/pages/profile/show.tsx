@@ -226,50 +226,66 @@ export default function ShowProfile({
     // --- handleCommentSubmit using axios (ensure this is correct) ---
     const handleCommentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedPost || !authUser) return;
-        const optimisticComment: Comment = {
-            id: Date.now(),
-            content: commentData.content,
-            created_at: new Date().toISOString(),
-            user: {
-                id: authUser.id,
-                name: authUser.name,
-                username: authUser.username as string | undefined, // Cast based on potential type difference
-                avatar: authUser.avatar || null,
-                verification_status: authUser.verification_status as 'unverified' | 'pending' | 'verified' | undefined,
-            },
-        };
-        const originalComments = selectedPost.comments;
-        setProfilePosts((prev) => prev.map((p) => (p.id === selectedPost.id ? { ...p, comments: [...p.comments, optimisticComment] } : p)));
-        setSelectedPost((prev) => (prev ? { ...prev, comments: [...prev.comments, optimisticComment] } : null));
+        
+        // Trim the comment content to remove whitespace
+        let trimmedContent = commentData.content.trim();
+        
+        // Check if the comment is empty after trimming
+        if (!trimmedContent) {
+            setCommentErrors({ content: 'Comment cannot be empty' });
+            return;
+        }
+        
+        // Limit comment to 100 characters
+        if (trimmedContent.length > 100) {
+            trimmedContent = trimmedContent.substring(0, 100);
+        }
+        
+        if (selectedPost) {
+            const optimisticComment: Comment = {
+                id: Date.now(),
+                content: trimmedContent,
+                created_at: new Date().toISOString(),
+                user: {
+                    id: authUser.id,
+                    name: authUser.name,
+                    username: authUser.username as string | undefined, // Cast based on potential type difference
+                    avatar: authUser.avatar || null,
+                    verification_status: authUser.verification_status as 'unverified' | 'pending' | 'verified' | undefined,
+                },
+            };
+            const originalComments = selectedPost.comments;
+            setProfilePosts((prev) => prev.map((p) => (p.id === selectedPost.id ? { ...p, comments: [...p.comments, optimisticComment] } : p)));
+            setSelectedPost((prev) => (prev ? { ...prev, comments: [...prev.comments, optimisticComment] } : null));
 
-        const formData = new FormData();
-        formData.append('content', commentData.content);
+            const formData = new FormData();
+            formData.append('content', trimmedContent);
 
-        axios
-            .post(route('posts.comment', { post: selectedPost.id }), formData)
-            .then((response) => {
-                const actualComment = response.data.comment as Comment;
-                if (actualComment) {
-                    setProfilePosts((prev) =>
-                        prev.map((p) =>
-                            p.id === selectedPost.id
-                                ? { ...p, comments: p.comments.map((c) => (c.id === optimisticComment.id ? actualComment : c)) }
-                                : p,
-                        ),
-                    );
-                    setSelectedPost((prev) =>
-                        prev ? { ...prev, comments: prev.comments.map((c) => (c.id === optimisticComment.id ? actualComment : c)) } : null,
-                    );
-                }
-                resetComment();
-            })
-            .catch((error) => {
-                console.error('Error adding comment:', error);
-                setProfilePosts((prev) => prev.map((p) => (p.id === selectedPost.id ? { ...p, comments: originalComments } : p)));
-                setSelectedPost((prev) => (prev ? { ...prev, comments: originalComments } : null));
-                setCommentErrors({ content: error.response?.data?.message || 'Failed to add comment.' });
-            });
+            axios
+                .post(route('posts.comment', { post: selectedPost.id }), formData)
+                .then((response) => {
+                    const actualComment = response.data.comment as Comment;
+                    if (actualComment) {
+                        setProfilePosts((prev) =>
+                            prev.map((p) =>
+                                p.id === selectedPost.id
+                                    ? { ...p, comments: p.comments.map((c) => (c.id === optimisticComment.id ? actualComment : c)) }
+                                    : p,
+                            ),
+                        );
+                        setSelectedPost((prev) =>
+                            prev ? { ...prev, comments: prev.comments.map((c) => (c.id === optimisticComment.id ? actualComment : c)) } : null,
+                        );
+                    }
+                    resetComment();
+                })
+                .catch((error) => {
+                    console.error('Error adding comment:', error);
+                    setProfilePosts((prev) => prev.map((p) => (p.id === selectedPost.id ? { ...p, comments: originalComments } : p)));
+                    setSelectedPost((prev) => (prev ? { ...prev, comments: originalComments } : null));
+                    setCommentErrors({ content: error.response?.data?.message || 'Failed to add comment.' });
+                });
+        }
     };
 
     // --- handleDeleteComment using router.delete (ensure this is correct) ---
@@ -692,7 +708,11 @@ export default function ShowProfile({
                                                             </Button>
                                                         )}
                                                     </div>
-                                                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
+                                                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{
+                                                        comment.content.length > 100 
+                                                            ? comment.content.substring(0, 100).match(/.{1,20}/g)?.join('\n') + '...'
+                                                            : comment.content.match(/.{1,20}/g)?.join('\n')
+                                                    }</p>
                                                 </div>
                                             </div>
                                         ))}
@@ -707,14 +727,21 @@ export default function ShowProfile({
                                         <Textarea
                                             value={commentData.content}
                                             onChange={(e) => {
-                                                setCommentData('content', e.target.value);
-                                                setCommentErrors({});
+                                                // Limit input to 100 characters
+                                                if (e.target.value.length <= 100) {
+                                                    setCommentData('content', e.target.value);
+                                                }
                                             }}
                                             placeholder="Write your comment..."
-                                            className="min-h-[100px] resize-none ..."
-                                            required
+                                            maxLength={100}
+                                            className="min-h-[100px] resize-none border-gray-200 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-700 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                                         />
                                         {commentErrors.content && <p className="mt-1 text-sm text-red-500">{commentErrors.content}</p>}
+                                        {commentData.content.length > 80 && (
+                                            <p className="mt-1 text-xs text-amber-500">
+                                                {100 - commentData.content.length} characters remaining (max 100)
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex justify-end gap-3 pt-2">

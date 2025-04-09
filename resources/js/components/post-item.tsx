@@ -254,7 +254,11 @@ export default function PostItem({ post, onLike, onComment, onDelete }: PostItem
                                                 </Button>
                                             )}
                                         </div>
-                                        <p className="text-sm text-gray-600 dark:text-gray-300">{comment.content}</p>
+                                        <p className="text-sm text-gray-600 dark:text-gray-300">{
+                                            comment.content.length > 100 
+                                                ? comment.content.substring(0, 100).match(/.{1,20}/g)?.join('\n') + '...'
+                                                : comment.content.match(/.{1,20}/g)?.join('\n')
+                                        }</p>
                                     </div>
                                 </div>
                             ))}
