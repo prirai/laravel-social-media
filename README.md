@@ -2,6 +2,8 @@
 
 A modern social media platform built with Laravel 12 and React, featuring user authentication, social interactions, marketplace, admin panel, end-to-end encrypted messaging, and blockchain-based verification system.
 
+User Guide: [here](https://github.com/prirai/social-media/blob/main/README.pdf)
+
 ## Project Structure
 
 ### Core Components
