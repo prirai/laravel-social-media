@@ -141,7 +141,7 @@ User Guide: [here](https://github.com/prirai/social-media/blob/main/README.pdf)
 
     Generate a key:
 
-    ``bash
+    ```bash
     php artisan key:generate
     ```
 
